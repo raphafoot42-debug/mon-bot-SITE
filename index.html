@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spark.io - L'IA sème, toi tu récoltes</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --gold:#FFD700; --black:#0a0a0f; --dark:#111118; --dark2:#1a1a2e; --text:#e0e0e0; --muted:#888; }
+body { font-family:'Segoe UI',sans-serif; background:var(--black); color:var(--text); }
+nav { position:fixed; top:0; width:100%; z-index:1000; background:rgba(10,10,15,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,215,0,0.15); display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; }
+.logo { font-size:1.5rem; font-weight:800; color:var(--gold); cursor:pointer; }
+.logo span { color:white; }
+.nav-btns { display:flex; gap:0.8rem; flex-wrap:wrap; }
+.btn { padding:0.5rem 1.2rem; border-radius:8px; cursor:pointer; font-size:0.9rem; transition:all 0.2s; border:none; font-family:inherit; }
+.btn-outline { background:transparent; border:1px solid var(--gold); color:var(--gold); }
+.btn-outline:hover { background:var(--gold); color:black; }
+.btn-gold { background:var(--gold); color:black; font-weight:700; }
+.btn-gold:hover { background:#ffed4a; transform:translateY(-1px); }
+.page { display:none; min-height:100vh; }
+.page.active { display:block; }
+.hero { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:8rem 2rem 4rem; background:radial-gradient(ellipse at top, #1a1a3e 0%, var(--black) 70%); }
+.badge { background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; margin-bottom:1.5rem; display:inline-block; }
+.hero h1 { font-size:clamp(2rem,5vw,3.8rem); font-weight:800; line-height:1.2; margin-bottom:1rem; }
+.hero h1 span { color:var(--gold); }
+.hero p { font-size:1.1rem; color:var(--muted); max-width:580px; margin-bottom:2.5rem; line-height:1.7; }
+.hero-btns { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:3rem; }
+.btn-lg { padding:0.9rem 2rem; font-size:1rem; border-radius:10px; }
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; max-width:800px; width:100%; }
+.stat { background:rgba(255,215,0,0.05); border:1px solid rgba(255,215,0,0.15); border-radius:12px; padding:1.2rem; text-align:center; }
+.stat-num { font-size:1.8rem; font-weight:800; color:var(--gold); }
+.stat-lbl { font-size:0.8rem; color:var(--muted); margin-top:0.3rem; }
+section { padding:5rem 2rem; }
+.s-title { text-align:center; font-size:clamp(1.5rem,3vw,2.2rem); font-weight:800; margin-bottom:0.8rem; }
+.s-title span { color:var(--gold); }
+.s-sub { text-align:center; color:var(--muted); margin-bottom:3rem; }
+.pricing-section { background:var(--dark); }
+.pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1.5rem; max-width:1100px; margin:0 auto; }
+.plan { background:var(--dark2); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:2rem; position:relative; transition:transform 0.3s; }
+.plan:hover { transform:translateY(-5px); }
+.plan.popular { border:2px solid var(--gold); }
+.plan-badge { position:absolute; top:-13px; left:50%; transform:translateX(-50%); background:var(--gold); color:black; font-size:0.75rem; font-weight:700; padding:0.3rem 1rem; border-radius:20px; white-space:nowrap; }
+.plan-name { font-size:1.1rem; font-weight:700; margin-bottom:0.5rem; }
+.plan-price { font-size:2.2rem; font-weight:800; color:var(--gold); margin:0.8rem 0; }
+.plan-price span { font-size:1rem; color:var(--muted); font-weight:400; }
+.plan ul { list-style:none; margin:1.2rem 0; }
+.plan ul li { padding:0.4rem 0; font-size:0.9rem; color:var(--muted); display:flex; align-items:center; gap:0.5rem; }
+.plan ul li::before { content:"✓"; color:var(--gold); font-weight:700; flex-shrink:0; }
+.plan-btn { width:100%; padding:0.8rem; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.95rem; transition:all 0.2s; border:none; font-family:inherit; margin-top:0.5rem; }
+.plan-btn.outline { background:transparent; border:1px solid var(--gold); color:var(--gold); }
+.plan-btn.outline:hover { background:var(--gold); color:black; }
+.plan-btn.gold { background:var(--gold); color:black; }
+.plan-btn.gold:hover { background:#ffed4a; }
+.guarantee { text-align:center; margin-top:2rem; color:var(--muted); font-size:0.9rem; }
+.guarantee b { color:var(--gold); }
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; }
+.modal-bg.open { display:flex; }
+.modal { background:var(--dark2); border:1px solid rgba(255,215,0,0.3); border-radius:20px; padding:2.5rem; width:90%; max-width:440px; position:relative; }
+.modal h2 { font-size:1.4rem; font-weight:800; margin-bottom:0.5rem; }
+.modal h2 span { color:var(--gold); }
+.modal p { color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem; }
+.form-group { margin-bottom:1rem; }
+.form-group label { display:block; font-size:0.85rem; color:var(--muted); margin-bottom:0.4rem; }
+.form-group input { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:0.75rem 1rem; color:white; font-size:0.95rem; font-family:inherit; outline:none; transition:border 0.2s; }
+.form-group input:focus { border-color:var(--gold); }
+.form-submit { width:100%; padding:0.9rem; background:var(--gold); color:black; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; margin-top:0.5rem; }
+.form-submit:hover { background:#ffed4a; }
+.modal-close { position:absolute; top:1rem; right:1.2rem; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; }
+.modal-switch { text-align:center; margin-top:1rem; font-size:0.9rem; color:var(--muted); }
+.modal-switch a { color:var(--gold); cursor:pointer; }
+.error-msg { color:#ff4444; font-size:0.85rem; margin-top:0.5rem; display:none; }
+.gen-wrap { max-width:820px; margin:0 auto; }
+.gen-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem; }
+.gen-header h2 { font-size:1.5rem; font-weight:800; }
+.credits-pill { background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; }
+.gen-box { background:var(--dark2); border:1px solid rgba(255,215,0,0.2); border-radius:20px; padding:2rem; }
+.gen-textarea { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:1rem; color:white; font-size:1rem; resize:none; height:130px; font-family:inherit; outline:none; transition:border 0.2s; }
+.gen-textarea:focus { border-color:var(--gold); }
+.gen-textarea::placeholder { color:var(--muted); }
+.gen-info { font-size:0.85rem; color:var(--muted); margin:0.8rem 0 1.2rem; }
+.gen-info b { color:var(--gold); }
+.gen-btn { width:100%; padding:1rem; background:var(--gold); color:black; border:none; border-radius:12px; font-size:1.1rem; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.gen-btn:hover { background:#ffed4a; transform:translateY(-2px); }
+.gen-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+.loading-box { text-align:center; padding:2.5rem; display:none; }
+.spinner { font-size:2.5rem; animation:spin 1s linear infinite; display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.preview-box { margin-top:1.5rem; display:none; border:1px solid rgba(255,215,0,0.2); border-radius:12px; overflow:hidden; }
+.preview-top { background:rgba(255,215,0,0.08); padding:0.8rem 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
+.preview-top span { color:var(--gold); font-weight:600; font-size:0.9rem; }
+.preview-actions { display:flex; gap:0.5rem; }
+.pbtn { padding:0.35rem 0.8rem; font-size:0.8rem; border-radius:6px; cursor:pointer; border:none; font-family:inherit; font-weight:600; }
+.pbtn-code { background:transparent; border:1px solid var(--gold); color:var(--gold); }
+.pbtn-deploy { background:var(--gold); color:black; }
+#preview-frame { width:100%; height:350px; border:none; background:white; }
+.code-view { background:#0d1117; padding:1rem; font-family:monospace; font-size:0.75rem; color:#58a6ff; max-height:300px; overflow-y:auto; white-space:pre-wrap; display:none; }
+.dash-grid { display:grid; grid-template-columns:280px 1fr; gap:1.5rem; max-width:1000px; margin:0 auto; }
+.dash-card { background:var(--dark2); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:1.5rem; }
+.dash-card h3 { font-size:0.9rem; color:var(--muted); margin-bottom:1rem; text-transform:uppercase; letter-spacing:1px; }
+.big-num { font-size:3.5rem; font-weight:800; color:var(--gold); line-height:1; }
+.big-lbl { font-size:0.85rem; color:var(--muted); margin-top:0.3rem; }
+.progress { background:rgba(255,215,0,0.1); border-radius:4px; height:6px; margin-top:1rem; }
+.progress-fill { height:100%; background:var(--gold); border-radius:4px; transition:width 0.5s; }
+.dash-new { width:100%; margin-top:1.5rem; padding:0.8rem; background:var(--gold); color:black; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; }
+.dash-new:hover { background:#ffed4a; }
+.history { display:flex; flex-direction:column; gap:0.8rem; }
+.h-item { background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:1rem; display:flex; justify-content:space-between; align-items:center; }
+.h-name { font-weight:600; font-size:0.95rem; margin-bottom:0.2rem; }
+.h-date { font-size:0.8rem; color:var(--muted); }
+.h-credits { color:var(--gold); font-size:0.85rem; font-weight:700; }
+.empty-state { text-align:center; padding:3rem; color:var(--muted); }
+.empty-state div { font-size:2.5rem; margin-bottom:0.8rem; }
+footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padding:3rem 2rem; text-align:center; }
+.footer-logo { font-size:1.8rem; font-weight:800; color:var(--gold); margin-bottom:0.8rem; }
+.footer-links { display:flex; gap:2rem; justify-content:center; flex-wrap:wrap; margin:1rem 0 2rem; }
+.footer-links a { color:var(--muted); text-decoration:none; font-size:0.9rem; }
+.footer-links a:hover { color:var(--gold); }
+.footer-copy { font-size:0.8rem; color:#444; }
+.toast { position:fixed; bottom:2rem; right:2rem; background:var(--dark2); border:1px solid rgba(255,215,0,0.3); border-radius:12px; padding:1rem 1.5rem; z-index:3000; display:none; max-width:300px; }
+.toast.show { display:block; animation:slideIn 0.3s ease; }
+@keyframes slideIn { from { transform:translateX(100px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@media(max-width:768px) { .stats { grid-template-columns:repeat(2,1fr); } .dash-grid { grid-template-columns:1fr; } nav { padding:0.8rem 1rem; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo" onclick="goHome()">Spark<span>.io</span></div>
+  <div class="nav-btns">
+    <button class="btn btn-outline" onclick="showPage('generator-page')" id="nav-gen" style="display:none">Générateur</button>
+    <button class="btn btn-outline" onclick="showPage('dashboard-page')" id="nav-dash" style="display:none">Dashboard</button>
+    <button class="btn btn-outline" id="nav-login" onclick="openModal('login')">Connexion</button>
+    <button class="btn btn-gold" id="nav-signup" onclick="openModal('signup')">S'inscrire</button>
+    <button class="btn btn-outline" id="nav-logout" style="display:none" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div id="landing-page" class="page active">
+  <section class="hero">
+    <div class="badge">⚡ Propulsé par l'IA de pointe</div>
+    <h1>L'IA sème,<br><span>toi tu récoltes</span></h1>
+    <p>Ne perdez plus des mois à coder. Notre IA génère des applications et des sites web complets, prêts à l'emploi, en quelques secondes.</p>
+    <div class="hero-btns">
+      <button class="btn btn-gold btn-lg" onclick="handleStart()">⚡ Créer mon projet</button>
+      <button class="btn btn-outline btn-lg" onclick="scrollToPricing()">Voir les tarifs</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num">125k+</div><div class="stat-lbl">Sites créés</div></div>
+      <div class="stat"><div class="stat-num">12k+</div><div class="stat-lbl">Utilisateurs</div></div>
+      <div class="stat"><div class="stat-num">94%</div><div class="stat-lbl">Temps gagné</div></div>
+      <div class="stat"><div class="stat-num">45k+</div><div class="stat-lbl">Projets live</div></div>
+    </div>
+  </section>
+
+  <section class="pricing-section" id="pricing-anchor">
+    <h2 class="s-title">Des tarifs <span>transparents</span></h2>
+    <p class="s-sub">Pas de frais cachés, annulation en un clic.</p>
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Gratuit</div>
+        <div class="plan-price">0€<span>/mois</span></div>
+        <ul><li>20 crédits offerts</li><li>Templates de base</li><li>Création de page simple</li><li>Support communautaire</li></ul>
+        <button class="plan-btn outline" onclick="handlePlan('Gratuit')">Commencer gratuitement</button>
+      </div>
+      <div class="plan">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">9,99€<span>/mois</span></div>
+        <ul><li>30 crédits/mois</li><li>Plus de templates</li><li>Exportation du code</li><li>Support basique</li><li>Projets illimités</li></ul>
+        <button class="plan-btn outline" onclick="handlePlan('Starter')">Choisir Starter</button>
+      </div>
+      <div class="plan popular">
+        <div class="plan-badge">⭐ Le plus populaire</div>
+        <div class="plan-name">Entrepreneur</div>
+        <div class="plan-price">19,99€<span>/mois</span></div>
+        <ul><li>80 crédits/mois</li><li>Sites avancés</li><li>Personnalisation poussée</li><li>Composants premium</li><li>Support email 24h</li></ul>
+        <button class="plan-btn gold" onclick="handlePlan('Entrepreneur')">Démarrer l'essai gratuit</button>
+      </div>
+      <div class="plan">
+        <div class="plan-name">🔥 Business Elite</div>
+        <div class="plan-price">40€<span>/mois</span></div>
+        <ul><li>Crédits illimités</li><li>Tous les templates</li><li>IA personnalisée</li><li>Communauté VIP</li><li>Support 24/7</li></ul>
+        <button class="plan-btn gold" onclick="handlePlan('Business Elite')">Devenir Elite</button>
+      </div>
+    </div>
+    <p class="guarantee"><b>✓ Garantie satisfait ou remboursé 30 jours</b></p>
+  </section>
+
+  <footer>
+    <div class="footer-logo">Spark.io</div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">L'IA sème, toi tu récoltes.</p>
+    <div class="footer-links">
+      <a href="#">À propos</a><a href="#">Blog</a><a href="#">Contact</a><a href="#">CGU</a><a href="#">Confidentialité</a>
+    </div>
+    <p class="footer-copy">© 2026 Spark.io — Tous droits réservés</p>
+  </footer>
+</div>
+
+<div id="generator-page" class="page">
+  <section style="padding-top:7rem;">
+    <div class="gen-wrap">
+      <div class="gen-header">
+        <h2>Générateur <span style="color:var(--gold)">IA</span></h2>
+        <span class="credits-pill" id="credits-display">⚡ 20 crédits</span>
+      </div>
+      <div class="gen-box">
+        <textarea class="gen-textarea" id="gen-input" placeholder="Ex: Fais-moi une page de vente pour mon restaurant avec menu, galerie et formulaire de réservation..."></textarea>
+        <p class="gen-info">Chaque génération coûte <b>2,5 crédits</b></p>
+        <button class="gen-btn" id="gen-btn" onclick="generateSite()">⚡ Générer mon projet</button>
+        <div class="loading-box" id="loading-box">
+          <div class="spinner">⚡</div>
+          <p style="margin-top:1rem;color:var(--muted);">L'IA génère votre site...</p>
+        </div>
+        <div class="preview-box" id="preview-box">
+          <div class="preview-top">
+            <span>✅ Site généré avec succès !</span>
+            <div class="preview-actions">
+              <button class="pbtn pbtn-code" onclick="toggleCode()">Voir le code</button>
+              <button class="pbtn pbtn-deploy" onclick="downloadSite()">Télécharger</button>
+            </div>
+          </div>
+          <iframe id="preview-frame" srcdoc=""></iframe>
+          <div class="code-view" id="code-view"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="dashboard-page" class="page">
+  <section style="padding-top:7rem;">
+    <h2 class="s-title">Mon <span>Dashboard</span></h2>
+    <p class="s-sub">Gérez vos projets et crédits.</p>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <h3>Crédits restants</h3>
+        <div class="big-num" id="dash-credits">20</div>
+        <div class="big-lbl">crédits disponibles</div>
+        <div class="progress"><div class="progress-fill" id="progress-fill" style="width:100%"></div></div>
+        <button class="dash-new" onclick="showPage('generator-page')">+ Nouveau Projet</button>
+      </div>
+      <div class="dash-card">
+        <h3>Historique des projets</h3>
+        <div class="history" id="history-list">
+          <div class="empty-state"><div>🚀</div>Aucun projet encore.<br>Créez votre premier site !</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-bg" id="modal-bg" onclick="closeModalBg(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="form-signup">
+      <h2>Créer un compte <span>Spark.io</span></h2>
+      <p>20 crédits gratuits à l'inscription !</p>
+      <div class="form-group"><label>Prénom</label><input type="text" id="signup-name" placeholder="Votre prénom"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="signup-email" placeholder="votre@email.com"></div>
+      <div class="form-group"><label>Mot de passe</label><input type="password" id="signup-pass" placeholder="Minimum 6 caractères"></div>
+      <div class="error-msg" id="signup-error"></div>
+      <button class="form-submit" onclick="signup()">Créer mon compte gratuitement</button>
+      <div class="modal-switch">Déjà un compte ? <a onclick="switchForm('login')">Se connecter</a></div>
+    </div>
+    <div id="form-login" style="display:none">
+      <h2>Connexion <span>Spark.io</span></h2>
+      <p>Content de vous revoir !</p>
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="votre@email.com"></div>
+      <div class="form-group"><label>Mot de passe</label><input type="password" id="login-pass" placeholder="Votre mot de passe"></div>
+      <div class="error-msg" id="login-error"></div>
+      <button class="form-submit" onclick="login()">Se connecter</button>
+      <div class="modal-switch">Pas encore de compte ? <a onclick="switchForm('signup')">S'inscrire gratuitement</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentUser = null;
+let users = JSON.parse(localStorage.getItem('spark_users') || '{}');
+let generatedCode = '';
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+function goHome() { showPage('landing-page'); }
+function scrollToPricing() {
+  showPage('landing-page');
+  setTimeout(() => document.getElementById('pricing-anchor').scrollIntoView({behavior:'smooth'}), 100);
+}
+function toast(msg, ms=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+function openModal(type) { document.getElementById('modal-bg').classList.add('open'); switchForm(type); }
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+function closeModalBg(e) { if(e.target===document.getElementById('modal-bg')) closeModal(); }
+function switchForm(type) {
+  document.getElementById('form-signup').style.display = type==='signup'?'block':'none';
+  document.getElementById('form-login').style.display = type==='login'?'block':'none';
+}
+function signup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-pass').value;
+  const err = document.getElementById('signup-error');
+  if (!name||!email||!pass) { showErr(err,'Remplissez tous les champs'); return; }
+  if (pass.length<6) { showErr(err,'Mot de passe trop court'); return; }
+  if (users[email]) { showErr(err,'Email déjà utilisé'); return; }
+  users[email] = {name,email,pass,credits:20,plan:'gratuit',projects:[]};
+  localStorage.setItem('spark_users', JSON.stringify(users));
+  loginUser(users[email]); closeModal();
+  toast('🎉 Bienvenue '+name+' ! 20 crédits offerts !');
+  showPage('generator-page');
+}
+function login() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  if (!email||!pass) { showErr(err,'Remplissez tous les champs'); return; }
+  if (!users[email]||users[email].pass!==pass) { showErr(err,'Email ou mot de passe incorrect'); return; }
+  loginUser(users[email]); closeModal();
+  toast('👋 Bienvenue '+users[email].name+' !');
+  showPage('generator-page');
+}
+function loginUser(user) {
+  currentUser = user;
+  document.getElementById('nav-login').style.display = 'none';
+  document.getElementById('nav-signup').style.display = 'none';
+  document.getElementById('nav-logout').style.display = 'block';
+  document.getElementById('nav-gen').style.display = 'block';
+  document.getElementById('nav-dash').style.display = 'block';
+  updateUI();
+}
+function logout() {
+  currentUser = null;
+  ['nav-login','nav-signup'].forEach(id => document.getElementById(id).style.display='block');
+  ['nav-logout','nav-gen','nav-dash'].forEach(id => document.getElementById(id).style.display='none');
+  showPage('landing-page'); toast('À bientôt !');
+}
+function showErr(el,msg) { el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',3000); }
+function handleStart() { if(!currentUser){openModal('signup');return;} showPage('generator-page'); }
+function handlePlan(plan) { if(!currentUser){openModal('signup');return;} toast('✅ Plan '+plan+' sélectionné !'); showPage('generator-page'); }
+async function generateSite() {
+  if (!currentUser) { openModal('login'); return; }
+  const input = document.getElementById('gen-input').value.trim();
+  if (!input) { toast('❌ Décrivez votre site !'); return; }
+  if (currentUser.credits < 2.5) { toast('❌ Crédits insuffisants !'); return; }
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('loading-box').style.display = 'block';
+  document.getElementById('preview-box').style.display = 'none';
+  try {
+    const res = await fetch('/api/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:input})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    generatedCode = data.code;
+    currentUser.credits = Math.round((currentUser.credits-2.5)*10)/10;
+    currentUser.projects.unshift({name:input.substring(0,40)+'...', date:new Date().toLocaleDateString('fr-FR'), credits:2.5});
+    saveUser(); updateUI();
+    document.getElementById('preview-frame').srcdoc = generatedCode;
+    document.getElementById('code-view').textContent = generatedCode;
+    document.getElementById('loading-box').style.display = 'none';
+    document.getElementById('preview-box').style.display = 'block';
+    toast('✅ Site généré avec succès !');
+  } catch(e) {
+    document.getElementById('loading-box').style.display = 'none';
+    toast('❌ Erreur : '+e.message, 5000);
+  }
+  btn.disabled = false;
+}
+function toggleCode() {
+  const cv = document.getElementById('code-view');
+  const fr = document.getElementById('preview-frame');
+  if (cv.style.display==='block') { cv.style.display='none'; fr.style.display='block'; }
+  else { cv.style.display='block'; fr.style.display='none'; }
+}
+function downloadSite() {
+  const blob = new Blob([generatedCode],{type:'text/html'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='mon-site.html'; a.click();
+  toast('📥 Site téléchargé !');
+}
+function saveUser() { users[currentUser.email]=currentUser; localStorage.setItem('spark_users',JSON.stringify(users)); }
+function updateUI() {
+  if (!currentUser) return;
+  const c = currentUser.credits;
+  document.getElementById('credits-display').textContent = '⚡ '+c+' crédits';
+  document.getElementById('dash-credits').textContent = c;
+  document.getElementById('progress-fill').style.width = Math.min((c/20)*100,100)+'%';
+  const list = document.getElementById('history-list');
+  if (!currentUser.projects||currentUser.projects.length===0) {
+    list.innerHTML='<div class="empty-state"><div>🚀</div>Aucun projet encore.<br>Créez votre premier site !</div>';
+  } else {
+    list.innerHTML=currentUser.projects.map(p=>`<div class="h-item"><div><div class="h-name">${p.name}</div><div class="h-date">${p.date}</div></div><div class="h-credits">-${p.credits} crédits</div></div>`).join('');
+  }
+}
+</script>
+</body>
+</html>
+```
+
+---
+
+## Structure des fichiers sur GitHub
+```
+sparkio/
+├── index.html        ← Fichier 3
+├── vercel.json       ← Fichier 1
+└── api/
+    └── generate.js   ← Fichier 2
