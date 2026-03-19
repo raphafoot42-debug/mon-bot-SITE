@@ -78,8 +78,11 @@ section { padding:5rem 2rem; }
 .gen-wrap { max-width:1200px; margin:0 auto; }
 .gen-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem; }
 .gen-header h2 { font-size:1.5rem; font-weight:800; }
+.gen-header-right { display:flex; gap:0.8rem; align-items:center; }
 .credits-pill { background:rgba(255,200,67,0.1); border:1px solid rgba(255,200,67,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; cursor:pointer; }
 .credits-pill:hover { background:rgba(255,200,67,0.2); }
+.download-nav-btn { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; padding:0.5rem 1.2rem; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit; display:none; transition:all 0.2s; }
+.download-nav-btn:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); transform:translateY(-1px); }
 .gen-layout { display:grid; grid-template-columns:1fr 1.5fr; gap:1.5rem; align-items:start; }
 .gen-box { background:var(--dark2); border:1px solid rgba(255,200,67,0.2); border-radius:20px; padding:2rem; }
 .gen-textarea { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:1rem; color:white; font-size:1rem; resize:none; height:150px; font-family:inherit; outline:none; transition:border 0.2s; }
@@ -100,9 +103,8 @@ section { padding:5rem 2rem; }
 .tab-btn { flex:1; padding:0.9rem; background:transparent; border:none; color:var(--muted); font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:inherit; }
 .tab-btn.active { color:var(--gold); border-bottom:2px solid var(--gold); background:rgba(255,200,67,0.05); }
 .tab-btn:hover { color:var(--gold); background:rgba(255,200,67,0.05); }
-.result-toolbar { background:rgba(255,200,67,0.06); padding:0.7rem 1rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,200,67,0.1); }
+.result-toolbar { background:rgba(255,200,67,0.06); padding:0.7rem 1rem; display:flex; align-items:center; border-bottom:1px solid rgba(255,200,67,0.1); }
 .result-toolbar span { color:var(--gold); font-size:0.85rem; font-weight:600; }
-.download-btn { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; padding:0.4rem 1rem; border-radius:6px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit; }
 .tab-content { display:none; flex:1; }
 .tab-content.active { display:flex; flex-direction:column; flex:1; }
 #preview-frame { width:100%; flex:1; min-height:450px; border:none; background:white; }
@@ -147,6 +149,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,200,67,0.1); pad
     <button class="btn btn-outline" id="nav-login" onclick="openModal('login')">Connexion</button>
     <button class="btn btn-gold" id="nav-signup" onclick="openModal('signup')">S'inscrire</button>
     <button class="btn btn-outline" id="nav-logout" style="display:none" onclick="logout()">Déconnexion</button>
+    <button class="download-nav-btn" id="download-nav-btn" onclick="downloadSite()">⬇ Télécharger mon site</button>
   </div>
 </nav>
 
@@ -242,7 +245,6 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,200,67,0.1); pad
             </div>
             <div class="result-toolbar">
               <span>✅ Site généré avec succès !</span>
-              <button class="download-btn" onclick="downloadSite()">⬇ Télécharger</button>
             </div>
             <div class="tab-content active" id="tab-preview">
               <iframe id="preview-frame" srcdoc="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
@@ -377,6 +379,7 @@ function logout() {
   currentUser = null;
   ['nav-login','nav-signup'].forEach(id => document.getElementById(id).style.display='block');
   ['nav-logout','nav-gen','nav-dash'].forEach(id => document.getElementById(id).style.display='none');
+  document.getElementById('download-nav-btn').style.display = 'none';
   showPage('landing-page'); toast('À bientôt !');
 }
 function showErr(el,msg) { el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',3000); }
@@ -409,6 +412,7 @@ async function generateSite() {
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
   document.getElementById('loading-box').style.display = 'block';
+  document.getElementById('download-nav-btn').style.display = 'none';
   try {
     const res = await fetch('/api/generate', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -425,6 +429,7 @@ async function generateSite() {
     document.getElementById('result-empty').style.display = 'none';
     document.getElementById('result-content').style.display = 'flex';
     document.getElementById('loading-box').style.display = 'none';
+    document.getElementById('download-nav-btn').style.display = 'block';
     switchTab('preview');
     toast('✅ Site généré avec succès !');
     if (currentUser.credits < 2.5) {
@@ -437,6 +442,7 @@ async function generateSite() {
   btn.disabled = false;
 }
 function downloadSite() {
+  if (!generatedCode) { toast('❌ Générez d\'abord un site !'); return; }
   const blob = new Blob([generatedCode],{type:'text/html'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='mon-site.html'; a.click();
