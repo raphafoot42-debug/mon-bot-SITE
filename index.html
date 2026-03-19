@@ -6,56 +6,59 @@
 <title>Spark.io - L'IA sème, toi tu récoltes</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-:root { --gold:#FFD700; --black:#0a0a0f; --dark:#111118; --dark2:#1a1a2e; --text:#e0e0e0; --muted:#888; }
+:root {
+  --gold:#FFC843; --gold2:#FFD966; --gold3:#FFE599;
+  --black:#0a0a0f; --dark:#111118; --dark2:#1a1a2e;
+  --text:#e0e0e0; --muted:#888;
+}
 body { font-family:'Segoe UI',sans-serif; background:var(--black); color:var(--text); }
-nav { position:fixed; top:0; width:100%; z-index:1000; background:rgba(10,10,15,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,215,0,0.15); display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; }
+nav { position:fixed; top:0; width:100%; z-index:1000; background:rgba(10,10,15,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,200,67,0.2); display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; }
 .logo { font-size:1.5rem; font-weight:800; color:var(--gold); cursor:pointer; }
 .logo span { color:white; }
-.nav-btns { display:flex; gap:0.8rem; flex-wrap:wrap; }
+.nav-btns { display:flex; gap:0.8rem; flex-wrap:wrap; align-items:center; }
 .btn { padding:0.5rem 1.2rem; border-radius:8px; cursor:pointer; font-size:0.9rem; transition:all 0.2s; border:none; font-family:inherit; }
 .btn-outline { background:transparent; border:1px solid var(--gold); color:var(--gold); }
 .btn-outline:hover { background:var(--gold); color:black; }
-.btn-gold { background:var(--gold); color:black; font-weight:700; }
-.btn-gold:hover { background:#ffed4a; transform:translateY(-1px); }
+.btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; font-weight:700; box-shadow:0 2px 12px rgba(255,200,67,0.3); }
+.btn-gold:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); transform:translateY(-1px); }
 .page { display:none; min-height:100vh; }
 .page.active { display:block; }
 .hero { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:8rem 2rem 4rem; background:radial-gradient(ellipse at top, #1a1a3e 0%, var(--black) 70%); }
-.badge { background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; margin-bottom:1.5rem; display:inline-block; }
+.badge { background:rgba(255,200,67,0.1); border:1px solid rgba(255,200,67,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; margin-bottom:1.5rem; display:inline-block; }
 .hero h1 { font-size:clamp(2rem,5vw,3.8rem); font-weight:800; line-height:1.2; margin-bottom:1rem; }
-.hero h1 span { color:var(--gold); }
+.hero h1 span { background:linear-gradient(135deg,var(--gold),var(--gold2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .hero p { font-size:1.1rem; color:var(--muted); max-width:580px; margin-bottom:2.5rem; line-height:1.7; }
 .hero-btns { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:3rem; }
 .btn-lg { padding:0.9rem 2rem; font-size:1rem; border-radius:10px; }
 .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; max-width:800px; width:100%; }
-.stat { background:rgba(255,215,0,0.05); border:1px solid rgba(255,215,0,0.15); border-radius:12px; padding:1.2rem; text-align:center; }
-.stat-num { font-size:1.8rem; font-weight:800; color:var(--gold); }
+.stat { background:rgba(255,200,67,0.05); border:1px solid rgba(255,200,67,0.15); border-radius:12px; padding:1.2rem; text-align:center; }
+.stat-num { font-size:1.8rem; font-weight:800; background:linear-gradient(135deg,var(--gold),var(--gold2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .stat-lbl { font-size:0.8rem; color:var(--muted); margin-top:0.3rem; }
 section { padding:5rem 2rem; }
 .s-title { text-align:center; font-size:clamp(1.5rem,3vw,2.2rem); font-weight:800; margin-bottom:0.8rem; }
 .s-title span { color:var(--gold); }
 .s-sub { text-align:center; color:var(--muted); margin-bottom:3rem; }
-.pricing-section { background:var(--dark); }
 .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1.5rem; max-width:1100px; margin:0 auto; }
 .plan { background:var(--dark2); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:2rem; position:relative; transition:transform 0.3s; }
 .plan:hover { transform:translateY(-5px); }
-.plan.popular { border:2px solid var(--gold); }
-.plan-badge { position:absolute; top:-13px; left:50%; transform:translateX(-50%); background:var(--gold); color:black; font-size:0.75rem; font-weight:700; padding:0.3rem 1rem; border-radius:20px; white-space:nowrap; }
+.plan.popular { border:2px solid var(--gold); box-shadow:0 0 30px rgba(255,200,67,0.15); }
+.plan-badge { position:absolute; top:-13px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; font-size:0.75rem; font-weight:700; padding:0.3rem 1rem; border-radius:20px; white-space:nowrap; }
 .plan-name { font-size:1.1rem; font-weight:700; margin-bottom:0.5rem; }
-.plan-price { font-size:2.2rem; font-weight:800; color:var(--gold); margin:0.8rem 0; }
-.plan-price span { font-size:1rem; color:var(--muted); font-weight:400; }
+.plan-price { font-size:2.2rem; font-weight:800; background:linear-gradient(135deg,var(--gold),var(--gold2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0.8rem 0; }
+.plan-price span { font-size:1rem; color:var(--muted); font-weight:400; -webkit-text-fill-color:var(--muted); }
 .plan ul { list-style:none; margin:1.2rem 0; }
 .plan ul li { padding:0.4rem 0; font-size:0.9rem; color:var(--muted); display:flex; align-items:center; gap:0.5rem; }
 .plan ul li::before { content:"✓"; color:var(--gold); font-weight:700; flex-shrink:0; }
 .plan-btn { width:100%; padding:0.8rem; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.95rem; transition:all 0.2s; border:none; font-family:inherit; margin-top:0.5rem; }
 .plan-btn.outline { background:transparent; border:1px solid var(--gold); color:var(--gold); }
 .plan-btn.outline:hover { background:var(--gold); color:black; }
-.plan-btn.gold { background:var(--gold); color:black; }
-.plan-btn.gold:hover { background:#ffed4a; }
+.plan-btn.gold { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; }
+.plan-btn.gold:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); }
 .guarantee { text-align:center; margin-top:2rem; color:var(--muted); font-size:0.9rem; }
 .guarantee b { color:var(--gold); }
 .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; }
 .modal-bg.open { display:flex; }
-.modal { background:var(--dark2); border:1px solid rgba(255,215,0,0.3); border-radius:20px; padding:2.5rem; width:90%; max-width:440px; position:relative; }
+.modal { background:var(--dark2); border:1px solid rgba(255,200,67,0.3); border-radius:20px; padding:2.5rem; width:90%; max-width:440px; position:relative; }
 .modal h2 { font-size:1.4rem; font-weight:800; margin-bottom:0.5rem; }
 .modal h2 span { color:var(--gold); }
 .modal p { color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem; }
@@ -63,46 +66,56 @@ section { padding:5rem 2rem; }
 .form-group label { display:block; font-size:0.85rem; color:var(--muted); margin-bottom:0.4rem; }
 .form-group input { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:0.75rem 1rem; color:white; font-size:0.95rem; font-family:inherit; outline:none; transition:border 0.2s; }
 .form-group input:focus { border-color:var(--gold); }
-.form-submit { width:100%; padding:0.9rem; background:var(--gold); color:black; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; margin-top:0.5rem; }
-.form-submit:hover { background:#ffed4a; }
+.form-submit { width:100%; padding:0.9rem; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; margin-top:0.5rem; }
+.form-submit:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); }
 .modal-close { position:absolute; top:1rem; right:1.2rem; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; }
 .modal-switch { text-align:center; margin-top:1rem; font-size:0.9rem; color:var(--muted); }
 .modal-switch a { color:var(--gold); cursor:pointer; }
 .error-msg { color:#ff4444; font-size:0.85rem; margin-top:0.5rem; display:none; }
-.gen-wrap { max-width:820px; margin:0 auto; }
+.no-credits-modal { background:var(--dark2); border:2px solid var(--gold); border-radius:20px; padding:2.5rem; width:90%; max-width:440px; text-align:center; }
+.no-credits-modal h2 { font-size:1.4rem; font-weight:800; margin-bottom:1rem; color:var(--gold); }
+.no-credits-modal p { color:var(--muted); margin-bottom:1.5rem; }
+.gen-wrap { max-width:1200px; margin:0 auto; }
 .gen-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem; }
 .gen-header h2 { font-size:1.5rem; font-weight:800; }
-.credits-pill { background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; }
-.gen-box { background:var(--dark2); border:1px solid rgba(255,215,0,0.2); border-radius:20px; padding:2rem; }
-.gen-textarea { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:1rem; color:white; font-size:1rem; resize:none; height:130px; font-family:inherit; outline:none; transition:border 0.2s; }
+.credits-pill { background:rgba(255,200,67,0.1); border:1px solid rgba(255,200,67,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; cursor:pointer; }
+.credits-pill:hover { background:rgba(255,200,67,0.2); }
+.gen-layout { display:grid; grid-template-columns:1fr 1.5fr; gap:1.5rem; align-items:start; }
+.gen-box { background:var(--dark2); border:1px solid rgba(255,200,67,0.2); border-radius:20px; padding:2rem; }
+.gen-textarea { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:1rem; color:white; font-size:1rem; resize:none; height:150px; font-family:inherit; outline:none; transition:border 0.2s; }
 .gen-textarea:focus { border-color:var(--gold); }
 .gen-textarea::placeholder { color:var(--muted); }
 .gen-info { font-size:0.85rem; color:var(--muted); margin:0.8rem 0 1.2rem; }
 .gen-info b { color:var(--gold); }
-.gen-btn { width:100%; padding:1rem; background:var(--gold); color:black; border:none; border-radius:12px; font-size:1.1rem; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; }
-.gen-btn:hover { background:#ffed4a; transform:translateY(-2px); }
+.gen-btn { width:100%; padding:1rem; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; border-radius:12px; font-size:1.1rem; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; box-shadow:0 2px 15px rgba(255,200,67,0.3); }
+.gen-btn:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); transform:translateY(-2px); }
 .gen-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-.loading-box { text-align:center; padding:2.5rem; display:none; }
+.loading-box { text-align:center; padding:2rem; display:none; }
 .spinner { font-size:2.5rem; animation:spin 1s linear infinite; display:inline-block; }
 @keyframes spin { to { transform:rotate(360deg); } }
-.preview-box { margin-top:1.5rem; display:none; border:1px solid rgba(255,215,0,0.2); border-radius:12px; overflow:hidden; }
-.preview-top { background:rgba(255,215,0,0.08); padding:0.8rem 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
-.preview-top span { color:var(--gold); font-weight:600; font-size:0.9rem; }
-.preview-actions { display:flex; gap:0.5rem; }
-.pbtn { padding:0.35rem 0.8rem; font-size:0.8rem; border-radius:6px; cursor:pointer; border:none; font-family:inherit; font-weight:600; }
-.pbtn-code { background:transparent; border:1px solid var(--gold); color:var(--gold); }
-.pbtn-deploy { background:var(--gold); color:black; }
-#preview-frame { width:100%; height:350px; border:none; background:white; }
-.code-view { background:#0d1117; padding:1rem; font-family:monospace; font-size:0.75rem; color:#58a6ff; max-height:300px; overflow-y:auto; white-space:pre-wrap; display:none; }
+.result-box { background:var(--dark2); border:1px solid rgba(255,200,67,0.2); border-radius:20px; overflow:hidden; min-height:520px; display:flex; flex-direction:column; }
+.result-empty { display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; color:var(--muted); padding:3rem; text-align:center; }
+.result-empty div { font-size:3.5rem; margin-bottom:1rem; }
+.result-tabs { display:flex; border-bottom:1px solid rgba(255,200,67,0.15); }
+.tab-btn { flex:1; padding:0.9rem; background:transparent; border:none; color:var(--muted); font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+.tab-btn.active { color:var(--gold); border-bottom:2px solid var(--gold); background:rgba(255,200,67,0.05); }
+.tab-btn:hover { color:var(--gold); background:rgba(255,200,67,0.05); }
+.result-toolbar { background:rgba(255,200,67,0.06); padding:0.7rem 1rem; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,200,67,0.1); }
+.result-toolbar span { color:var(--gold); font-size:0.85rem; font-weight:600; }
+.download-btn { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; padding:0.4rem 1rem; border-radius:6px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.tab-content { display:none; flex:1; }
+.tab-content.active { display:flex; flex-direction:column; flex:1; }
+#preview-frame { width:100%; flex:1; min-height:450px; border:none; background:white; }
+#code-view { background:#0d1117; padding:1.2rem; font-family:'Courier New',monospace; font-size:0.78rem; color:#e6edf3; flex:1; overflow-y:auto; white-space:pre-wrap; min-height:450px; line-height:1.6; }
 .dash-grid { display:grid; grid-template-columns:280px 1fr; gap:1.5rem; max-width:1000px; margin:0 auto; }
 .dash-card { background:var(--dark2); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:1.5rem; }
 .dash-card h3 { font-size:0.9rem; color:var(--muted); margin-bottom:1rem; text-transform:uppercase; letter-spacing:1px; }
-.big-num { font-size:3.5rem; font-weight:800; color:var(--gold); line-height:1; }
+.big-num { font-size:3.5rem; font-weight:800; background:linear-gradient(135deg,var(--gold),var(--gold2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
 .big-lbl { font-size:0.85rem; color:var(--muted); margin-top:0.3rem; }
-.progress { background:rgba(255,215,0,0.1); border-radius:4px; height:6px; margin-top:1rem; }
-.progress-fill { height:100%; background:var(--gold); border-radius:4px; transition:width 0.5s; }
-.dash-new { width:100%; margin-top:1.5rem; padding:0.8rem; background:var(--gold); color:black; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; }
-.dash-new:hover { background:#ffed4a; }
+.progress { background:rgba(255,200,67,0.1); border-radius:4px; height:6px; margin-top:1rem; }
+.progress-fill { height:100%; background:linear-gradient(135deg,var(--gold),var(--gold2)); border-radius:4px; transition:width 0.5s; }
+.dash-new { width:100%; margin-top:1.5rem; padding:0.8rem; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit; }
+.dash-new:hover { background:linear-gradient(135deg,var(--gold2),var(--gold3)); }
 .history { display:flex; flex-direction:column; gap:0.8rem; }
 .h-item { background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:1rem; display:flex; justify-content:space-between; align-items:center; }
 .h-name { font-weight:600; font-size:0.95rem; margin-bottom:0.2rem; }
@@ -110,15 +123,16 @@ section { padding:5rem 2rem; }
 .h-credits { color:var(--gold); font-size:0.85rem; font-weight:700; }
 .empty-state { text-align:center; padding:3rem; color:var(--muted); }
 .empty-state div { font-size:2.5rem; margin-bottom:0.8rem; }
-footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padding:3rem 2rem; text-align:center; }
+footer { background:var(--dark2); border-top:1px solid rgba(255,200,67,0.1); padding:3rem 2rem; text-align:center; }
 .footer-logo { font-size:1.8rem; font-weight:800; color:var(--gold); margin-bottom:0.8rem; }
 .footer-links { display:flex; gap:2rem; justify-content:center; flex-wrap:wrap; margin:1rem 0 2rem; }
 .footer-links a { color:var(--muted); text-decoration:none; font-size:0.9rem; }
 .footer-links a:hover { color:var(--gold); }
 .footer-copy { font-size:0.8rem; color:#444; }
-.toast { position:fixed; bottom:2rem; right:2rem; background:var(--dark2); border:1px solid rgba(255,215,0,0.3); border-radius:12px; padding:1rem 1.5rem; z-index:3000; display:none; max-width:300px; }
+.toast { position:fixed; bottom:2rem; right:2rem; background:var(--dark2); border:1px solid rgba(255,200,67,0.3); border-radius:12px; padding:1rem 1.5rem; z-index:3000; display:none; max-width:300px; }
 .toast.show { display:block; animation:slideIn 0.3s ease; }
 @keyframes slideIn { from { transform:translateX(100px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@media(max-width:900px) { .gen-layout { grid-template-columns:1fr; } }
 @media(max-width:768px) { .stats { grid-template-columns:repeat(2,1fr); } .dash-grid { grid-template-columns:1fr; } nav { padding:0.8rem 1rem; } }
 </style>
 </head>
@@ -127,6 +141,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
 <nav>
   <div class="logo" onclick="goHome()">Spark<span>.io</span></div>
   <div class="nav-btns">
+    <button class="btn btn-outline" onclick="showPage('pricing-page')">💎 Forfaits</button>
     <button class="btn btn-outline" onclick="showPage('generator-page')" id="nav-gen" style="display:none">Générateur</button>
     <button class="btn btn-outline" onclick="showPage('dashboard-page')" id="nav-dash" style="display:none">Dashboard</button>
     <button class="btn btn-outline" id="nav-login" onclick="openModal('login')">Connexion</button>
@@ -135,6 +150,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
   </div>
 </nav>
 
+<!-- LANDING -->
 <div id="landing-page" class="page active">
   <section class="hero">
     <div class="badge">⚡ Propulsé par l'IA de pointe</div>
@@ -142,7 +158,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
     <p>Ne perdez plus des mois à coder. Notre IA génère des applications et des sites web complets, prêts à l'emploi, en quelques secondes.</p>
     <div class="hero-btns">
       <button class="btn btn-gold btn-lg" onclick="handleStart()">⚡ Créer mon projet</button>
-      <button class="btn btn-outline btn-lg" onclick="scrollToPricing()">Voir les tarifs</button>
+      <button class="btn btn-outline btn-lg" onclick="showPage('pricing-page')">Voir les forfaits</button>
     </div>
     <div class="stats">
       <div class="stat"><div class="stat-num">125k+</div><div class="stat-lbl">Sites créés</div></div>
@@ -151,40 +167,6 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
       <div class="stat"><div class="stat-num">45k+</div><div class="stat-lbl">Projets live</div></div>
     </div>
   </section>
-
-  <section class="pricing-section" id="pricing-anchor">
-    <h2 class="s-title">Des tarifs <span>transparents</span></h2>
-    <p class="s-sub">Pas de frais cachés, annulation en un clic.</p>
-    <div class="pricing-grid">
-      <div class="plan">
-        <div class="plan-name">Gratuit</div>
-        <div class="plan-price">0€<span>/mois</span></div>
-        <ul><li>20 crédits offerts</li><li>Templates de base</li><li>Création de page simple</li><li>Support communautaire</li></ul>
-        <button class="plan-btn outline" onclick="handlePlan('Gratuit')">Commencer gratuitement</button>
-      </div>
-      <div class="plan">
-        <div class="plan-name">Starter</div>
-        <div class="plan-price">9,99€<span>/mois</span></div>
-        <ul><li>30 crédits/mois</li><li>Plus de templates</li><li>Exportation du code</li><li>Support basique</li><li>Projets illimités</li></ul>
-        <button class="plan-btn outline" onclick="handlePlan('Starter')">Choisir Starter</button>
-      </div>
-      <div class="plan popular">
-        <div class="plan-badge">⭐ Le plus populaire</div>
-        <div class="plan-name">Entrepreneur</div>
-        <div class="plan-price">19,99€<span>/mois</span></div>
-        <ul><li>80 crédits/mois</li><li>Sites avancés</li><li>Personnalisation poussée</li><li>Composants premium</li><li>Support email 24h</li></ul>
-        <button class="plan-btn gold" onclick="handlePlan('Entrepreneur')">Démarrer l'essai gratuit</button>
-      </div>
-      <div class="plan">
-        <div class="plan-name">🔥 Business Elite</div>
-        <div class="plan-price">40€<span>/mois</span></div>
-        <ul><li>Crédits illimités</li><li>Tous les templates</li><li>IA personnalisée</li><li>Communauté VIP</li><li>Support 24/7</li></ul>
-        <button class="plan-btn gold" onclick="handlePlan('Business Elite')">Devenir Elite</button>
-      </div>
-    </div>
-    <p class="guarantee"><b>✓ Garantie satisfait ou remboursé 30 jours</b></p>
-  </section>
-
   <footer>
     <div class="footer-logo">Spark.io</div>
     <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">L'IA sème, toi tu récoltes.</p>
@@ -195,37 +177,91 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
   </footer>
 </div>
 
+<!-- FORFAITS -->
+<div id="pricing-page" class="page">
+  <section style="padding-top:7rem;">
+    <h2 class="s-title">Des tarifs <span>transparents</span></h2>
+    <p class="s-sub">Pas de frais cachés, annulation en un clic.</p>
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Gratuit</div>
+        <div class="plan-price">0€<span>/mois</span></div>
+        <ul><li>20 crédits offerts</li><li>Templates de base</li><li>Création de page simple</li><li>Support communautaire</li></ul>
+        <button class="plan-btn outline" onclick="handlePlan('Gratuit',20)">Commencer gratuitement</button>
+      </div>
+      <div class="plan">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">9,99€<span>/mois</span></div>
+        <ul><li>75 crédits/mois</li><li>Plus de templates</li><li>Exportation du code</li><li>Support basique</li><li>Projets illimités</li></ul>
+        <button class="plan-btn outline" onclick="handlePlan('Starter',75)">Choisir Starter</button>
+      </div>
+      <div class="plan popular">
+        <div class="plan-badge">⭐ Le plus populaire</div>
+        <div class="plan-name">Entrepreneur</div>
+        <div class="plan-price">19,99€<span>/mois</span></div>
+        <ul><li>140 crédits/mois</li><li>Sites avancés</li><li>Personnalisation poussée</li><li>Composants premium</li><li>Support email 24h</li></ul>
+        <button class="plan-btn gold" onclick="handlePlan('Entrepreneur',140)">Démarrer l'essai gratuit</button>
+      </div>
+      <div class="plan">
+        <div class="plan-name">🔥 Business Elite</div>
+        <div class="plan-price">40€<span>/mois</span></div>
+        <ul><li>Crédits illimités</li><li>Tous les templates</li><li>IA personnalisée</li><li>Communauté VIP</li><li>Support 24/7</li></ul>
+        <button class="plan-btn gold" onclick="handlePlan('Business Elite',99999)">Devenir Elite</button>
+      </div>
+    </div>
+    <p class="guarantee"><b>✓ Garantie satisfait ou remboursé 30 jours</b></p>
+  </section>
+</div>
+
+<!-- GÉNÉRATEUR -->
 <div id="generator-page" class="page">
   <section style="padding-top:7rem;">
     <div class="gen-wrap">
       <div class="gen-header">
         <h2>Générateur <span style="color:var(--gold)">IA</span></h2>
-        <span class="credits-pill" id="credits-display">⚡ 20 crédits</span>
+        <span class="credits-pill" id="credits-display" onclick="showPage('pricing-page')">⚡ 20 crédits</span>
       </div>
-      <div class="gen-box">
-        <textarea class="gen-textarea" id="gen-input" placeholder="Ex: Fais-moi une page de vente pour mon restaurant avec menu, galerie et formulaire de réservation..."></textarea>
-        <p class="gen-info">Chaque génération coûte <b>2,5 crédits</b></p>
-        <button class="gen-btn" id="gen-btn" onclick="generateSite()">⚡ Générer mon projet</button>
-        <div class="loading-box" id="loading-box">
-          <div class="spinner">⚡</div>
-          <p style="margin-top:1rem;color:var(--muted);">L'IA génère votre site...</p>
+      <div class="gen-layout">
+        <div class="gen-box">
+          <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem;">📝 Décrivez votre site</p>
+          <textarea class="gen-textarea" id="gen-input" placeholder="Ex: Fais-moi une page de vente pour mon restaurant avec menu, galerie et formulaire de réservation..."></textarea>
+          <p class="gen-info">Chaque génération coûte <b>2,5 crédits</b></p>
+          <button class="gen-btn" id="gen-btn" onclick="generateSite()">⚡ Générer mon projet</button>
+          <div class="loading-box" id="loading-box">
+            <div class="spinner">⚡</div>
+            <p style="margin-top:1rem;color:var(--muted);">L'IA génère votre site...</p>
+          </div>
         </div>
-        <div class="preview-box" id="preview-box">
-          <div class="preview-top">
-            <span>✅ Site généré avec succès !</span>
-            <div class="preview-actions">
-              <button class="pbtn pbtn-code" onclick="toggleCode()">Voir le code</button>
-              <button class="pbtn pbtn-deploy" onclick="downloadSite()">Télécharger</button>
+
+        <div class="result-box" id="result-box">
+          <div class="result-empty" id="result-empty">
+            <div>🌐</div>
+            <p style="font-size:1rem;font-weight:600;">Votre site apparaîtra ici</p>
+            <p style="font-size:0.85rem;margin-top:0.5rem;">Décrivez votre site et cliquez sur Générer</p>
+          </div>
+          <div id="result-content" style="display:none;flex-direction:column;flex:1;">
+            <div class="result-tabs">
+              <button class="tab-btn active" onclick="switchTab('preview')">👁 Aperçu</button>
+              <button class="tab-btn" onclick="switchTab('code')">💻 Code</button>
+            </div>
+            <div class="result-toolbar">
+              <span>✅ Site généré avec succès !</span>
+              <button class="download-btn" onclick="downloadSite()">⬇ Télécharger</button>
+            </div>
+            <div class="tab-content active" id="tab-preview">
+              <iframe id="preview-frame" srcdoc=""></iframe>
+            </div>
+            <div class="tab-content" id="tab-code">
+              <div id="code-view"></div>
             </div>
           </div>
-          <iframe id="preview-frame" srcdoc=""></iframe>
-          <div class="code-view" id="code-view"></div>
         </div>
       </div>
     </div>
   </section>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard-page" class="page">
   <section style="padding-top:7rem;">
     <h2 class="s-title">Mon <span>Dashboard</span></h2>
@@ -237,6 +273,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
         <div class="big-lbl">crédits disponibles</div>
         <div class="progress"><div class="progress-fill" id="progress-fill" style="width:100%"></div></div>
         <button class="dash-new" onclick="showPage('generator-page')">+ Nouveau Projet</button>
+        <button class="plan-btn outline" style="width:100%;margin-top:0.8rem;padding:0.6rem;" onclick="showPage('pricing-page')">💎 Voir les forfaits</button>
       </div>
       <div class="dash-card">
         <h3>Historique des projets</h3>
@@ -248,6 +285,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
   </section>
 </div>
 
+<!-- MODAL AUTH -->
 <div class="modal-bg" id="modal-bg" onclick="closeModalBg(event)">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">×</button>
@@ -273,6 +311,17 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,215,0,0.1); padd
   </div>
 </div>
 
+<!-- MODAL CRÉDITS ÉPUISÉS -->
+<div class="modal-bg" id="no-credits-modal">
+  <div class="no-credits-modal">
+    <div style="font-size:3rem;margin-bottom:1rem;">⚡</div>
+    <h2>Crédits épuisés !</h2>
+    <p>Vous n'avez plus de crédits. Passez à un forfait supérieur pour continuer.</p>
+    <button class="form-submit" onclick="goToPricing()" style="margin-bottom:0.8rem;">💎 Voir les forfaits</button>
+    <button onclick="closeNoCredits()" style="width:100%;padding:0.7rem;background:transparent;border:1px solid var(--muted);color:var(--muted);border-radius:10px;cursor:pointer;font-family:inherit;">Plus tard</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -287,10 +336,6 @@ function showPage(id) {
   document.body.scrollTop = 0;
 }
 function goHome() { showPage('landing-page'); }
-function scrollToPricing() {
-  showPage('landing-page');
-  setTimeout(() => document.getElementById('pricing-anchor').scrollIntoView({behavior:'smooth'}), 100);
-}
 function toast(msg, ms=3000) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -344,16 +389,37 @@ function logout() {
 }
 function showErr(el,msg) { el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',3000); }
 function handleStart() { if(!currentUser){openModal('signup');return;} showPage('generator-page'); }
-function handlePlan(plan) { if(!currentUser){openModal('signup');return;} toast('✅ Plan '+plan+' sélectionné !'); showPage('generator-page'); }
+function handlePlan(plan, credits) {
+  if (!currentUser) { openModal('signup'); return; }
+  currentUser.credits = credits;
+  currentUser.plan = plan;
+  saveUser(); updateUI(); closeNoCredits();
+  toast('✅ Forfait '+plan+' activé ! '+credits+' crédits ajoutés.');
+  showPage('generator-page');
+}
+function goToPricing() { closeNoCredits(); showPage('pricing-page'); }
+function closeNoCredits() { document.getElementById('no-credits-modal').classList.remove('open'); }
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  if (tab === 'preview') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('tab-preview').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('tab-code').classList.add('active');
+  }
+}
+
 async function generateSite() {
   if (!currentUser) { openModal('login'); return; }
   const input = document.getElementById('gen-input').value.trim();
   if (!input) { toast('❌ Décrivez votre site !'); return; }
-  if (currentUser.credits < 2.5) { toast('❌ Crédits insuffisants !'); return; }
+  if (currentUser.credits < 2.5) { document.getElementById('no-credits-modal').classList.add('open'); return; }
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
   document.getElementById('loading-box').style.display = 'block';
-  document.getElementById('preview-box').style.display = 'none';
   try {
     const res = await fetch('/api/generate', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -367,20 +433,19 @@ async function generateSite() {
     saveUser(); updateUI();
     document.getElementById('preview-frame').srcdoc = generatedCode;
     document.getElementById('code-view').textContent = generatedCode;
+    document.getElementById('result-empty').style.display = 'none';
+    document.getElementById('result-content').style.display = 'flex';
     document.getElementById('loading-box').style.display = 'none';
-    document.getElementById('preview-box').style.display = 'block';
+    switchTab('preview');
     toast('✅ Site généré avec succès !');
+    if (currentUser.credits < 2.5) {
+      setTimeout(() => { document.getElementById('no-credits-modal').classList.add('open'); }, 2000);
+    }
   } catch(e) {
     document.getElementById('loading-box').style.display = 'none';
     toast('❌ Erreur : '+e.message, 5000);
   }
   btn.disabled = false;
-}
-function toggleCode() {
-  const cv = document.getElementById('code-view');
-  const fr = document.getElementById('preview-frame');
-  if (cv.style.display==='block') { cv.style.display='none'; fr.style.display='block'; }
-  else { cv.style.display='block'; fr.style.display='none'; }
 }
 function downloadSite() {
   const blob = new Blob([generatedCode],{type:'text/html'});
@@ -405,14 +470,3 @@ function updateUI() {
 </script>
 </body>
 </html>
-```
-
----
-
-## Structure des fichiers sur GitHub
-```
-sparkio/
-├── index.html        ← Fichier 3
-├── vercel.json       ← Fichier 1
-└── api/
-    └── generate.js   ← Fichier 2
