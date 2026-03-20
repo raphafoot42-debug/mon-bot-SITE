@@ -78,7 +78,6 @@ section { padding:5rem 2rem; }
 .gen-wrap { max-width:1200px; margin:0 auto; }
 .gen-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem; }
 .gen-header h2 { font-size:1.5rem; font-weight:800; }
-.gen-header-right { display:flex; gap:0.8rem; align-items:center; }
 .credits-pill { background:rgba(255,200,67,0.1); border:1px solid rgba(255,200,67,0.3); color:var(--gold); padding:0.4rem 1rem; border-radius:20px; font-size:0.85rem; font-weight:700; cursor:pointer; }
 .credits-pill:hover { background:rgba(255,200,67,0.2); }
 .download-nav-btn { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:black; border:none; padding:0.5rem 1.2rem; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:inherit; display:none; transition:all 0.2s; }
@@ -247,7 +246,7 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,200,67,0.1); pad
               <span>✅ Site généré avec succès !</span>
             </div>
             <div class="tab-content active" id="tab-preview">
-              <iframe id="preview-frame" srcdoc="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+              <iframe id="preview-frame" src="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
             </div>
             <div class="tab-content" id="tab-code">
               <div id="code-view"></div>
@@ -323,6 +322,8 @@ footer { background:var(--dark2); border-top:1px solid rgba(255,200,67,0.1); pad
 let currentUser = null;
 let users = JSON.parse(localStorage.getItem('spark_users') || '{}');
 let generatedCode = '';
+let currentBlobUrl = null;
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -424,7 +425,12 @@ async function generateSite() {
     currentUser.credits = Math.round((currentUser.credits-2.5)*10)/10;
     currentUser.projects.unshift({name:input.substring(0,40)+'...', date:new Date().toLocaleDateString('fr-FR'), credits:2.5});
     saveUser(); updateUI();
-    document.getElementById('preview-frame').srcdoc = generatedCode;
+
+    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+    const blob = new Blob([generatedCode], {type:'text/html'});
+    currentBlobUrl = URL.createObjectURL(blob);
+    document.getElementById('preview-frame').src = currentBlobUrl;
+
     document.getElementById('code-view').textContent = generatedCode;
     document.getElementById('result-empty').style.display = 'none';
     document.getElementById('result-content').style.display = 'flex';
