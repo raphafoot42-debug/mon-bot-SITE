@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NexaAI — IA sème, toi tu récoltes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#020810;--bg2:#050f1e;--bg3:#081628;--cyan:#00e5ff;--blue:#0047cc;--blue2:#0a2560;--text:#e2eeff;--text2:#7a9cc4;--border:rgba(0,229,255,0.10);--glow:0 0 50px rgba(0,229,255,0.12);--glow2:0 0 80px rgba(0,229,255,0.22);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden;cursor:none;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.45;}
+.cursor{position:fixed;width:10px;height:10px;background:var(--cyan);border-radius:50%;pointer-events:none;z-index:9999;transition:transform .15s;mix-blend-mode:screen;}
+.cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,229,255,.4);border-radius:50%;pointer-events:none;z-index:9998;transition:all .12s;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 6%;background:rgba(2,8,16,.75);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);transition:all .3s;}
+nav.scrolled{padding:.8rem 6%;background:rgba(2,8,16,.97);}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;letter-spacing:-.03em;background:linear-gradient(120deg,#fff 20%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;}
+.nav-center{display:flex;gap:2.5rem;}
+.nav-center a{color:var(--text2);text-decoration:none;font-size:.88rem;font-weight:500;letter-spacing:.03em;transition:color .2s;position:relative;}
+.nav-center a::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:1px;background:var(--cyan);transform:scaleX(0);transition:transform .25s;}
+.nav-center a:hover{color:var(--cyan);}
+.nav-center a:hover::after{transform:scaleX(1);}
+.nav-right{display:flex;align-items:center;gap:1rem;}
+.lang-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;}
+.lang-btn{padding:.3rem .9rem;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.06em;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.lang-btn.active{background:var(--cyan);color:#000;border-radius:20px;}
+.nav-cta{padding:.6rem 1.4rem;background:transparent;border:1px solid rgba(0,229,255,.4);color:var(--cyan);border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .25s;font-family:'DM Sans',sans-serif;}
+.nav-cta:hover{background:var(--cyan);color:#000;box-shadow:0 0 20px rgba(0,229,255,.3);}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:8rem 6% 5rem;position:relative;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.orb1{width:600px;height:600px;top:-150px;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,71,204,.35) 0%,transparent 70%);animation:of1 8s ease-in-out infinite;}
+.orb2{width:300px;height:300px;bottom:10%;left:5%;background:radial-gradient(circle,rgba(0,229,255,.08) 0%,transparent 70%);animation:of2 6s ease-in-out infinite reverse;}
+.orb3{width:250px;height:250px;top:30%;right:5%;background:radial-gradient(circle,rgba(0,229,255,.06) 0%,transparent 70%);animation:of2 7s ease-in-out infinite 2s;}
+@keyframes of1{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-30px);}}
+@keyframes of2{0%,100%{transform:translateY(0);}50%{transform:translateY(-20px);}}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:70px 70px;mask-image:radial-gradient(ellipse 90% 70% at 50% 40%,black 0%,transparent 100%);}
+.hero-content{position:relative;z-index:1;max-width:860px;}
+.pill{display:inline-flex;align-items:center;gap:.6rem;padding:.45rem 1.1rem;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:30px;font-size:.78rem;font-weight:600;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2.2rem;animation:fu .9s ease both;}
+.pill-dot{width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 10px var(--cyan);animation:bk 2s infinite;}
+@keyframes bk{0%,100%{opacity:1;}50%{opacity:.2;}}
+h1{font-family:'Syne',sans-serif;font-size:clamp(3rem,7.5vw,6rem);font-weight:800;line-height:1.02;letter-spacing:-.04em;margin-bottom:.4rem;animation:fu .9s .1s ease both;}
+.slogan{font-family:'Syne',sans-serif;font-size:clamp(1.4rem,3vw,2.2rem);font-weight:600;letter-spacing:-.02em;color:var(--text2);margin-bottom:1.8rem;animation:fu .9s .15s ease both;}
+.slogan .hl{background:linear-gradient(120deg,var(--cyan),#60c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-desc{font-size:1.1rem;color:var(--text2);max-width:580px;margin:0 auto 3rem;font-weight:300;line-height:1.8;animation:fu .9s .2s ease both;}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fu .9s .3s ease both;}
+.btn-glow{padding:1rem 2.2rem;background:var(--cyan);color:#000;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;text-decoration:none;transition:all .28s;font-family:'DM Sans',sans-serif;box-shadow:0 0 30px rgba(0,229,255,.35),inset 0 1px 0 rgba(255,255,255,.3);letter-spacing:.01em;}
+.btn-glow:hover{background:#fff;transform:translateY(-3px);box-shadow:0 0 60px rgba(0,229,255,.5);}
+.btn-ghost{padding:1rem 2.2rem;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12);border-radius:10px;font-weight:400;font-size:1rem;cursor:pointer;text-decoration:none;transition:all .28s;font-family:'DM Sans',sans-serif;}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan);transform:translateY(-2px);}
+.hero-nums{display:flex;justify-content:center;gap:4rem;margin-top:5rem;padding-top:3.5rem;border-top:1px solid var(--border);animation:fu .9s .4s ease both;flex-wrap:wrap;}
+.num-item{text-align:center;}
+.num-val{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.num-label{font-size:.8rem;color:var(--text2);margin-top:.4rem;letter-spacing:.04em;}
+@keyframes fu{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* SECTIONS */
+section{padding:7rem 6%;position:relative;}
+.slabel{font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin-bottom:1rem;display:block;}
+h2{font-family:'Syne',sans-serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-bottom:1.2rem;}
+.sdesc{color:var(--text2);font-size:1.05rem;max-width:500px;font-weight:300;line-height:1.8;}
+.tc{text-align:center;}.tc .sdesc{margin:0 auto;}
+.sh{margin-bottom:4rem;}
+
+/* ABOUT */
+#about{background:var(--bg2);}
+.about-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center;max-width:1100px;margin:0 auto;}
+.acards{position:relative;height:460px;}
+.acard{position:absolute;background:var(--bg3);border:1px solid var(--border);border-radius:18px;padding:1.8rem;transition:all .4s;}
+.acard:hover{border-color:rgba(0,229,255,.3);box-shadow:var(--glow);transform:translateY(-4px);}
+.acard:nth-child(1){top:0;left:0;right:15%;}
+.acard:nth-child(2){bottom:0;right:0;left:15%;}
+.acard:nth-child(3){top:50%;left:50%;transform:translate(-50%,-50%);width:150px;text-align:center;z-index:2;background:linear-gradient(135deg,var(--bg3),var(--blue2));border-color:rgba(0,229,255,.25);}
+.acard:nth-child(3):hover{transform:translate(-50%,-54%);}
+.acard-icon{font-size:1.8rem;margin-bottom:.6rem;}
+.acard h4{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;margin-bottom:.4rem;}
+.acard p{font-size:.83rem;color:var(--text2);line-height:1.6;}
+.flist{list-style:none;margin-top:2.5rem;}
+.flist li{display:flex;align-items:flex-start;gap:1rem;padding:1rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.95rem;}
+.flist li:last-child{border:none;}
+.fck{width:22px;height:22px;flex-shrink:0;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--cyan);margin-top:2px;}
+
+/* FORFAITS */
+#forfaits{background:var(--bg);}
+.plans-wrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:860px;margin:0 auto;}
+.plan{background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:3rem 2.5rem;position:relative;overflow:hidden;transition:all .35s;}
+.plan::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .35s;}
+.plan:hover{transform:translateY(-8px);border-color:rgba(0,229,255,.25);box-shadow:var(--glow2);}
+.plan:hover::before{opacity:1;}
+.plan.pro{background:linear-gradient(145deg,var(--bg2),var(--blue2));border-color:rgba(0,229,255,.3);box-shadow:var(--glow);}
+.plan.pro::before{opacity:1;}
+.plan-shine{position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(0,229,255,.07) 0%,transparent 70%);pointer-events:none;}
+.plan-badge{position:absolute;top:1.5rem;right:1.5rem;background:var(--cyan);color:#000;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .8rem;border-radius:20px;}
+.plan-name{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem;}
+.plan-price{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;line-height:1;margin-bottom:.2rem;letter-spacing:-.04em;}
+.plan-price .cur{font-size:1.5rem;font-weight:600;vertical-align:super;margin-right:2px;}
+.plan-price .per{font-size:1rem;font-weight:400;color:var(--text2);}
+.plan-tagline{font-size:.88rem;color:var(--text2);margin-bottom:2.5rem;font-weight:300;}
+.plan-features{list-style:none;margin-bottom:2.8rem;}
+.plan-features li{display:flex;align-items:center;gap:.8rem;padding:.65rem 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.04);}
+.plan-features li:last-child{border:none;}
+.pfdot{width:6px;height:6px;background:var(--cyan);border-radius:50%;flex-shrink:0;box-shadow:0 0 8px var(--cyan);}
+.plan-cta{display:block;width:100%;padding:1rem;border-radius:12px;font-weight:700;font-size:.95rem;cursor:pointer;text-align:center;text-decoration:none;transition:all .28s;font-family:'DM Sans',sans-serif;letter-spacing:.02em;}
+.cta-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.cta-outline:hover{border-color:var(--cyan);color:var(--cyan);}
+.cta-fill{background:var(--cyan);border:none;color:#000;box-shadow:0 0 25px rgba(0,229,255,.3);}
+.cta-fill:hover{background:#fff;box-shadow:0 0 40px rgba(0,229,255,.5);transform:translateY(-1px);}
+
+/* TESTIMONIALS */
+#temoignages{background:var(--bg2);}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;}
+.tcard{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2.2rem;transition:all .35s;position:relative;overflow:hidden;}
+.tcard::after{content:'"';position:absolute;bottom:-20px;right:1.5rem;font-family:'Syne',sans-serif;font-size:8rem;font-weight:800;color:rgba(0,229,255,.04);line-height:1;pointer-events:none;}
+.tcard:hover{border-color:rgba(0,229,255,.2);transform:translateY(-4px);box-shadow:var(--glow);}
+.tcard-stars{color:var(--cyan);font-size:.8rem;letter-spacing:.15em;margin-bottom:1.2rem;}
+.tcard-text{font-size:.92rem;color:var(--text2);line-height:1.8;margin-bottom:1.8rem;font-style:italic;}
+.tcard-author{display:flex;align-items:center;gap:.9rem;}
+.tcard-av{width:40px;height:40px;flex-shrink:0;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:#000;}
+.tcard-name{font-weight:600;font-size:.9rem;line-height:1.3;}
+.tcard-role{font-size:.78rem;color:var(--text2);}
+
+/* CONTACT */
+#contact{background:var(--bg);}
+.cwrap{display:grid;grid-template-columns:1fr 1.5fr;gap:6rem;align-items:start;max-width:1050px;margin:0 auto;}
+.cleft h3{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:700;margin-bottom:1rem;}
+.cleft p{color:var(--text2);font-size:.95rem;margin-bottom:2.5rem;font-weight:300;}
+.cinfo{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--border);font-size:.9rem;}
+.cinfo:last-of-type{border:none;}
+.cinfo-icon{width:38px;height:38px;flex-shrink:0;background:rgba(0,229,255,.07);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.fbox{background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:3rem;box-shadow:var(--glow);position:relative;overflow:hidden;}
+.fbox::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.f2col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.fgrp{margin-bottom:1.2rem;}
+.fgrp label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:.5rem;letter-spacing:.06em;text-transform:uppercase;}
+.fgrp input,.fgrp select,.fgrp textarea{width:100%;padding:.9rem 1.1rem;background:var(--bg3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:.9rem;font-family:'DM Sans',sans-serif;outline:none;transition:all .25s;-webkit-appearance:none;}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{border-color:rgba(0,229,255,.5);box-shadow:0 0 0 3px rgba(0,229,255,.07);}
+.fgrp textarea{resize:vertical;min-height:110px;}
+.fgrp select option{background:var(--bg3);}
+.fgrp input::placeholder,.fgrp textarea::placeholder{color:rgba(122,156,196,.45);}
+.fsub{width:100%;padding:1.1rem;background:var(--cyan);color:#000;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;transition:all .28s;font-family:'DM Sans',sans-serif;box-shadow:0 0 25px rgba(0,229,255,.3);margin-top:.5rem;letter-spacing:.02em;}
+.fsub:hover{background:#fff;box-shadow:0 0 50px rgba(0,229,255,.5);transform:translateY(-2px);}
+.fsub:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.fsuccess{display:none;text-align:center;padding:3rem 1rem;}
+.fsuccess-icon{font-size:3.5rem;margin-bottom:1rem;}
+.fsuccess h4{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:.6rem;}
+.fsuccess p{color:var(--text2);font-size:.92rem;}
+
+/* FOOTER */
+footer{background:var(--bg2);border-top:1px solid var(--border);padding:2.5rem 6%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;}
+.flogo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.03em;background:linear-gradient(120deg,#fff 20%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.fcopy{font-size:.82rem;color:var(--text2);}
+.fsocials{display:flex;gap:1rem;}
+.sbtn{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem;transition:all .25s;color:var(--text2);}
+.sbtn:hover{border-color:var(--cyan);color:var(--cyan);transform:translateY(-2px);box-shadow:0 0 15px rgba(0,229,255,.2);}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.16,1,.3,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* RESPONSIVE */
+@media(max-width:960px){
+  .about-wrap,.cwrap{grid-template-columns:1fr;gap:3rem;}
+  .plans-wrap,.tgrid{grid-template-columns:1fr;max-width:480px;margin:0 auto;}
+  .acards{height:340px;}
+  .nav-center{display:none;}
+  .f2col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cur"></div>
+<div class="cursor-ring" id="curRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#hero" class="logo">NexaAI</a>
+  <div class="nav-center">
+    <a href="#about" data-fr="À propos" data-en="About">À propos</a>
+    <a href="#forfaits" data-fr="Forfaits" data-en="Plans">Forfaits</a>
+    <a href="#temoignages" data-fr="Témoignages" data-en="Reviews">Témoignages</a>
+    <a href="#contact" data-fr="Contact" data-en="Contact">Contact</a>
+  </div>
+  <div class="nav-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('fr')">FR</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
+    <a href="#contact" class="nav-cta" data-fr="Commencer" data-en="Get Started">Commencer</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="pill">
+      <span class="pill-dot"></span>
+      <span data-fr="Formations IA & Automatisation" data-en="AI Training & Automation">Formations IA & Automatisation</span>
+    </div>
+    <h1>NexaAI</h1>
+    <p class="slogan">
+      <span class="hl" data-fr="IA sème," data-en="AI sows,">IA sème,</span>
+      <span data-fr=" toi tu récoltes." data-en=" you harvest."> toi tu récoltes.</span>
+    </p>
+    <p class="hero-desc" data-fr="Formations sur mesure et automatisations intelligentes pour les entrepreneurs et marketeurs qui veulent exploiter la puissance de l'IA dès aujourd'hui." data-en="Custom training and smart automations for entrepreneurs and marketers ready to harness the full power of AI.">Formations sur mesure et automatisations intelligentes pour les entrepreneurs et marketeurs qui veulent exploiter la puissance de l'IA dès aujourd'hui.</p>
+    <div class="hero-btns">
+      <a href="#forfaits" class="btn-glow" data-fr="Voir les forfaits" data-en="See Plans">Voir les forfaits</a>
+      <a href="#contact" class="btn-ghost" data-fr="Nous contacter" data-en="Contact Us">Nous contacter</a>
+    </div>
+    <div class="hero-nums">
+      <div class="num-item"><div class="num-val" id="c1">0+</div><div class="num-label" data-fr="Clients accompagnés" data-en="Clients served">Clients accompagnés</div></div>
+      <div class="num-item"><div class="num-val" id="c2">0×</div><div class="num-label" data-fr="Gain de productivité" data-en="Productivity gain">Gain de productivité</div></div>
+      <div class="num-item"><div class="num-val" id="c3">0%</div><div class="num-label" data-fr="Satisfaction client" data-en="Client satisfaction">Satisfaction client</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-wrap">
+    <div class="acards reveal">
+      <div class="acard">
+        <div class="acard-icon">🧠</div>
+        <h4 data-fr="Formations IA" data-en="AI Training">Formations IA</h4>
+        <p data-fr="Maîtrisez ChatGPT, Claude, Midjourney et les outils no-code pour booster votre activité." data-en="Master ChatGPT, Claude, Midjourney and no-code tools to boost your business.">Maîtrisez ChatGPT, Claude, Midjourney et les outils no-code pour booster votre activité.</p>
+      </div>
+      <div class="acard">
+        <div class="acard-icon">⚡</div>
+        <h4 data-fr="Automatisation n8n" data-en="n8n Automation">Automatisation n8n</h4>
+        <p data-fr="Des workflows intelligents qui travaillent pour vous 24h/24 et génèrent des prospects qualifiés." data-en="Smart workflows that work 24/7 and generate qualified prospects for you.">Des workflows intelligents qui travaillent pour vous 24h/24 et génèrent des prospects qualifiés.</p>
+      </div>
+      <div class="acard">
+        <div class="acard-icon">🚀</div>
+        <h4>NexaAI</h4>
+        <p data-fr="Votre partenaire IA" data-en="Your AI partner">Votre partenaire IA</p>
+      </div>
+    </div>
+    <div class="about-text reveal">
+      <span class="slabel">NexaAI</span>
+      <h2 data-fr="L'IA qui travaille pendant que vous dormez" data-en="AI that works while you sleep">L'IA qui travaille pendant que vous dormez</h2>
+      <p class="sdesc" data-fr="On combine expertise IA et marketing digital pour créer des systèmes qui attirent, qualifient et convertissent vos prospects automatiquement." data-en="We combine AI expertise and digital marketing to build systems that attract, qualify and convert your prospects automatically.">On combine expertise IA et marketing digital pour créer des systèmes qui attirent, qualifient et convertissent vos prospects automatiquement.</p>
+      <ul class="flist">
+        <li><span class="fck">✓</span><span data-fr="Formations IA adaptées à votre niveau et secteur" data-en="AI training adapted to your level and industry">Formations IA adaptées à votre niveau et secteur</span></li>
+        <li><span class="fck">✓</span><span data-fr="Automatisations n8n, Make et Marketing Digital" data-en="n8n, Make and Digital Marketing automations">Automatisations n8n, Make et Marketing Digital</span></li>
+        <li><span class="fck">✓</span><span data-fr="Closing automatique IA — prospects contactés 24h/24" data-en="Automatic AI closing — prospects reached 24/7">Closing automatique IA — prospects contactés 24h/24</span></li>
+        <li><span class="fck">✓</span><span data-fr="Support dédié et accompagnement personnalisé" data-en="Dedicated support and personalized coaching">Support dédié et accompagnement personnalisé</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FORFAITS -->
+<section id="forfaits">
+  <div class="tc sh reveal">
+    <span class="slabel" data-fr="Nos Forfaits" data-en="Our Plans">Nos Forfaits</span>
+    <h2 data-fr="Choisissez votre niveau" data-en="Choose your level">Choisissez votre niveau</h2>
+    <p class="sdesc" data-fr="Des forfaits clairs, sans surprise, pour démarrer ou passer à la vitesse supérieure." data-en="Clear, straightforward plans to get started or level up.">Des forfaits clairs, sans surprise, pour démarrer ou passer à la vitesse supérieure.</p>
+  </div>
+  <div class="plans-wrap reveal">
+    <div class="plan">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price"><span class="cur">€</span>14<span style="font-size:2rem">.99</span><span class="per" data-fr="/mois" data-en="/mo">/mois</span></div>
+      <p class="plan-tagline" data-fr="Idéal pour découvrir la puissance de l'IA" data-en="Ideal for discovering the power of AI">Idéal pour découvrir la puissance de l'IA</p>
+      <ul class="plan-features">
+        <li><span class="pfdot"></span><span data-fr="50 prospects closés par IA / jour" data-en="50 AI-closed prospects / day">50 prospects closés par IA / jour</span></li>
+        <li><span class="pfdot"></span><span data-fr="Messages personnalisés par IA" data-en="AI-personalized messages">Messages personnalisés par IA</span></li>
+        <li><span class="pfdot"></span><span data-fr="Accès aux formations IA" data-en="Access to AI training">Accès aux formations IA</span></li>
+        <li><span class="pfdot"></span><span data-fr="Tableau de bord des prospects" data-en="Prospects dashboard">Tableau de bord des prospects</span></li>
+        <li><span class="pfdot"></span><span data-fr="Rapports & statistiques" data-en="Reports & statistics">Rapports & statistiques</span></li>
+        <li><span class="pfdot"></span><span data-fr="Support client" data-en="Customer support">Support client</span></li>
+      </ul>
+      <a href="#contact" class="plan-cta cta-outline" data-fr="Commencer avec Starter" data-en="Start with Starter">Commencer avec Starter</a>
+    </div>
+    <div class="plan pro">
+      <div class="plan-shine"></div>
+      <div class="plan-badge" data-fr="Populaire" data-en="Popular">Populaire</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price"><span class="cur">€</span>24<span style="font-size:2rem">.99</span><span class="per" data-fr="/mois" data-en="/mo">/mois</span></div>
+      <p class="plan-tagline" data-fr="Pour scaler sans limite avec l'IA" data-en="To scale without limits with AI">Pour scaler sans limite avec l'IA</p>
+      <ul class="plan-features">
+        <li><span class="pfdot"></span><span data-fr="✦ Prospects illimités / jour" data-en="✦ Unlimited prospects / day">✦ Prospects illimités / jour</span></li>
+        <li><span class="pfdot"></span><span data-fr="Messages personnalisés par IA" data-en="AI-personalized messages">Messages personnalisés par IA</span></li>
+        <li><span class="pfdot"></span><span data-fr="Accès complet aux formations IA" data-en="Full access to AI training">Accès complet aux formations IA</span></li>
+        <li><span class="pfdot"></span><span data-fr="Tableau de bord avancé" data-en="Advanced dashboard">Tableau de bord avancé</span></li>
+        <li><span class="pfdot"></span><span data-fr="Rapports & statistiques avancés" data-en="Advanced reports & statistics">Rapports & statistiques avancés</span></li>
+        <li><span class="pfdot"></span><span data-fr="Support client prioritaire" data-en="Priority customer support">Support client prioritaire</span></li>
+      </ul>
+      <a href="#contact" class="plan-cta cta-fill" data-fr="Commencer avec Pro" data-en="Start with Pro">Commencer avec Pro</a>
+    </div>
+  </div>
+</section>
+
+<!-- TÉMOIGNAGES -->
+<section id="temoignages">
+  <div class="tc sh reveal">
+    <span class="slabel" data-fr="Témoignages" data-en="Reviews">Témoignages</span>
+    <h2 data-fr="Ce qu'ils disent de nous" data-en="What they say about us">Ce qu'ils disent de nous</h2>
+    <p class="sdesc" data-fr="Des entrepreneurs et marketeurs qui ont transformé leur business grâce à NexaAI." data-en="Entrepreneurs and marketers who transformed their business with NexaAI.">Des entrepreneurs et marketeurs qui ont transformé leur business grâce à NexaAI.</p>
+  </div>
+  <div class="tgrid reveal">
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <p class="tcard-text" data-fr="« NexaAI a révolutionné ma prospection. En 2 semaines, 30 nouveaux prospects qualifiés contactés automatiquement. Le ROI est incroyable. »" data-en="« NexaAI revolutionized my prospecting. In 2 weeks, 30 new qualified prospects contacted automatically. The ROI is incredible. »">« NexaAI a révolutionné ma prospection. En 2 semaines, 30 nouveaux prospects qualifiés contactés automatiquement. Le ROI est incroyable. »</p>
+      <div class="tcard-author"><div class="tcard-av">KM</div><div><div class="tcard-name">Karim M.</div><div class="tcard-role" data-fr="Consultant Marketing Digital" data-en="Digital Marketing Consultant">Consultant Marketing Digital</div></div></div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <p class="tcard-text" data-fr="« La formation IA m'a permis de maîtriser des outils que je pensais réservés aux experts. Maintenant je crée mes propres automatisations. »" data-en="« The AI training allowed me to master tools I thought were for experts only. Now I build my own automations. »">« La formation IA m'a permis de maîtriser des outils que je pensais réservés aux experts. Maintenant je crée mes propres automatisations. »</p>
+      <div class="tcard-author"><div class="tcard-av">SL</div><div><div class="tcard-name">Sofia L.</div><div class="tcard-role" data-fr="Entrepreneuse E-commerce" data-en="E-commerce Entrepreneur">Entrepreneuse E-commerce</div></div></div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-stars">★★★★★</div>
+      <p class="tcard-text" data-fr="« Le forfait Pro vaut chaque centime. Mon système de closing tourne tout seul la nuit. J'ai triplé mon chiffre d'affaires en 3 mois. »" data-en="« The Pro plan is worth every cent. My closing system runs on its own at night. I tripled my revenue in 3 months. »">« Le forfait Pro vaut chaque centime. Mon système de closing tourne tout seul la nuit. J'ai triplé mon chiffre d'affaires en 3 mois. »</p>
+      <div class="tcard-author"><div class="tcard-av">AR</div><div><div class="tcard-name">Adam R.</div><div class="tcard-role" data-fr="Freelance & Créateur de contenu" data-en="Freelancer & Content Creator">Freelance & Créateur de contenu</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="cwrap">
+    <div class="cleft reveal">
+      <span class="slabel" data-fr="Contact" data-en="Contact">Contact</span>
+      <h3 data-fr="Prêt à automatiser votre croissance ?" data-en="Ready to automate your growth?">Prêt à automatiser votre croissance ?</h3>
+      <p data-fr="Remplissez le formulaire et notre IA prend le relais. Vous recevrez un message personnalisé en quelques minutes." data-en="Fill the form and our AI takes over. You'll receive a personalized message within minutes.">Remplissez le formulaire et notre IA prend le relais. Vous recevrez un message personnalisé en quelques minutes.</p>
+      <div class="cinfo"><div class="cinfo-icon">📧</div><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f99a96978d989a8db9979c81989890d79a9694">[email&#160;protected]</a></span></div>
+      <div class="cinfo"><div class="cinfo-icon">📱</div><span>Instagram & TikTok : @nexaai</span></div>
+      <div class="cinfo"><div class="cinfo-icon">⚡</div><span data-fr="Réponse IA en moins de 5 min" data-en="AI response in under 5 min">Réponse IA en moins de 5 min</span></div>
+    </div>
+    <div class="fbox reveal">
+      <div id="formContent">
+        <div class="f2col">
+          <div class="fgrp"><label data-fr="Prénom *" data-en="First name *">Prénom *</label><input type="text" id="f-nom" placeholder="John"/></div>
+          <div class="fgrp"><label data-fr="Email *" data-en="Email *">Email *</label><input type="email" id="f-email" placeholder="john@email.com"/></div>
+        </div>
+        <div class="fgrp"><label data-fr="Téléphone" data-en="Phone">Téléphone</label><input type="tel" id="f-tel" placeholder="+33 6 00 00 00 00"/></div>
+        <div class="fgrp">
+          <label data-fr="Forfait qui vous intéresse *" data-en="Plan you're interested in *">Forfait qui vous intéresse *</label>
+          <select id="f-forfait">
+            <option value="">-- Choisir --</option>
+            <option value="Starter">Starter — 14,99€/mois (50 prospects/jour)</option>
+            <option value="Pro">Pro — 24,99€/mois (Illimité)</option>
+          </select>
+        </div>
+        <div class="fgrp"><label data-fr="Ce que vous voulez accomplir *" data-en="What you want to achieve *">Ce que vous voulez accomplir *</label><input type="text" id="f-interet" placeholder="Ex: automatiser ma prospection, apprendre l'IA..."/></div>
+        <div class="fgrp"><label data-fr="Message (optionnel)" data-en="Message (optional)">Message (optionnel)</label><textarea id="f-message" placeholder="Décrivez votre situation actuelle..."></textarea></div>
+        <button class="fsub" id="f-btn" onclick="submitForm()"><span id="f-btn-text" data-fr="🚀 Envoyer ma demande" data-en="🚀 Send my request">🚀 Envoyer ma demande</span></button>
+        <p id="f-error" style="color:#ff6b6b;font-size:.82rem;margin-top:.8rem;display:none;" data-fr="Veuillez remplir tous les champs obligatoires." data-en="Please fill in all required fields.">Veuillez remplir tous les champs obligatoires.</p>
+      </div>
+      <div class="fsuccess" id="formSuccess">
+        <div class="fsuccess-icon">✅</div>
+        <h4 data-fr="Message envoyé !" data-en="Message sent!">Message envoyé !</h4>
+        <p data-fr="Notre IA analyse votre demande. Vous recevrez un message personnalisé dans les prochaines minutes. À très vite !" data-en="Our AI is analyzing your request. You'll receive a personalized message within the next few minutes. See you soon!">Notre IA analyse votre demande. Vous recevrez un message personnalisé dans les prochaines minutes. À très vite !</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="flogo">NexaAI</div>
+  <div class="fcopy" data-fr="© 2025 NexaAI — Tous droits réservés" data-en="© 2025 NexaAI — All rights reserved">© 2025 NexaAI — Tous droits réservés</div>
+  <div class="fsocials">
+    <a href="https://tiktok.com/@nexaai" target="_blank" class="sbtn" title="TikTok">🎵</a>
+    <a href="https://instagram.com/nexaai" target="_blank" class="sbtn" title="Instagram">📸</a>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// CURSOR
+const cur=document.getElementById('cur'),ring=document.getElementById('curRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function anim(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cur.style.cssText=`left:${mx-5}px;top:${my-5}px;`;ring.style.cssText=`left:${rx-18}px;top:${ry-18}px;`;requestAnimationFrame(anim);})();
+document.querySelectorAll('a,button,input,select,textarea').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.transform='scale(2.5)';ring.style.transform='scale(1.4)';ring.style.borderColor='var(--cyan)';});
+  el.addEventListener('mouseleave',()=>{cur.style.transform='scale(1)';ring.style.transform='scale(1)';ring.style.borderColor='rgba(0,229,255,.4)';});
+});
+
+// NAV SCROLL
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>60));
+
+// REVEAL
+const ro=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');ro.unobserve(e.target);}}),{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
+
+// COUNTERS
+function runCounters(){
+  [[document.getElementById('c1'),150,'+'],[document.getElementById('c2'),3,'×'],[document.getElementById('c3'),98,'%']].forEach(([el,target,suf])=>{
+    let v=0;const step=target/60;
+    const iv=setInterval(()=>{v=Math.min(v+step,target);el.textContent=Math.floor(v)+suf;if(v>=target)clearInterval(iv);},20);
+  });
+}
+const cObs=new IntersectionObserver(e=>{if(e[0].isIntersecting){runCounters();cObs.disconnect();}},{threshold:.5});
+cObs.observe(document.querySelector('.hero-nums'));
+
+// LANG
+let lang='fr';
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${l}')"]`).classList.add('active');
+  document.querySelectorAll('[data-fr],[data-en]').forEach(el=>{
+    const v=el.getAttribute('data-'+l);
+    if(!v)return;
+    if(el.tagName==='INPUT'||el.tagName==='TEXTAREA')el.placeholder=v;
+    else el.textContent=v;
+  });
+}
+
+// FORM
+async function submitForm(){
+  const nom=document.getElementById('f-nom').value.trim();
+  const email=document.getElementById('f-email').value.trim();
+  const forfait=document.getElementById('f-forfait').value;
+  const interet=document.getElementById('f-interet').value.trim();
+  const tel=document.getElementById('f-tel').value.trim();
+  const message=document.getElementById('f-message').value.trim();
+  const err=document.getElementById('f-error');
+  if(!nom||!email||!forfait||!interet){err.style.display='block';return;}
+  err.style.display='none';
+  const btn=document.getElementById('f-btn');
+  const btxt=document.getElementById('f-btn-text');
+  btn.disabled=true;
+  btxt.textContent=lang==='fr'?'⏳ Envoi en cours...':'⏳ Sending...';
+  try{
+    await fetch('http://localhost:5678/webhook/nouveau-prospect',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nom,email,telep
