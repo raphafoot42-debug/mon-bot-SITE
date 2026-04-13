@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
@@ -13,10 +13,6 @@ export default async function handler(req, res) {
 
     try {
         const { model, max_tokens, system, messages } = req.body;
-
-        if (!messages || !Array.isArray(messages)) {
-            return res.status(400).json({ error: 'Invalid request body' });
-        }
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
