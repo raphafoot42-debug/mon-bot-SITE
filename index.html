@@ -187,6 +187,22 @@
     </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+<script>
+function toggleChat() {
+  const chat = document.getElementById("chat");
+
+  if (!chat) {
+    console.log("chat introuvable");
+    return;
+  }
+
+  if (chat.style.display === "none" || chat.style.display === "") {
+    chat.style.display = "block";
+  } else {
+    chat.style.display = "none";
+  }
+}
+</script>
 <body>
 
 <!-- HEADER -->
