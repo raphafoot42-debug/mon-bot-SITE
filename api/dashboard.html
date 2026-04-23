@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard NexaAI</title>
+</head>
+<body>
+  <h1>Connexion TikTok réussie ✅</h1>
+
+  <p id="user"></p>
+
+  <script>
+    // récupérer les infos dans l’URL
+    const params = new URLSearchParams(window.location.search);
+
+    const token = params.get("access_token");
+    const openId = params.get("open_id");
+
+    if (!token) {
+      document.body.innerHTML = "❌ Pas connecté";
+    } else {
+      document.getElementById("user").innerHTML =
+        "OpenID: " + openId + "<br>Token reçu ✔️";
+    }
+
+    // sauvegarde locale (important)
+    localStorage.setItem("tiktok_token", token);
+    localStorage.setItem("tiktok_openid", openId);
+  </script>
+</body>
+</html>
