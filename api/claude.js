@@ -3,17 +3,23 @@ module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const { model, max_tokens, system, messages } = req.body;
+        const body = req.body;
 
+        // ===== ROUTE ADMIN AUTH =====
+        if (body.adminAuth) {
+            const { password } = body;
+            if (password === process.env.ADMIN_PASSWORD) {
+                return res.status(200).json({ ok: true });
+            }
+            return res.status(401).json({ ok: false });
+        }
+
+        // ===== ROUTE CLAUDE =====
+        const { model, max_tokens, system, messages } = body;
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
