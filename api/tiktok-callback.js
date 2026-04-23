@@ -1,9 +1,13 @@
 module.exports = async function handler(req, res) {
-    const { code } = req.query;
+    const { code, error } = req.query;
+
+    if (error) {
+        return res.status(400).send("TikTok error: " + error);
+    }
 
     if (!code) {
         return res.status(400).send("No code received");
     }
-    // ici plus tard on échangera le code contre un token TikTok
-    return res.status(200).send("TikTok login success: " + code);
+
+    return res.status(200).send("TikTok login success. Code: " + code);
 };
