@@ -1,13 +1,41 @@
-module.exports = async function handler(req, res) {
-    const { code, error } = req.query;
+export default async function handler(req, res) {
+  const { code } = req.query;
 
-    if (error) {
-        return res.status(400).send("TikTok error: " + error);
+  if (!code) {
+    return res.status(400).send("No code received");
+  }
+
+  try {
+    const client_key = process.env.TIKTOK_CLIENT_KEY;
+    const client_secret = process.env.TIKTOK_CLIENT_SECRET;
+
+    const tokenResponse = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        client_key,
+        client_secret,
+        code,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    const data = await tokenResponse.json();
+
+    if (!data.access_token) {
+      return res.status(400).json(data);
     }
 
-    if (!code) {
-        return res.status(400).send("No code received");
-    }
+    // 🔥 ici tu peux stocker le token (simple version)
+    // ou envoyer vers ton frontend
 
-    return res.status(200).send("TikTok login success. Code: " + code);
-};
+    return res.redirect(
+      `/dashboard?access_token=${data.access_token}&open_id=${data.open_id}`
+    );
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
