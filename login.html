@@ -1,53 +1,45 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TikTok OAuth Login</title>
-</head>
+<script>
+function base64url(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
-<body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial">
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  return crypto.subtle.digest('SHA-256', data);
+}
 
-  <button id="login">Se connecter avec TikTok</button>
+function randomVerifier() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let result = '';
+  for (let i = 0; i < 64; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
 
-  <script>
-    function base64url(buffer) {
-      return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-    }
+document.getElementById('login').onclick = async () => {
 
-    async function sha256(text) {
-      const data = new TextEncoder().encode(text);
-      return crypto.subtle.digest('SHA-256', data);
-    }
+  const verifier = randomVerifier();
+  sessionStorage.setItem('pkce_verifier', verifier);
 
-    document.getElementById('login').onclick = async () => {
+  const challenge = base64url(await sha256(verifier));
 
-      // TON VERIFIER FIXE
-      const verifier = "IZej5k1MZ2a6EhJsEkFRUc4mC2VQMlNZU4Xkd7xbjYA";
+  const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
 
-      sessionStorage.setItem('pkce_verifier', verifier);
+  url.search = new URLSearchParams({
+    client_key: 'awa1x5rwccfeu9wi',
+    response_type: 'code',
+    scope: 'user.info.basic',
+    redirect_uri: 'http://127.0.0.1:8086',
+    state: 'abc123',
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
 
-      // CHALLENGE CORRECT
-      const challenge = base64url(await sha256(verifier));
+  window.location.href = url.toString();
+};
+</script>
 
-      const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
-
-      url.search = new URLSearchParams({
-        client_key: 'awa1x5rwccfeu9wi',
-        response_type: 'code',
-        scope: 'user.info.basic',
-        redirect_uri: 'http://127.0.0.1:8085',
-        state: 'abc123',
-        code_challenge: challenge,
-        code_challenge_method: 'S256'
-      });
-
-      window.location.href = url.toString();
-    };
-  </script>
-
-</body>
-</html>
