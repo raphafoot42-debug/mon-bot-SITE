@@ -1,14 +1,3 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <title>TikTok Login</title>
-</head>
-
-<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
-
-<button id="login">Se connecter avec TikTok</button>
-
 <script>
 function base64url(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)))
@@ -38,7 +27,9 @@ document.getElementById('login').onclick = async () => {
 
   const challenge = base64url(await sha256(verifier));
 
-  const params = new URLSearchParams({
+  const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
+
+  url.search = new URLSearchParams({
     client_key: 'awa1x5rwccfeu9wi',
     response_type: 'code',
     scope: 'user.info.basic',
@@ -48,10 +39,6 @@ document.getElementById('login').onclick = async () => {
     code_challenge_method: 'S256'
   });
 
-  window.location.href =
-    'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
+  window.location.href = url.toString();
 };
 </script>
-
-</body>
-</html>
