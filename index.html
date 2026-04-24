@@ -3,66 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NexaAI Login</title>
-
-  <style>
-    body{
-      font-family: Arial, sans-serif;
-      background:#000;
-      color:#fff;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-      flex-direction:column;
-      gap:20px;
-    }
-    button{
-      color:#39ff14;
-      font-size:20px;
-      background:transparent;
-      border:1px solid #39ff14;
-      padding:12px 20px;
-      border-radius:10px;
-      cursor:pointer;
-    }
-  </style>
+  <title>TikTok OAuth Login</title>
 </head>
-<body>
+<body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial">
 
-  <h1>NexaAI Login</h1>
-  <button id="loginBtn">Se connecter avec TikTok</button>
+  <button id="login">Se connecter avec TikTok</button>
 
   <script>
-    // --- PKCE AUTO ---
-    function base64urlencode(a) {
-      return btoa(String.fromCharCode.apply(null, new Uint8Array(a)))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // --- helpers PKCE ---
+    function base64url(buffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
     }
 
-    async function sha256(plain) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(plain);
-      return await crypto.subtle.digest('SHA-256', data);
+    async function sha256(text) {
+      const data = new TextEncoder().encode(text);
+      return crypto.subtle.digest('SHA-256', data);
     }
 
-    function randomString(length) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let result = '';
-      for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    function randomVerifier() {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      let str = '';
+      for (let i = 0; i < 64; i++) {
+        str += chars[Math.floor(Math.random() * chars.length)];
       }
-      return result;
+      return str;
     }
 
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const verifier = randomString(64);
-      localStorage.setItem('pkce_verifier', verifier);
+    document.getElementById('login').onclick = async () => {
+      // 1) génère verifier
+      const verifier = randomVerifier();
+      sessionStorage.setItem('pkce_verifier', verifier);
 
-      const hashed = await sha256(verifier);
-      const challenge = base64urlencode(hashed);
+      // 2) génère challenge
+      const challenge = base64url(await sha256(verifier));
 
-      const params = new URLSearchParams({
+      // 3) construit URL propre
+      const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
+      url.search = new URLSearchParams({
         client_key: 'awa1x5rwccfeu9wi',
         response_type: 'code',
         scope: 'user.info.basic',
@@ -72,9 +52,9 @@
         code_challenge_method: 'S256'
       });
 
-      window.location.href =
-        'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
-    });
+      // 4) redirection
+      window.location.href = url.toString();
+    };
   </script>
 
 </body>
