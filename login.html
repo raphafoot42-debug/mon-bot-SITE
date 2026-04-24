@@ -23,22 +23,18 @@
       return crypto.subtle.digest('SHA-256', data);
     }
 
-    function randomVerifier() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-      let str = '';
-      for (let i = 0; i < 64; i++) {
-        str += chars[Math.floor(Math.random() * chars.length)];
-      }
-      return str;
-    }
-
     document.getElementById('login').onclick = async () => {
-      const verifier = randomVerifier();
+
+      // TON VERIFIER FIXE
+      const verifier = "IZej5k1MZ2a6EhJsEkFRUc4mC2VQMlNZU4Xkd7xbjYA";
+
       sessionStorage.setItem('pkce_verifier', verifier);
 
+      // CHALLENGE CORRECT
       const challenge = base64url(await sha256(verifier));
 
       const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
+
       url.search = new URLSearchParams({
         client_key: 'awa1x5rwccfeu9wi',
         response_type: 'code',
