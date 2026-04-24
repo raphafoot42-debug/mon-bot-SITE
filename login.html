@@ -1,6 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login TikTok</title>
+</head>
+
+<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
+
+<button id="login">Se connecter avec TikTok</button>
+
 <script>
 function base64url(buffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
@@ -27,18 +43,20 @@ document.getElementById('login').onclick = async () => {
 
   const challenge = base64url(await sha256(verifier));
 
-  const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
-
-  url.search = new URLSearchParams({
-    client_key: 'awa1x5rwccfeu9wi',
+  const params = new URLSearchParams({
+    client_key: 'TA_CLIENT_KEY',
     response_type: 'code',
     scope: 'user.info.basic',
-    redirect_uri: 'http://127.0.0.1:8086',
+    redirect_uri: 'http://127.0.0.1:8086/callback.html',
     state: 'abc123',
     code_challenge: challenge,
     code_challenge_method: 'S256'
   });
 
-  window.location.href = url.toString();
+  window.location.href =
+    'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
 };
 </script>
+
+</body>
+</html>
