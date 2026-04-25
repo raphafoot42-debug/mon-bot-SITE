@@ -4,11 +4,8 @@
   <meta charset="UTF-8" />
   <title>Login TikTok</title>
 </head>
-
 <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
-
 <button id="login">Se connecter avec TikTok</button>
-
 <script>
 function base64url(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -37,17 +34,15 @@ function randomVerifier() {
 }
 
 document.getElementById('login').onclick = async () => {
-
   const verifier = randomVerifier();
   sessionStorage.setItem('pkce_verifier', verifier);
-
   const challenge = base64url(await sha256(verifier));
 
   const params = new URLSearchParams({
-    client_key: 'TA_CLIENT_KEY',
+    client_key: 'awa1x5rwccfeu9wi',
     response_type: 'code',
     scope: 'user.info.basic',
-    redirect_uri: 'http://127.0.0.1:8086/callback.html',
+    redirect_uri: 'https://mon-bot-site.vercel.app/api/tiktok-callback',
     state: 'abc123',
     code_challenge: challenge,
     code_challenge_method: 'S256'
@@ -57,6 +52,5 @@ document.getElementById('login').onclick = async () => {
     'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
 };
 </script>
-
 </body>
 </html>
