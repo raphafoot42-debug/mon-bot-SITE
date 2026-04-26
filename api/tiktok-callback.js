@@ -1,6 +1,5 @@
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-
     const { code, error } = req.query;
 
     if(error) {
@@ -12,13 +11,12 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        // Échanger le code contre un access token
         const params = new URLSearchParams({
             client_key: process.env.TIKTOK_CLIENT_KEY,
             client_secret: process.env.TIKTOK_CLIENT_SECRET,
             code: code,
             grant_type: 'authorization_code',
-            redirect_uri: 'https://mon-bot-site.vercel.app/api/tiktok-callback'
+            redirect_uri: 'https://steady-centaur-82e10a.netlify.app/api/tiktok-callback'
         });
 
         const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
@@ -36,7 +34,6 @@ module.exports = async function handler(req, res) {
         const accessToken = tokenData.access_token;
         const openId = tokenData.open_id;
 
-        // Récupérer le profil TikTok
         const profileRes = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,avatar_url,display_name,username', {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
@@ -44,7 +41,6 @@ module.exports = async function handler(req, res) {
         const profileData = await profileRes.json();
         const user = profileData.data?.user;
 
-        // Rediriger vers le site avec les infos TikTok
         const tiktokInfo = encodeURIComponent(JSON.stringify({
             openId: openId,
             username: user?.username || '',
@@ -53,10 +49,10 @@ module.exports = async function handler(req, res) {
             accessToken: accessToken
         }));
 
-        return res.redirect('/?tiktok=success&data=' + tiktokInfo);
+        return res.redirect('https://steady-centaur-82e10a.netlify.app/?tiktok=success&data=' + tiktokInfo);
 
     } catch(err) {
         console.error('TikTok callback error:', err);
-        return res.redirect('/?tiktok=error');
+        return res.redirect('https://steady-centaur-82e10a.netlify.app/?tiktok=error');
     }
 }
