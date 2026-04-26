@@ -18,12 +18,10 @@ function base64url(buffer) {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 }
-
 async function sha256(text) {
   const data = new TextEncoder().encode(text);
   return crypto.subtle.digest('SHA-256', data);
 }
-
 function randomVerifier() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
   let v = '';
@@ -32,22 +30,19 @@ function randomVerifier() {
   }
   return v;
 }
-
 document.getElementById('login').onclick = async () => {
   const verifier = randomVerifier();
   sessionStorage.setItem('pkce_verifier', verifier);
   const challenge = base64url(await sha256(verifier));
-
   const params = new URLSearchParams({
-    client_key: 'awa1x5rwccfeu9wi',
+    client_key: 'sbaw1dltizgdnu9xs8',
     response_type: 'code',
     scope: 'user.info.basic',
-    redirect_uri: 'https://mon-bot-site.vercel.app/api/tiktok-callback',
+    redirect_uri: 'https://steady-centaur-82e10a.netlify.app/api/tiktok-callback',
     state: 'abc123',
     code_challenge: challenge,
     code_challenge_method: 'S256'
   });
-
   window.location.href =
     'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
 };
