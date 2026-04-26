@@ -1,71 +1,51 @@
-exports.handler = async function(event, context) {
-    const { code, error } = event.queryStringParameters || {};
-
-    if(error) {
-        return {
-            statusCode: 302,
-            headers: { Location: '/?tiktok=error' }
-        };
-    }
-
-    if(!code) {
-        return {
-            statusCode: 400,
-            body: 'No code provided'
-        };
-    }
-
-    try {
-        const params = new URLSearchParams({
-            client_key: process.env.TIKTOK_CLIENT_KEY,
-            client_secret: process.env.TIKTOK_CLIENT_SECRET,
-            code: code,
-            grant_type: 'authorization_code',
-            redirect_uri: 'https://steady-centaur-82e10a.netlify.app/.netlify/functions/tiktok-callback'
-        });
-
-        const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        });
-
-        const tokenData = await tokenRes.json();
-
-        if(tokenData.error) {
-            return {
-                statusCode: 302,
-                headers: { Location: '/?tiktok=error&msg=' + tokenData.error }
-            };
-        }
-
-        const accessToken = tokenData.access_token;
-        const openId = tokenData.open_id;
-
-        const profileRes = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,avatar_url,display_name,username', {
-            headers: { 'Authorization': 'Bearer ' + accessToken }
-        });
-
-        const profileData = await profileRes.json();
-        const user = profileData.data?.user;
-
-        const tiktokInfo = encodeURIComponent(JSON.stringify({
-            openId: openId,
-            username: user?.username || '',
-            displayName: user?.display_name || '',
-            avatar: user?.avatar_url || '',
-            accessToken: accessToken
-        }));
-
-        return {
-            statusCode: 302,
-            headers: { Location: '/?tiktok=success&data=' + tiktokInfo }
-        };
-
-    } catch(err) {
-        return {
-            statusCode: 302,
-            headers: { Location: '/?tiktok=error' }
-        };
-    }
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login TikTok</title>
+</head>
+<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
+<button id="login">Se connecter avec TikTok</button>
+<script>
+function base64url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  return crypto.subtle.digest('SHA-256', data);
+}
+function randomVerifier() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let v = '';
+  for (let i = 0; i < 64; i++) {
+    v += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return v;
+}
+document.getElementById('login').onclick = async () => {
+  const verifier = randomVerifier();
+  sessionStorage.setItem('pkce_verifier', verifier);
+  const challenge = base64url(await sha256(verifier));
+  const params = new URLSearchParams({
+    client_key: 'sbaw1dltizgdnu9xs8',
+    response_type: 'code',
+    scope: 'user.info.basic',
+    redirect_uri: 'https://steady-centaur-82e10a.netlify.app/.netlify/functions/tiktok-callback',
+    state: 'abc123',
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
+  window.location.href =
+    'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
 };
+</script>
+</body>
+</html>
