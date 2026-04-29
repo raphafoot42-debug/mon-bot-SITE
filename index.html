@@ -855,8 +855,8 @@
 // ===== CONFIG =====
 const STRIPE_PK = 'pk_test_51TH5S2P8svYH1bkONQyzCOzUff4OrRBFLAu0REAMGK1043xGSQZlW8Ohw3aXYxdfNbgQhvHQsVx6LXeIQbUxpdzu00iEbgUt7K';
 // ✅ Proxy Vercel — clés cachées côté serveur
-const PROXY_URL = 'https://mon-bot-site.vercel.app/api/claude';
-const STRIPE_URL = 'https://mon-bot-site.vercel.app/api/stripe-checkout';
+const PROXY_URL = '/.netlify/functions/claude';
+const STRIPE_URL = '/.netlify/functions/stripe-checkout';
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
 let stripe = null;
     let sb = null;
@@ -2178,7 +2178,7 @@ async function bqSendToAI(userText) {
         }
     } catch(err) {
         document.getElementById('bq-typing').style.display = 'none';
-        bqAIMsg('Connexion instable, réessaie ! 🔄');
+        bqAIMsg('Nexa analyse ton profil... Réessaie dans quelques secondes 🔄');
     }
 }
 </script>
