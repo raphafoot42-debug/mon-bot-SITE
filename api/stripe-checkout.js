@@ -9,42 +9,50 @@ const PRICE_IDS = {
     'elite-once':    'price_1TJ8XPP8svYH1bkOWwjjcZ87',
 };
 
-module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', '*');
+exports.handler = async function(event, context) {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if(event.httpMethod === 'OPTIONS') {
+        return { statusCode: 200, headers, body: '' };
+    }
+
+    if(event.httpMethod !== 'POST') {
+        return { statusCode: 405, headers, body: 'Method not allowed' };
+    }
 
     try {
-        const { plan, email, success_url, cancel_url } = req.body;
+        const { plan, email, success_url, cancel_url, priceId } = JSON.parse(event.body || '{}');
 
-        if (!plan || !email) {
-            return res.status(400).json({ error: 'plan and email are required' });
+        if(!email) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email required' }) };
         }
 
-        const priceId = PRICE_IDS[plan];
-        if (!priceId) {
-            return res.status(400).json({ error: 'Invalid plan' });
+        const finalPriceId = priceId || PRICE_IDS[plan];
+        if(!finalPriceId) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid plan' }) };
         }
 
-        const isOnce = plan.includes('-once');
+        const isOnce = plan && plan.includes('-once');
+        const baseUrl = 'https://steady-centaur-82e10a.netlify.app';
 
         const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+                'Authorization': 'Bearer ' + process.env.STRIPE_SECRET_KEY,
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: new URLSearchParams({
                 'payment_method_types[]': 'card',
                 'mode': isOnce ? 'payment' : 'subscription',
                 'customer_email': email,
-                'line_items[0][price]': priceId,
+                'line_items[0][price]': finalPriceId,
                 'line_items[0][quantity]': '1',
-                'success_url': success_url || `${req.headers.origin}?payment=success&plan=${plan}`,
-                'cancel_url': cancel_url || `${req.headers.origin}?payment=cancel`,
+                'success_url': success_url || (baseUrl + '?payment=success&plan=' + (plan || 'starter')),
+                'cancel_url': cancel_url || (baseUrl + '?payment=cancel'),
                 'locale': 'fr',
                 'allow_promotion_codes': 'true'
             })
@@ -52,14 +60,14 @@ module.exports = async function handler(req, res) {
 
         const session = await stripeResponse.json();
 
-        if (session.error) {
-            return res.status(400).json({ error: session.error.message });
+        if(session.error) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: session.error.message }) };
         }
 
-        return res.status(200).json({ url: session.url, id: session.id });
+        return { statusCode: 200, headers, body: JSON.stringify({ url: session.url, id: session.id }) };
 
-    } catch (error) {
-        console.error('Stripe checkout error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+    } catch(err) {
+        console.error('Stripe error:', err);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal server error' }) };
     }
-}
+};
