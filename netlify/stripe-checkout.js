@@ -28,47 +28,61 @@ exports.handler = async function(event, context) {
         const { plan, email, success_url, cancel_url, priceId } = JSON.parse(event.body || '{}');
 
         if(!email) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email required' }) };
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email manquant' }) };
         }
 
         const finalPriceId = priceId || PRICE_IDS[plan];
         if(!finalPriceId) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid plan' }) };
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Plan invalide' }) };
         }
 
         const isOnce = plan && plan.includes('-once');
-        const baseUrl = 'https://steady-centaur-82e10a.netlify.app';
+        
+        // CORRECTION : URL Dynamique basée sur la requête entrante
+        const host = event.headers.host || 'steady-centaur-82e10a.netlify.app';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${host}`;
+
+        const stripeParams = new URLSearchParams({
+            'payment_method_types[]': 'card',
+            'mode': isOnce ? 'payment' : 'subscription',
+            'customer_email': email,
+            'line_items[0][price]': finalPriceId,
+            'line_items[0][quantity]': '1',
+            'success_url': success_url || (baseUrl + '/dashboard.html?payment=success'),
+            'cancel_url': cancel_url || (baseUrl + '/#pricing'),
+            'locale': 'fr',
+            'allow_promotion_codes': 'true'
+        });
 
         const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + process.env.STRIPE_SECRET_KEY,
+                'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`,
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: new URLSearchParams({
-                'payment_method_types[]': 'card',
-                'mode': isOnce ? 'payment' : 'subscription',
-                'customer_email': email,
-                'line_items[0][price]': finalPriceId,
-                'line_items[0][quantity]': '1',
-                'success_url': success_url || (baseUrl + '?payment=success&plan=' + (plan || 'starter')),
-                'cancel_url': cancel_url || (baseUrl + '?payment=cancel'),
-                'locale': 'fr',
-                'allow_promotion_codes': 'true'
-            })
+            body: stripeParams
         });
 
         const session = await stripeResponse.json();
 
         if(session.error) {
-        
+            console.error('Erreur API Stripe:', session.error);
             return { statusCode: 400, headers, body: JSON.stringify({ error: session.error.message }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ url: session.url, id: session.id }) };
+        return { 
+            statusCode: 200, 
+            headers, 
+            body: JSON.stringify({ url: session.url, id: session.id }) 
+        };
 
     } catch(err) {
-        console.error('Stripe error:', err);
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal server error' }) };
+        console.error('Erreur interne serveur:', err);
+        return { 
+            statusCode: 500, 
+            headers, 
+            body: JSON.stringify({ error: 'Erreur lors de la création de la session de paiement' }) 
+        };
     }
 };
