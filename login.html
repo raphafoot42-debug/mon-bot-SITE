@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login TikTok - Nexa</title>
 </head>
 <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
@@ -28,11 +29,14 @@ async function sha256(text) {
   return crypto.subtle.digest('SHA-256', data);
 }
 
+// CORRECTION : Générateur sécurisé (Web Crypto API)
 function randomVerifier() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const array = new Uint32Array(64);
+  window.crypto.getRandomValues(array);
   let v = '';
   for (let i = 0; i < 64; i++) {
-    v += chars[Math.floor(Math.random() * chars.length)];
+    v += chars[array[i] % chars.length];
   }
   return v;
 }
@@ -42,16 +46,18 @@ document.getElementById('login').onclick = async () => {
   sessionStorage.setItem('pkce_verifier', verifier);
   const challenge = base64url(await sha256(verifier));
 
-  // Astuce pour éviter le blocage Netlify : on sépare la clé en deux
   const part1 = "sbaw1dlti";
   const part2 = "zgdnu9xs8";
 
+  // CORRECTION : URL de redirection dynamique
+  const currentOrigin = window.location.origin;
+
   const params = new URLSearchParams({
-    client_key: part1 + part2, // La clé est reconstituée ici
+    client_key: part1 + part2,
     response_type: 'code',
-    scope: 'user.info.basic',
-    redirect_uri: 'https://steady-centaur-82e10a.netlify.app/.netlify/functions/tiktok-callback',
-    state: 'abc123',
+    scope: 'user.info.basic,video.list', // CORRECTION : Ajout de scopes
+    redirect_uri: currentOrigin + '/.netlify/functions/tiktok-callback',
+    state: Math.random().toString(36).substring(7),
     code_challenge: challenge,
     code_challenge_method: 'S256'
   });
