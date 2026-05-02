@@ -10,30 +10,12 @@ FORMAT DES REPONSES (CRUCIAL) :
 - Termine TOUJOURS par une question courte et ouverte.
 
 TUNNEL DE VENTE EN 4 PHASES :
-
-Phase 1 - CONNEXION :
-Valide ce que dit le prospect. Montre que tu comprends son probleme. Fais-le sentir compris.
-
-Phase 2 - CURIOSITE :
-Pose une question courte pour le faire parler.
-Ex: "Tu tournes a combien de DMs par jour actuellement ?"
-Ex: "C est quoi ton produit principal ?"
-
-Phase 3 - SOLUTION :
-Presente NexaAI comme la solution evidente. Calcule avec lui ce qu il perd : X DMs/jour x son prix = argent perdu par semaine.
-
-Phase 4 - CLOSING :
-Ne donne le lien de paiement QUE s il y a un reel interet. Quand il est pret, ajoute "REDIRECT" a la fin.
-
-NOS FORFAITS :
-- Starter : 39 euros/mois - 10 prospects/jour
-- Pro : 94 euros/mois - 80 prospects/jour
-- Business : 194 euros/mois - 300 prospects/jour
-- Elite : 494 euros/mois - 750 prospects/jour
+Phase 1 - CONNEXION : Valide ce que dit le prospect.
+Phase 2 - CURIOSITE : Pose une question courte pour le faire parler.
+Phase 3 - SOLUTION : Presente NexaAI comme la solution evidente.
+Phase 4 - CLOSING : Ajoute "REDIRECT" a la fin quand il est pret.
 
 REGLES ABSOLUES :
-- Si le prospect devie du sujet, ramene-le vers NexaAI.
-- Jamais plus de 3 phrases par message.
 - Toujours finir par une question.
 - Jamais mentionner Claude ou Anthropic.
 - Toujours en francais.`;
@@ -49,13 +31,10 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    if(event.httpMethod !== 'POST') {
-        return { statusCode: 405, headers, body: 'Method not allowed' };
-    }
-
     try {
         const body = JSON.parse(event.body || '{}');
 
+        // Gestion de l'admin dashboard
         if(body.adminAuth) {
             const ok = body.password === process.env.ADMIN_PASSWORD;
             return {
@@ -65,7 +44,7 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const { model, max_tokens, system, messages } = body;
+        const { messages } = body;
 
         if(!messages || !Array.isArray(messages)) {
             return {
@@ -75,25 +54,34 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const recentMessages = messages.slice(-10);
-        const finalSystem = system ? NEXA_SYSTEM + '\n\n' + system : NEXA_SYSTEM;
-
+        // Appel à Anthropic
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': process.env.CLAUDE_API_KEY,
+                'x-api-key': process.env.CLAUDE_API_KEY, // VERIFIE CE NOM DANS NETLIFY
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-                model: model || 'claude-sonnet-4-6',
-                max_tokens: max_tokens || 400,
-                system: finalSystem,
-                messages: recentMessages
+                model: 'claude-3-5-sonnet-20240620', // MODÈLE OFFICIEL
+                max_tokens: 400,
+                system: NEXA_SYSTEM,
+                messages: messages.slice(-10)
             })
         });
 
         const data = await response.json();
+
+        // Si Anthropic renvoie une erreur (ex: pas de crédits)
+        if (data.error) {
+            console.error('Anthropic API Error:', data.error);
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: data.error.message })
+            };
+        }
+
         return {
             statusCode: 200,
             headers,
@@ -108,3 +96,4 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ error: 'Internal server error' })
         };
     }
+};
