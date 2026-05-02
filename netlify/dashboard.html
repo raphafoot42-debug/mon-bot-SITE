@@ -1,46 +1,84 @@
-export default async function handler(req, res) {
-  const { code } = req.query;
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexa AI - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background:#050505; color:#fff; font-family:Arial, sans-serif;">
 
-  if (!code) {
-    return res.status(400).send("Missing code");
-  }
+    <div id="loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <p>Synchronisation avec TikTok...</p>
+    </div>
 
-  try {
-    // 1. échanger code contre access_token
-    const response = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_key: awa1x5rwccfeu9wi,
-        client_secret: dkrnBke6ZJrAhoaA8pFcxw56cGxelbwH,
-        code: code,
-        grant_type: "authorization_code",
-        redirect_uri: "https://TON-SITE.vercel.app/api/tiktok-callback"
-      }),
-    });
+    <nav style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
+        <div style="font-weight:bold; color:#00ff88;">NEXA AI</div>
+        <div id="user-info">Chargement...</div>
+    </nav>
 
-    const data = await response.json();
+    <main style="padding:40px;">
+        <h1>Tableau de bord</h1>
+        <div id="stats-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+            <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #333;">
+                <h3>Prospects</h3>
+                <p id="count-prospects">0</p>
+            </div>
+            <!-- Autres stats ici -->
+        </div>
+    </main>
 
-    // 2. vérifier réponse TikTok
-    if (!data.access_token) {
-      return res.status(400).json({
-        error: "Token error",
-        details: data
-      });
+    <script>
+    // --- GESTION DU CALLBACK TIKTOK ---
+    async function handleTikTokCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+
+        if (code) {
+            document.getElementById('loader').style.display = 'flex';
+            
+            const verifier = sessionStorage.getItem('pkce_verifier');
+            
+            try {
+                // ERREUR CORRIGÉE : Utilisation du bon chemin Netlify Functions
+                const response = await fetch('/.netlify/functions/tiktok-callback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        code: code,
+                        verifier: verifier 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log("Connexion réussie !");
+                    // Nettoyer l'URL pour éviter de relancer le code au refresh
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    loadDashboardData();
+                } else {
+                    throw new Error(data.message || "Erreur de synchro");
+                }
+            } catch (err) {
+                console.error("Erreur OAuth:", err);
+                alert("Erreur lors de la connexion TikTok.");
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        } else {
+            loadDashboardData();
+        }
     }
 
-    // 3. succès
-    return res.status(200).json({
-      access_token: data.access_token,
-      open_id: data.open_id
-    });
+    function loadDashboardData() {
+        // Logique pour charger tes stats depuis Supabase
+        document.getElementById('user-info').innerText = "Utilisateur Connecté";
+    }
 
-  } catch (err) {
-    return res.status(500).json({
-      error: "Server error",
-      details: err.message
-    });
-  }
-}
+    // Lancement au chargement de la page
+    window.onload = handleTikTokCallback;
+    </script>
+</body>
+</html>
