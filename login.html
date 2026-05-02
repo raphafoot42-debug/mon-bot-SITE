@@ -12,6 +12,7 @@
 </button>
 
 <script>
+// --- Utilitaires de sécurité ---
 function base64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -29,39 +30,47 @@ async function sha256(text) {
   return crypto.subtle.digest('SHA-256', data);
 }
 
-// CORRECTION : Générateur sécurisé (Web Crypto API)
-function randomVerifier() {
+// Générateur sécurisé (Web Crypto API)
+function generateSecureString(length) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  const array = new Uint32Array(64);
+  const array = new Uint32Array(length);
   window.crypto.getRandomValues(array);
   let v = '';
-  for (let i = 0; i < 64; i++) {
+  for (let i = 0; i < length; i++) {
     v += chars[array[i] % chars.length];
   }
   return v;
 }
 
 document.getElementById('login').onclick = async () => {
-  const verifier = randomVerifier();
+  // 1. Génération PKCE
+  const verifier = generateSecureString(64);
   sessionStorage.setItem('pkce_verifier', verifier);
   const challenge = base64url(await sha256(verifier));
 
+  // 2. Génération State (Protection CSRF)
+  const state = generateSecureString(16);
+  sessionStorage.setItem('auth_state', state);
+
+  // 3. Configuration des clés (Split pour éviter détection robots)
   const part1 = "sbaw1dlti";
   const part2 = "zgdnu9xs8";
 
-  // CORRECTION : URL de redirection dynamique
+  // 4. Construction de l'URL de redirection dynamique pour Netlify
   const currentOrigin = window.location.origin;
+  const redirectUri = currentOrigin + '/.netlify/functions/tiktok-callback';
 
   const params = new URLSearchParams({
     client_key: part1 + part2,
     response_type: 'code',
-    scope: 'user.info.basic,video.list', // CORRECTION : Ajout de scopes
-    redirect_uri: currentOrigin + '/.netlify/functions/tiktok-callback',
-    state: Math.random().toString(36).substring(7),
+    scope: 'user.info.basic,video.list',
+    redirect_uri: redirectUri,
+    state: state, // Utilisation du state sécurisé
     code_challenge: challenge,
     code_challenge_method: 'S256'
   });
 
+  // Redirection vers TikTok
   window.location.href = 'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
 };
 </script>
