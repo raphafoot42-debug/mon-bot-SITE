@@ -1,22 +1,40 @@
-module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    const { code, error } = req.query;
+exports.handler = async function(event, context) {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
 
-    if(error) {
-        return res.redirect('/?tiktok=error');
+    // Récupération des paramètres (Netlify utilise event.queryStringParameters)
+    const { code, error, state } = event.queryStringParameters || {};
+
+    if (error) {
+        return {
+            statusCode: 302,
+            headers: { ...headers, 'Location': '/?tiktok=error' },
+            body: ''
+        };
     }
 
-    if(!code) {
-        return res.status(400).json({ error: 'No code provided' });
+    if (!code) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'No code provided' })
+        };
     }
 
     try {
+        // Note : Le verifier devrait idéalement être passé via le state ou géré côté client.
+        // Si tu l'as mis en sessionStorage côté client, l'échange doit se faire via un appel fetch 
+        // depuis le dashboard plutôt qu'une redirection directe ici.
+        
         const params = new URLSearchParams({
             client_key: process.env.TIKTOK_CLIENT_KEY,
             client_secret: process.env.TIKTOK_CLIENT_SECRET,
             code: code,
             grant_type: 'authorization_code',
-            redirect_uri: 'https://steady-centaur-82e10a.netlify.app/api/tiktok-callback'
+            // CORRECTION : URL compatible Netlify
+            redirect_uri: 'https://steady-centaur-82e10a.netlify.app/.netlify/functions/tiktok-callback'
         });
 
         const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
@@ -27,13 +45,18 @@ module.exports = async function handler(req, res) {
 
         const tokenData = await tokenRes.json();
 
-        if(tokenData.error) {
-            return res.redirect('/?tiktok=error&msg=' + tokenData.error);
+        if (tokenData.error) {
+            return {
+                statusCode: 302,
+                headers: { ...headers, 'Location': '/?tiktok=error&msg=' + encodeURIComponent(tokenData.error_description || tokenData.error) },
+                body: ''
+            };
         }
 
         const accessToken = tokenData.access_token;
         const openId = tokenData.open_id;
 
+        // Récupération du profil
         const profileRes = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,avatar_url,display_name,username', {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
@@ -49,10 +72,22 @@ module.exports = async function handler(req, res) {
             accessToken: accessToken
         }));
 
-        return res.redirect('https://steady-centaur-82e10a.netlify.app/?tiktok=success&data=' + tiktokInfo);
+        // Redirection finale vers le dashboard
+        return {
+            statusCode: 302,
+            headers: { 
+                ...headers, 
+                'Location': '/dashboard.html?tiktok=success&data=' + tiktokInfo 
+            },
+            body: ''
+        };
 
-    } catch(err) {
+    } catch (err) {
         console.error('TikTok callback error:', err);
-        return res.redirect('https://steady-centaur-82e10a.netlify.app/?tiktok=error');
+        return {
+            statusCode: 302,
+            headers: { ...headers, 'Location': '/dashboard.html?tiktok=error' },
+            body: ''
+        };
     }
-}
+};
