@@ -989,89 +989,114 @@ window.addEventListener('load', async () => {
         }
     });
 
-    // ===== SUPABASE HELPERS =====
-    async function getAuthUser() {
-        if(!sb) return null;
-        const { data: { user } } = await sb.auth.getUser();
-        return user;
-    }
+   // ===== SUPABASE HELPERS =====
+async function getAuthUser() {
+    if(!sb) return null;
+    const { data: { user } } = await sb.auth.getUser();
+    return user;
+}
 
-    async function saveUserToDB(userData) {
-        if(!sb) return;
-        const { error } = await sb.from('users').upsert([userData], { onConflict: 'email' });
-        if(error) console.error('Supabase save error:', error);
-    }
+async function saveUserToDB(userData) {
+    if(!sb) return;
+    // Utilisation de upsert pour mettre à jour ou insérer
+    const { error } = await sb.from('users').upsert([userData], { onConflict: 'email' });
+    if(error) console.error('Supabase save error:', error);
+}
 
-    async function loadUserFromDB(email) {
-        if(!sb) return null;
-        const { data, error } = await sb.from('users').select('*').eq('email', email).single();
-        if(error) return null;
-        return data;
-    }
+async function loadUserFromDB(email) {
+    if(!sb) return null;
+    const { data, error } = await sb.from('users').select('*').eq('email', email).single();
+    if(error) return null;
+    return data;
+}
 
-    async function loadProspectsFromDB(userId) {
-        if(!sb) return [];
-        const { data: prospects } = await sb.from('prospects').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-        return prospects || [];
-    }
+async function loadProspectsFromDB(userId) {
+    if(!sb) return [];
+    const { data: prospects } = await sb.from('prospects').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    return prospects || [];
+}
 
-    async function loadUserData() {
-        if(!sb) return;
-        const authUser = await getAuthUser();
-        if(!authUser) return;
-        const userData = await loadUserFromDB(authUser.email);
-        if(userData) {
-            const prospects = await loadProspectsFromDB(userData.id);
-            const user = { ...userData, prospects };
-            localStorage.setItem('nexaai_user', JSON.stringify(user));
-            loadDashboard(user);
-            showPage('dashboard');
-        } else {
-            td.email = authUser.email;
-            showPage('bot-qualify');
-            setTimeout(() => botQualifyStart(authUser.email), 300);
-        }
+async function loadUserData() {
+    if(!sb) return;
+    const authUser = await getAuthUser();
+    if(!authUser) return;
+
+    const userData = await loadUserFromDB(authUser.email);
+    
+    if(userData) {
+        // L'utilisateur existe en BDD
+        const prospects = await loadProspectsFromDB(userData.id);
+        const user = { ...userData, prospects };
+        localStorage.setItem('nexaai_user', JSON.stringify(user));
+        loadDashboard(user);
+        showPage('dashboard');
+    } else {
+        // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
+        // CORRECTION : On initialise td (tunnel data) si ce n'est pas fait
+        td = td || {}; 
+        td.email = authUser.email;
+        showPage('bot-qualify');
+        // Petit délai pour laisser le temps au DOM de charger la page bot-qualify
+        setTimeout(() => {
+            if (typeof botQualifyStart === 'function') {
+                botQualifyStart(authUser.email);
+            }
+        }, 300);
+    }
+    
+    if (typeof changeLang === 'function') {
         changeLang(currentLang);
     }
+}
 
-    async function signOut() {
-        if(sb) await sb.auth.signOut();
-        localStorage.removeItem('nexaai_user');
-        showPage('home');
-    }
+async function signOut() {
+    if(sb) await sb.auth.signOut();
+    localStorage.removeItem('nexaai_user');
+    showPage('home');
+}
 
-    // ===== STATE =====
+// ===== STATE =====
 let currentPlan = 'starter';
-let td = {}; // tunnel data
+let td = {}; // tunnel data (données du tunnel de qualification)
 let connected = [];
 let chatOpen = false;
 let chatHist = [];
 
 // ===== PAGE SUCCÈS =====
 function showSuccessPage(user) {
-    // Créer la page de succès dynamiquement
-    const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑'};
+    if (!user) return;
+
+    const planNames = {
+        starter: 'Starter',
+        pro: 'Pro 🎯',
+        business: 'Business 💼',
+        elite: 'Elite 👑'
+    };
     const planName = planNames[user.plan] || 'Starter';
 
-    // Ajouter une page succès si elle n'existe pas
     let successPage = document.getElementById('success');
     if(!successPage) {
         successPage = document.createElement('div');
         successPage.id = 'success';
-        successPage.className = 'page';
+        // Utilisation de .page-content ou .page selon ton CSS global
+        successPage.className = 'page-content'; 
+        successPage.style.display = 'none'; // Caché par défaut
+        
         successPage.innerHTML = `
             <div class="tunnel-wrap">
-                <div class="tunnel-card" style="text-align:center;max-width:550px;">
+                <div class="tunnel-card" style="text-align:center;max-width:550px;margin: 0 auto; padding: 40px;">
                     <div style="font-size:4rem;margin-bottom:20px;">🎉</div>
-                    <h2 style="color:var(--accent);font-size:2rem;margin-bottom:15px;">Bienvenue ${user.prenom} !</h2>
-                    <p style="color:var(--text-light);font-size:1rem;line-height:1.7;margin-bottom:30px;">Ton plan <strong style="color:var(--accent);">${planName}</strong> est activé. Nexa est prête à travailler pour toi 24h/24.</p>
+                    <h2 style="color:var(--accent);font-size:2rem;margin-bottom:15px;">Bienvenue ${user.prenom || ''} !</h2>
+                    <p style="color:var(--text-light);font-size:1rem;line-height:1.7;margin-bottom:30px;">
+                        Ton plan <strong style="color:var(--accent);">${planName}</strong> est activé. Nexa est prête à travailler pour toi 24h/24.
+                    </p>
                     <div style="background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.3);border-radius:12px;padding:20px;margin-bottom:30px;text-align:left;">
                         <p style="color:var(--accent);font-weight:700;margin-bottom:12px;">✅ Prochaines étapes :</p>
                         <p style="color:var(--text-light);margin:8px 0;">1. Connecte tes réseaux TikTok / Instagram</p>
                         <p style="color:var(--text-light);margin:8px 0;">2. Parle à Nexa pour finaliser ton profil</p>
                         <p style="color:var(--text-light);margin:8px 0;">3. Regarde tes premiers prospects arriver</p>
                     </div>
-                    <button class="btn btn-primary btn-full" onclick="loadDashboard(JSON.parse(localStorage.getItem('nexaai_user')));showPage('dashboard');" style="font-size:1rem;">
+                    <button class="btn btn-primary btn-full" onclick="goToDashboard()" style="font-size:1rem; width: 100%;">
                         Accéder à mon dashboard →
                     </button>
                 </div>
@@ -1079,6 +1104,13 @@ function showSuccessPage(user) {
         document.body.appendChild(successPage);
     }
     showPage('success');
+}
+
+// Fonction de secours pour le bouton du dashboard
+function goToDashboard() {
+    const user = JSON.parse(localStorage.getItem('nexaai_user'));
+    if(user) loadDashboard(user);
+    showPage('dashboard');
 }
 
 // ===== MODAL ONBOARDING =====
