@@ -25,7 +25,8 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const { plan, email, success_url, cancel_url, priceId } = JSON.parse(event.body || '{}');
+        // Ajout de clientStripeConnectId dans la récupération des données
+        const { plan, email, success_url, cancel_url, priceId, clientStripeConnectId } = JSON.parse(event.body || '{}');
 
         if(!email) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email manquant' }) };
@@ -38,7 +39,6 @@ exports.handler = async function(event, context) {
 
         const isOnce = plan && plan.includes('-once');
         
-        // CORRECTION : URL Dynamique basée sur la requête entrante
         const host = event.headers.host || 'steady-centaur-82e10a.netlify.app';
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${host}`;
@@ -54,6 +54,20 @@ exports.handler = async function(event, context) {
             'locale': 'fr',
             'allow_promotion_codes': 'true'
         });
+
+        // --- LOGIQUE D'AFFILIATION / COMMISSION 5% ---
+        // Si un ID Stripe Connect est fourni (acct_...), on active le partage des revenus
+        if (clientStripeConnectId && clientStripeConnectId.startsWith('acct_')) {
+            if (isOnce) {
+                // Pour un paiement unique : on prend 5% de frais d'application
+                stripeParams.append('payment_intent_data[application_fee_percent]', '5');
+                stripeParams.append('transfer_data[destination]', clientStripeConnectId);
+            } else {
+                // Pour un abonnement : on prend 5% sur chaque récurrence
+                stripeParams.append('subscription_data[application_fee_percent]', '5');
+                stripeParams.append('subscription_data[transfer_data][destination]', clientStripeConnectId);
+            }
+        }
 
         const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
             method: 'POST',
