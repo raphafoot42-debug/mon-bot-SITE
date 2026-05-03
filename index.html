@@ -229,37 +229,29 @@
     </nav>
 </header>
 
-<!-- HOME -->
-<div id="home" class="page active">
-    <section class="hero">
-        <div class="container">
-            <h1 id="heroTitle">Sème. Nexa récolte.</h1>
-            <p class="subtitle" id="heroSub">Tu crées. Nexa vend.</p>
-            <button class="cta-btn" id="heroCta" onclick="openOnboarding()">Voir les offres</button>
+<!-- SECTION PRICING -->
+<section class="pricing" id="pricing">
+    <div class="container">
+        <div class="pricing-header">
+            <h2 id="pricingTitle">Choisis ton offre</h2>
+            <p id="pricingSub">Sans engagement • Résiliable à tout moment • Support inclus</p>
         </div>
-    </section>
-    <section class="pricing" id="pricing">
-        <div class="container">
-            <div class="pricing-header">
-                <h2 id="pricingTitle">Choisis ton offre</h2>
-                <p id="pricingSub">Sans engagement • Résiliable à tout moment • Support inclus</p>
-            
-            </div> <!-- Fermeture de pricing-header -->
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px; margin-top:50px;">                              
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px; margin-top:50px;">     
+
             <!-- STARTER -->
             <div class="pricing-card">
                 <h3>Starter</h3>
                 <div class="pricing-current">€39</div>
-                <div class="pricing-period" id="starterTagline">/mois</div>
+                <div class="pricing-period">/mois</div>
                 <ul class="pricing-features">
-                    <li id="starterF1">10 prospects / jour</li>
-                    <li id="starterF2">10 messages automatisés / jour</li>
-                    <li id="starterF3">Dashboard de suivi</li>
-                    <li id="starterF4">Support par email</li>
+                    <li>10 prospects / jour</li>
+                    <li>10 messages automatisés / jour</li>
+                    <li>Dashboard de suivi</li>
+                    <li>Support par email</li>
                 </ul>
 
-                <!-- LE BOUTON CORRECT AVEC TON LIEN STRIPE -->
-                <button class="pricing-btn" id="starterBtn" onclick="window.location.href='https://buy.stripe.com/test_dRmdRbfbHcCY1hz5oc1ZS00'">
+                <button class="pricing-btn" onclick="window.location.href='https://buy.stripe.com/test_dRmdRbfbHcCY1hz5oc1ZS00'">
                     3 JOURS GRATUITS →
                 </button>
 
@@ -267,78 +259,95 @@
                     <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
                     <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€390 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
                     <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €78</div>
-                    <button onclick="startTunnel('starter-once')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">
+                    <button onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">
                         Paiement annuel →
                     </button>
                 </div>
             </div>
 
-                <!-- PRO -->
-                <div class="pricing-card featured">
-                    <h3>Pro 🎯</h3>
-                    <div class="pricing-current">€94</div>
-                    <div class="pricing-period" id="proTagline">/mois</div>
-                    <ul class="pricing-features">
-                        <li id="proF1"><strong>80 prospects / jour</strong></li>
-                        <li id="proF2">30 messages / jour</li>
-                        <li id="proF3">Dashboard + Analytics</li>
-                        <li id="proF4">Support 24/7</li>
-                        <li id="proF5">API d'intégration</li>
-                    </ul>
-                    <button class="pricing-btn" id="proBtn" onclick="startTunnel('pro')">Choisir Pro →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €188</div>
-                        <button onclick="startTunnel('pro-once')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.background='var(--accent)';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">Paiement unique →</button>
-                    </div>
-                </div>
-                <!-- ELITE -->
-                <div class="pricing-card" style="position:relative;border-color:rgba(100,180,255,0.4);background:linear-gradient(145deg,#111,rgba(100,180,255,0.06));">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 20px rgba(100,180,255,0.4);">BUSINESS 💼</div>
-                    <h3 style="margin-top:10px;">Business 💼</h3>
-                    <div class="pricing-current" style="font-size:3.5rem;">€194</div>
-                    <div class="pricing-period">/mois</div>
-                    <ul class="pricing-features">
-                        <li><strong>300 prospects / jour</strong></li>
-                        <li><strong>200 messages bot / jour</strong></li>
-                        <li>Dashboard + Analytics avancé</li>
-                        <li>Support prioritaire</li>
-                        <li>API d'intégration</li>
-                    </ul>
-                    <button class="pricing-btn" onclick="startTunnel('business')" style="background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;box-shadow:0 0 25px rgba(100,180,255,0.4);">Choisir Business →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:#60c8ff;font-size:1.5rem;font-weight:900;line-height:1;">€1 940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:#60c8ff;font-size:0.8rem;margin:6px 0 10px;">Économie de €388</div>
-                        <button onclick="startTunnel('business-once')" style="width:100%;padding:10px;background:transparent;color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.background='#4a9eff';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#4a9eff'">Paiement unique →</button>
-                    </div>
-                </div>
-                <!-- prenium -->
-                <div class="pricing-card" style="position:relative;border-color:rgba(255,215,0,0.4);background:linear-gradient(145deg,#111,rgba(255,215,0,0.06));">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,gold,#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 20px rgba(255,215,0,0.4);">ELITE 👑</div>
-                    <h3 style="margin-top:10px;">Elite 👑</h3>
-                    <div class="pricing-current" style="font-size:3.5rem;">€494</div>
-                    <div class="pricing-period">/mois</div>
-                    <ul class="pricing-features">
-                        <li><strong>750 prospects / jour</strong></li>
-                        <li><strong>Messages bot illimités</strong></li>
-                        <li>Dashboard Elite complet</li>
-                        <li>Account manager dédié</li>
-                        <li>API + Webhooks</li>
-                        <li>Onboarding dédié</li>
-                    </ul>
-                    <button class="pricing-btn" onclick="startTunnel('elite')" style="background:linear-gradient(90deg,gold,#fff);color:#000;box-shadow:0 0 25px rgba(255,215,0,0.4);">Choisir Elite →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,gold,#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:gold;font-size:1.5rem;font-weight:900;line-height:1;">€4 940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:gold;font-size:0.8rem;margin:6px 0 10px;">Économie de €988</div>
-                        <button onclick="startTunnel('elite-once')" style="width:100%;padding:10px;background:transparent;color:gold;border:1px solid gold;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.background='gold';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='gold'">Paiement unique →</button>
-                    </div>
+            <!-- PRO -->
+            <div class="pricing-card featured">
+                <h3>Pro 🎯</h3>
+                <div class="pricing-current">€94</div>
+                <div class="pricing-period">/mois</div>
+                <ul class="pricing-features">
+                    <li><strong>80 prospects / jour</strong></li>
+                    <li>30 messages / jour</li>
+                    <li>Dashboard + Analytics</li>
+                    <li>Support 24/7</li>
+                </ul>
+                <button class="pricing-btn" onclick="startTunnel('pro-mensuel')">Choisir Pro →</button>
+                
+                <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
+                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                    <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
+                    <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;">Paiement unique →</button>
                 </div>
             </div>
+
+            <!-- BUSINESS (Anciennement Premium dans tes IDs) -->
+            <div class="pricing-card" style="position:relative; border-color:rgba(100,180,255,0.4);">
+                <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">BUSINESS 💼</div>
+                <h3 style="margin-top:10px;">Business 💼</h3>
+                <div class="pricing-current" style="font-size:3.5rem;">€194</div>
+                <div class="pricing-period">/mois</div>
+                <ul class="pricing-features">
+                    <li><strong>300 prospects / jour</strong></li>
+                    <li><strong>200 messages / jour</strong></li>
+                    <li>Support prioritaire</li>
+                </ul>
+                <button class="pricing-btn" onclick="startTunnel('business-mensuel')" style="background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;">Choisir Business →</button>
+                
+                <div style="margin-top:16px;padding:16px;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-radius:10px;text-align:center;">
+                    <div style="display:inline-block;background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                    <div style="color:#60c8ff;font-size:1.5rem;font-weight:900;">€1 940</div>
+                    <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                </div>
+            </div>
+
+            <!-- ELITE -->
+            <div class="pricing-card" style="position:relative; border-color:rgba(255,215,0,0.4);">
+                <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,gold,#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">ELITE 👑</div>
+                <h3 style="margin-top:10px;">Elite 👑</h3>
+                <div class="pricing-current" style="font-size:3.5rem;">€494</div>
+                <div class="pricing-period">/mois</div>
+                <ul class="pricing-features">
+                    <li><strong>750 prospects / jour</strong></li>
+                    <li><strong>Messages illimités</strong></li>
+                    <li>Account manager dédié</li>
+                </ul>
+                <button class="pricing-btn" onclick="startTunnel('elite-mensuel')" style="background:linear-gradient(90deg,gold,#fff);color:#000;">Choisir Elite →</button>
+                
+                <div style="margin-top:16px;padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.25);border-radius:10px;text-align:center;">
+                    <div style="display:inline-block;background:linear-gradient(90deg,gold,#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                    <div style="color:gold;font-size:1.5rem;font-weight:900;">€4 940</div>
+                    <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:gold;border:1px solid gold;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                </div>
+            </div>
+
         </div>
-    </section>
+    </div>
+</section>
+
+<!-- LE CODE JAVASCRIPT À METTRE TOUT EN BAS AVANT </body> -->
+<script>
+const STRIPE_PLANS = {
+  "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", prospects: 10 },
+  "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", prospects: 80 },
+  "price_1TT4XwP8svYH1bkOoPQgfYmF": { name: "Business Annuel", prospects: 300 },
+  "price_1TT4XNP8svYH1bkORkrNN1P6": { name: "Elite Annuel", prospects: 750 }
+};
+
+function startTunnel(id) {
+    // Si c'est un prix annuel (commence par price_)
+    if (id.startsWith('price_')) {
+        console.log("Lancement du paiement annuel Stripe ID:", id);
+        // Ici ton code pour rediriger vers Stripe avec l'ID sélectionné
+    } else {
+        console.log("Lancement du forfait mensuel:", id);
+    }
+}
+</script>
 <!-- CONFIGURATION COMMISSIONS CLIENT (CORRIGÉ) -->
 <div id="nexa-commission-setup" style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
     <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
