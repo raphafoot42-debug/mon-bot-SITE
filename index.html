@@ -497,9 +497,10 @@
     </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="page">
+<!-- DASHBOARD RÉPARÉ -->
+<div id="dashboard-page" class="page" style="display:none;">
     <div class="dashboard-wrapper">
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-logo">✦ NexaAI</div>
             <ul class="sidebar-menu">
@@ -510,8 +511,42 @@
                 <li><a id="menuLogout" onclick="logout()" style="color:#ff4444;">Déconnexion</a></li>
             </ul>
         </div>
-        <div class="dash-main">
 
+        <!-- Main Content -->
+        <div class="dash-main">
+            <!-- Section Aperçu -->
+            <div id="overview-section" class="dash-section">
+                <h2>Tableau de bord</h2>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>Prospects</h3><p id="statProspects">0</p></div>
+                    <div class="stat-card"><h3>Messages</h3><p>0</p></div>
+                </div>
+            </div>
+
+            <!-- Section Prospects -->
+            <div id="prospects-section" class="dash-section" style="display:none;">
+                <h2>Mes Prospects</h2>
+                <div id="prospectsList">Chargement...</div>
+            </div>
+
+            <!-- Section Bot -->
+            <div id="bot-section" class="dash-section" style="display:none;">
+                <h2>Assistant IA</h2>
+                <div class="chat-container">
+                    <div id="chatBox"></div>
+                    <input type="text" id="botInput" placeholder="Posez une question...">
+                    <button onclick="sendDashMsg()">Envoyer</button>
+                </div>
+            </div>
+            
+            <!-- Section Paramètres -->
+            <div id="settings-section" class="dash-section" style="display:none;">
+                <h2>Paramètres</h2>
+                <p>Gérez votre compte ici.</p>
+            </div>
+        </div> <!-- Fin de dash-main -->
+    </div> <!-- Fin de dashboard-wrapper -->
+</div> <!-- Fin de dashboard-page -->
             <!-- APERÇU -->
             <div id="d-overview">
                 <h1 id="dash-welcome">Tableau de bord</h1>
