@@ -339,7 +339,18 @@
             </div>
         </div>
     </section>
-
+<!-- CONFIGURATION COMMISSIONS CLIENT -->
+<div style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
+    <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure tes ventes IA</h4>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
+        Entre ton <strong>ID Stripe Connect</strong> pour que Nexa vende tes produits et te reverse tes gains automatiquement (95% pour toi, 5% de frais Nexa).
+    </p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+        <input type="text" id="clientStripeId" placeholder="acct_1..." style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px;">
+        <button onclick="saveStripeId()" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer;">Enregistrer</button>
+    </div>
+    <p style="font-size:0.7rem; color:gray; margin-top:10px;">Tu trouveras ton ID dans tes paramètres Stripe Connect.</p>
+</div>
 <!-- TÉMOIGNAGES -->
 <section style="padding:80px 0;background:var(--bg);">
     <div class="container" style="max-width:1100px;">
