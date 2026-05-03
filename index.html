@@ -243,9 +243,10 @@
             <div class="pricing-header">
                 <h2 id="pricingTitle">Choisis ton offre</h2>
                 <p id="pricingSub">Sans engagement • Résiliable à tout moment • Support inclus</p>
-            </div>
-            <div clas  >                                                                                                                                                                                                                                                                                                                                                                                                                                                        
-             <!-- STARTER -->
+                        </div> <!-- Fermeture de pricing-header ->
+            
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px; margin-top:50px;">                                                                                                                                                                                                                                                                                                                                                                                                                                         
+            <!-- STARTER -->
             <div class="pricing-card">
                 <h3>Starter</h3>
                 <div class="pricing-current">€39</div>
@@ -272,20 +273,6 @@
                 </div>
             </div>
 
-            <!-- PRO -->
-            <div class="pricing-card featured">
-                <div class="featured-badge">PLUS POPULAIRE</div>
-                <h3>Pro</h3>
-                <div class="pricing-current">€99</div>
-                <div class="pricing-period" id="proTagline">/mois</div>
-                <ul class="pricing-features">
-                    <li id="proF1">50 prospects / jour</li>
-                    <li id="proF2">50 messages automatisés / jour</li>
-                    <li id="proF3">Filtres de recherche avancés</li>
-                    <li id="proF4">Support prioritaire 24/7</li>
-                </ul>
-                <button class="pricing-btn" id="proBtn" onclick="startTunnel('pro')">Commencer →</button>
-            </div>
                 <!-- PRO -->
                 <div class="pricing-card featured">
                     <h3>Pro 🎯</h3>
@@ -506,49 +493,6 @@
             <div style="text-align:center;color:var(--text-light);font-size:0.85rem;">
                 Déjà un compte ? <button onclick="showPage('login')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;font-family:'Inter',sans-serif;">Se connecter</button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- ÉTAPE 4 : PAIEMENT -->
-<div id="step4" class="page">
-    <div class="tunnel-wrap">
-        <div class="tunnel-card">
-            <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
-            <h2>Paiement</h2>
-            <p class="step-info">Étape 4</p>
-
-            <!-- Récapitulatif forfait -->
-            <div style="background:rgba(57,255,20,0.08);border:2px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:25px;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:900;font-size:1.1rem;" id="pay-plan-name">Starter</div>
-                    <div style="color:var(--text-light);font-size:0.82rem;" id="pay-plan-type">Abonnement mensuel</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="color:var(--accent);font-size:2rem;font-weight:900;" id="pay-plan-price">€39</div>
-                </div>
-            </div>
-
-            <!-- Ce que tu obtiens -->
-            <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:25px;">
-                <p style="color:var(--accent);font-weight:700;margin-bottom:10px;font-size:0.9rem;">✅ Inclus dans ton plan :</p>
-                <div id="pay-features" style="color:var(--text-light);font-size:0.88rem;line-height:2;"></div>
-            </div>
-
-            <!-- Bouton Stripe Checkout -->
-            <button class="btn btn-primary btn-full" id="pay-btn" onclick="processPayment()" style="margin-bottom:15px;font-size:1rem;padding:18px;">
-                🔒 Payer avec Stripe
-            </button>
-
-            <!-- Garanties -->
-            <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:10px;">
-                <span style="color:var(--text-light);font-size:0.75rem;">Paiement sécurisé</span>
-                <span style="color:var(--text-light);font-size:0.75rem;">Sans engagement</span>
-                <span style="color:var(--text-light);font-size:0.75rem;">Annulation en 1 clic</span>
-            </div>
-
-            <!-- Logos paiement -->
-            <p style="text-align:center;color:var(--text-light);font-size:0.72rem;margin-top:15px;">Visa • Mastercard • Amex • Apple Pay • Google Pay</p>
         </div>
     </div>
 </div>
