@@ -747,8 +747,8 @@
     <div id="chatMsgs"></div>
     <div id="typingBubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
     <div class="chat-input-row">
-        <input id="chatInput" type="text" placeholder="Votre message..." onkeydown="if(event.key==='Enter')sendChat()" oninput="if(awaitingAdminPwd)this.type='password';else this.type='text';">
-        <button class="chat-send-btn" onclick="sendChat()">➤</button>
+        <input id="chatInput" type="text" placeholder="Votre message..." onkeydown="if(event.key==='Enter'){sendChatMsg(this.value.trim());this.value=''}" oninput="if(awaitingAdminPwd)this.type='password';else this.type='text';">
+        <button class="chat-send-btn" onclick="sendChatMsg(document.getElementById('chatInput').value.trim());document.getElementById('chatInput').value=''">➤</button>
     </div>
 </div>
 
@@ -869,6 +869,7 @@ const STRIPE_URL = '/.netlify/functions/stripe-checkout';
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
 let stripe = null;
 let sb = null;
+let CLIENT_STORE_URL = '';
     // Détecter retour Stripe après paiement
 // ===== RETOUR TIKTOK =====
 function checkTikTokReturn() {
@@ -1994,6 +1995,9 @@ TON COMPORTEMENT :
 - Tu t'adaptes en temps réel, jamais de script fixe
 - Chaque message rapproche le prospect d'une décision
 
+RÔLE AGENT DE VENTE TIKTOK :
+Quand tu prospectes pour un client, tu connais son business et son lien de vente. Tu pousses les prospects vers ce lien. Tu utilises la preuve sociale, l urgence et la rareté pour convaincre. Tu fermes la vente — c est ton seul objectif.
+
 RÈGLES ABSOLUES :
 - Max 3-4 lignes par message, jamais de pavé
 - Toujours en français
@@ -2027,13 +2031,6 @@ function addMsg(type, text, opts=[]) {
 
 function optClick(opt) { sendChatMsg(opt); }
 
-function sendChat() {
-    const inp = document.getElementById('chatInput');
-    const t = inp.value.trim();
-    if(!t) return;
-    inp.value = '';
-    sendChatMsg(t);
-}
 
 let awaitingAdminPwd = false;
 
@@ -2080,7 +2077,12 @@ async function sendChatMsg(text) {
         const res = await fetch(PROXY_URL, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:400,system:SYS,messages:chatHist})
+            body:JSON.stringify({
+                model:CLAUDE_MODEL,
+                max_tokens:400,
+                system: SYS + (CLIENT_STORE_URL ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL : ''),
+                messages:chatHist
+            })
         });
         const data = await res.json();
         document.getElementById('typingBubble').style.display = 'none';
@@ -2280,6 +2282,10 @@ async function bqSendToAI(userText) {
     const tiktokMatch = userText.match(/@[\w.]+/);
     if(tiktokMatch) bqData.tiktok = tiktokMatch[0];
 
+    // Détecter URL Beacons/Stan Store
+    const urlMatch = userText.match(/https?:\/\/[^\s]+/);
+    if(urlMatch) { bqData.store_url = urlMatch[0]; CLIENT_STORE_URL = urlMatch[0]; }
+
     // Détecter prénom (premier message court)
     if(!bqData.prenom && bqHist.length === 1 && userText.split(' ').length <= 3) {
         bqData.prenom = userText.trim();
@@ -2338,7 +2344,10 @@ async function bqSendToAI(userText) {
                 localUser.tiktok = bqData.tiktok || '';
                 localStorage.setItem('nexaai_user', JSON.stringify(localUser));
 
-                bqAIMsg(reply + '\n\n👇 Choisis ton forfait pour activer ton agent IA !', [
+                const storeConfirm = bqData.store_url ? '\n🔗 ' + bqData.store_url : '';
+                const tiktokConfirm = bqData.tiktok ? '\n📱 ' + bqData.tiktok : '';
+                const missionMsg = 'Paramétrage terminé. ✅' + tiktokConfirm + storeConfirm + "\n\nJ'ai ton lien de vente et l'accès à ton TikTok. Je lance maintenant la prospection automatique pour vendre tes produits.\n\n👇 Choisis ton forfait :";
+                bqAIMsg(missionMsg + '', [
                     '⚡ Starter — €39/mois',
                     '🚀 Pro — €94/mois',
                     'Business — €194/mois',
