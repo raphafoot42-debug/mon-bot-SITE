@@ -236,10 +236,21 @@
             <h2 id="pricingTitle">Choisis ton offre</h2>
             <p id="pricingSub">Sans engagement • Résiliable à tout moment • Support inclus</p>
         </div>
+   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px; margin-top:50px;">     
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:30px; margin-top:50px;">     
-
-            <!-- STARTER -->
+            <!-- SECTION AMBASSADEUR / PARTENARIAT -->              
+<div class="ambassador-card" style="margin-top: 30px; border: 2px dashed #007bff; border-radius: 12px; padding: 25px; background: #f8fbff; text-align: center;">
+    <h3 style="color: #007bff; margin-bottom: 15px;">🤝 Modèle Partenaire (Revenue Share)</h3>
+    <p style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
+        <strong>Idéal pour débuter :</strong> Vous accédez à tous nos outils gratuitement (0€/mois).<br>
+        En échange, nous partageons les revenus : <strong>Vous gardez 20%</strong> de chaque vente que vous réalisez, et nous conservons 80% pour l'infrastructure.
+    </p>
+    <button onclick="handleAmbassadorSignup()" class="btn-primary" style="background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        Activer le mode Ambassadeur
+    </button>
+</div>
+           
+           <!-- STARTER -->
             <div class="pricing-card">
                 <h3>Starter</h3>
                 <div class="pricing-current">€39</div>
@@ -503,7 +514,7 @@ function startTunnel(id) {
 </div>
 
 <!-- LOGIN -->
-<div id="login" class="page">
+    id="login" class="page">
     <div class="tunnel-wrap">
         <div class="tunnel-card">
             <h2 id="loginTitle">Connexion</h2>
