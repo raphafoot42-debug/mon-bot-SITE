@@ -577,28 +577,9 @@ function startTunnel(id) {
 <!-- DASHBOARD RÉPARÉ -->
 <div id="dashboard-page" class="page" style="display:none;">
     <div class="dashboard-wrapper">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-logo">✦ NexaAI</div>
-            <ul class="sidebar-menu">
-                <li><a class="active" id="menuOverview" onclick="showDash('overview',this)">📊 Aperçu</a></li>
-                <li><a id="menuProspects" onclick="showDash('prospects',this)">👥 Mes Prospects</a></li>
-                <li><a id="menuBot" onclick="showDash('bot',this)">🤖 Parler au Bot</a></li>
-                <li><a id="menuSettings" onclick="showDash('settings',this)">⚙️ Paramètres</a></li>
-                <li><a id="menuLogout" onclick="logout()" style="color:#ff4444;">Déconnexion</a></li>
-            </ul>
-        </div>
-
+       
         <!-- Main Content -->
         <div class="dash-main">
-            <!-- Section Aperçu -->
-            <div id="overview-section" class="dash-section">
-                <h2>Tableau de bord</h2>
-                <div class="stats-grid">
-                    <div class="stat-card"><h3>Prospects</h3><p id="statProspects">0</p></div>
-                    <div class="stat-card"><h3>Messages</h3><p>0</p></div>
-                </div>
-            </div>
 
             <!-- Section Prospects -->
             <div id="prospects-section" class="dash-section" style="display:none;">
