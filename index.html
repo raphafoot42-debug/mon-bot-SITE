@@ -2278,62 +2278,26 @@ async function sendDashMsg() {
     }
 }
 
-
 // ===== BOT QUALIFICATION =====
 let bqHist = [];
 let bqStep = 0;
 let bqData = {};
 
 const BQ_PROMPT = `Tu t'appelles Nexa. Tu es l'IA personnelle de NexaAI. Tu ne mentionnes jamais Claude ni Anthropic.
+Tu viens de rencontrer un nouvel utilisateur. Tu vas le qualifier en 5 étapes.
 
-Tu viens de rencontrer un nouvel utilisateur qui vient de créer son compte. Tu vas le qualifier en 5 étapes pour devenir son agent IA personnel et lui recommander le bon forfait.
+FORFAITS :
+- Starter : €39/mois — 10 prospects/jour
+- Pro : €94/mois — 80 prospects/jour
+- Business : €194/mois — 300 prospects/jour
+- Elite : €494/mois — 750 prospects/jour
+- Ambassadeur : €0 (Affiliation 80/20)
 
-FORFAITS (à respecter strictement) :
-- Starter : €39/mois / €390 paiement unique — 10 prospects/jour
-- Pro : €94/mois / €940 paiement unique — 80 prospects/jour
-- Business : €194/mois / €1940 paiement unique — 300 prospects/jour
-- Elite : €494/mois / €4940 paiement unique — 750 prospects/jour
-
-TUNNEL EN 5 ÉTAPES — une seule question à la fois, jamais deux d'un coup :
-
-ÉTAPE 1 — LIEN HUMAIN :
-Présente-toi chaleureusement en tant que Nexa, son agent IA personnel. Dis-lui que tu vas apprendre à le connaître pour travailler pour lui. Demande juste son prénom pour commencer.
-
-ÉTAPE 2 — SON BUSINESS :
-Collecte une info à la fois, naturellement dans la conversation :
-→ Nom de son business
-→ Ce qu'il vend exactement (produit, service, coaching) — note bien le NOM du produit
-→ Son prix de vente exact (ex: 97€, 497€, 1500€) — c'est crucial pour calculer son manque à gagner
-→ Sa cible client (qui il vise exactement)
-→ Son objectif de revenus ce mois-ci
-Reformule après chaque réponse pour qu'il se sente compris. Quand il donne son prix, confirme : "Donc tu vends [produit] à [prix]€, c'est bien ça ?".
-
-ÉTAPE 3 — SON TIKTOK :
-Collecte une info à la fois :
-→ Son pseudo TikTok (@...)
-→ Sa niche / type de contenu
-→ Son nombre de followers approximatif
-→ Combien de DMs il reçoit par jour sans pouvoir y répondre
-Montre de l'intérêt pour son TikTok, fais-lui sentir que tu comprends sa situation.
-
-ÉTAPE 4 — CRÉER L'URGENCE :
-Utilise tout ce qu'il t'a dit. Calcule avec lui ce qu'il perd chaque jour : "Avec X DMs/jour à [son prix]€ le produit, tu perds environ X€ par semaine sans automatisation." Sois précise, percutante. Montre-lui que chaque jour sans NexaAI = de l'argent perdu.
-
-ÉTAPE 5 — RECOMMANDER LE BON FORFAIT :
-Recommande le forfait selon son volume de DMs :
-- 0-10 DMs/jour → Starter (€39/mois)
-- 11-80 DMs/jour → Pro (€94/mois)
-- 81-300 DMs/jour → Business (€194/mois)
-- 300+ DMs/jour → Elite (€494/mois)
-Explique pourquoi CE forfait correspond EXACTEMENT à son profil TikTok et son business. Termine ton message par exactement ce mot : "CHOIX_FORFAIT"
-
-RÈGLES :
-- Une seule question à la fois — jamais deux d'un coup
-- Max 3-4 lignes par message, naturel et humain
-- Jamais mentionner Claude ou Anthropic
-- Tu es Nexa, l'agent IA personnel du client
-- Toujours en français
-- Mémorise tout ce qu'il dit — tu en auras besoin pour travailler pour lui`;
+ÉTAPE 1 : Prénom.
+ÉTAPE 2 : Business (Nom, Produit, Prix, Cible).
+ÉTAPE 3 : TikTok (Pseudo, Followers, DMs/jour).
+ÉTAPE 4 : Calculer le manque à gagner (Urgence).
+ÉTAPE 5 : Recommander le forfait. Termine par "CHOIX_FORFAIT".`;
 
 function botQualifyStart(email) {
     bqHist = [];
@@ -2342,13 +2306,13 @@ function botQualifyStart(email) {
     document.getElementById('bq-msgs').innerHTML = '';
     document.getElementById('bq-opts').innerHTML = '';
     document.getElementById('bq-progress').style.width = '0%';
-    bqAIMsg("Salut ! 👋 Moi c'est Nexa, ton agent IA personnel NexaAI.\n\nJe vais apprendre à te connaître pour travailler pour toi 24h/24. Pour commencer... c'est quoi ton prénom ?");
+    bqAIMsg("Salut ! 👋 Moi c'est Nexa, ton agent IA personnel.\n\nPour commencer ce voyage ensemble... c'est quoi ton prénom ?");
 }
 
 function bqAIMsg(text, opts=[]) {
     const msgs = document.getElementById('bq-msgs');
     const d = document.createElement('div');
-    d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;animation:slideL 0.3s ease;';
+    d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;animation:slideL 0.3s ease;margin-bottom:10px;';
     d.innerHTML = text.replace(/\n/g,'<br>');
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
@@ -2369,7 +2333,7 @@ function bqUserMsg(text) {
     document.getElementById('bq-opts').innerHTML = '';
     const msgs = document.getElementById('bq-msgs');
     const d = document.createElement('div');
-    d.style.cssText = 'background:linear-gradient(90deg,var(--accent),#2dd10f);color:#000;border-radius:14px;padding:12px 16px;max-width:85%;align-self:flex-end;font-weight:600;font-size:0.88rem;animation:slideR 0.3s ease;align-self:flex-end;margin-left:auto;';
+    d.style.cssText = 'background:linear-gradient(90deg,var(--accent),#2dd10f);color:#000;border-radius:14px;padding:12px 16px;max-width:85%;align-self:flex-end;font-weight:600;font-size:0.88rem;animation:slideR 0.3s ease;margin-left:auto;margin-bottom:10px;';
     d.textContent = text;
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
@@ -2386,30 +2350,40 @@ function bqSend() {
 
 async function bqSendToAI(userText) {
     bqHist.push({ role: 'user', content: userText });
-
-    // Extraire intelligemment les infos du message
     const lower = userText.toLowerCase();
 
-    // Détecter pseudo TikTok
-    const tiktokMatch = userText.match(/@[\w.]+/);
-    if(tiktokMatch) bqData.tiktok = tiktokMatch[0];
-
-    // Détecter URL Beacons/Stan Store
-    const urlMatch = userText.match(/https?:\/\/[^\s]+/);
-    if(urlMatch) { bqData.store_url = urlMatch[0]; CLIENT_STORE_URL = urlMatch[0]; }
-
-    // Détecter prénom (premier message court)
-    if(!bqData.prenom && bqHist.length === 1 && userText.split(' ').length <= 3) {
-        bqData.prenom = userText.trim();
+    // --- LOGIQUE SPÉCIALE CLOSER (Affiliation vs Payant) ---
+    
+    // 1. Détection Ambassadeur / Affiliation
+    if (lower.includes('ambassadeur') || lower.includes('affiliation') || lower.includes('gratuit')) {
+        bqData.plan = 'affiliation';
+        bqAIMsg("Excellent choix ! 🤝 Plan Ambassadeur activé (80% pour toi / 20% pour Nexa).");
+        bqAIMsg("Action : Copie ton lien Beacons et mets-le en bio TikTok. \n\nDis-moi 'PRET' quand c'est fait pour ouvrir ton accès.");
+        await saveUserToDB({ email: bqData.email, plan: 'affiliation', prenom: bqData.prenom || 'Ambassadeur' });
+        return;
     }
 
-    // Mettre à jour la progression
-    bqStep = Math.min(Math.floor(bqHist.length / 2) + 1, 5);
-    document.getElementById('bq-progress').style.width = (bqStep * 20) + '%';
+    // 2. Détection Forfaits Payants
+    const planMap = [
+        { keys: ['starter', '39'], plan: 'starter', name: 'Starter', price: '€39' },
+        { keys: ['pro', '94'], plan: 'pro', name: 'Pro 🎯', price: '€94' },
+        { keys: ['business', '194'], plan: 'business', name: 'Business 💼', price: '€194' },
+        { keys: ['elite', '494'], plan: 'elite', name: 'Elite 👑', price: '€494' }
+    ];
 
+    for(const p of planMap) {
+        if(p.keys.some(k => lower.includes(k)) && bqStep >= 4) {
+            bqData.plan = p.plan;
+            bqAIMsg(`Option ${p.name} sélectionnée ! 🔥 On lance l'artillerie lourde.`);
+            bqAIMsg("Pour injecter mon IA sur ton compte, envoie-moi ton NOM complet et l'URL de ton tunnel.");
+            bqAIMsg("Je t'envoie le lien de paiement sécurisé juste après.");
+            await saveUserToDB({ email: bqData.email, plan: p.plan, prenom: bqData.prenom || 'Client Premium' });
+            return;
+        }
+    }
+
+    // --- LOGIQUE NORMALE (IA) ---
     document.getElementById('bq-typing').style.display = 'block';
-    document.getElementById('bq-msgs').scrollTop = 99999;
-
     try {
         const res = await fetch(PROXY_URL, {
             method: 'POST',
@@ -2423,91 +2397,22 @@ async function bqSendToAI(userText) {
             let reply = data.content[0].text;
             bqHist.push({ role: 'assistant', content: reply });
 
-            // Détecter CHOIX_FORFAIT = fin du tunnel
             if(reply.includes('CHOIX_FORFAIT')) {
                 reply = reply.replace('CHOIX_FORFAIT', '').trim();
-                document.getElementById('bq-progress').style.width = '100%';
-
-                // Sauvegarder tout le profil dans Supabase
-                // Extraire prix et produit depuis l'historique de conversation
-                const fullConv = bqHist.map(m => m.content).join(' ');
-                const prixMatch = fullConv.match(/(\d+)\s*€/);
-                if(prixMatch) bqData.prix_produit = prixMatch[1] + '€';
-
-                await saveUserToDB({
-                    email: bqData.email,
-                    prenom: bqData.prenom || bqData.email.split('@')[0],
-                    business: bqData.business || '',
-                    type_business: bqData.type_business || '',
-                    plan: 'free',
-                    platforms: bqData.tiktok ? ['tiktok'] : [],
-                    tiktok_pseudo: bqData.tiktok || '',
-                    objectif: bqData.objectif || '',
-                    dms_par_jour: parseInt(bqData.dms) || 0,
-                    prix_produit: bqData.prix_produit || '',
-                    niche_tiktok: bqData.niche || '',
-                    followers_tiktok: bqData.followers || '',
-                    cible_client: bqData.cible || ''
-                });
-
-                // Mettre à jour localStorage aussi
-                const localUser = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-                localUser.prenom = bqData.prenom || localUser.prenom;
-                localUser.tiktok = bqData.tiktok || '';
-                localStorage.setItem('nexaai_user', JSON.stringify(localUser));
-
-                const storeConfirm = bqData.store_url ? '\n🔗 ' + bqData.store_url : '';
-                const tiktokConfirm = bqData.tiktok ? '\n📱 ' + bqData.tiktok : '';
-                const missionMsg = 'Paramétrage terminé. ✅' + tiktokConfirm + storeConfirm + "\n\nJ'ai ton lien de vente et l'accès à ton TikTok. Je lance maintenant la prospection automatique pour vendre tes produits.\n\n👇 Choisis ton forfait :";
-                bqAIMsg(missionMsg + '', [
+                bqAIMsg(reply, [
+                    '🤝 Plan Ambassadeur — €0',
                     '⚡ Starter — €39/mois',
                     '🚀 Pro — €94/mois',
                     'Business — €194/mois',
                     '👑 Elite — €494/mois'
                 ]);
-                return;
+            } else {
+                bqAIMsg(reply);
             }
-
-            // Détecter le choix de forfait
-            const planMap = [
-                { keys: ['starter', '39'], plan: 'starter', name: 'Starter', price: '€39' },
-                { keys: ['pro', '94'], plan: 'pro', name: 'Pro 🎯', price: '€94' },
-                { keys: ['business', '194'], plan: 'business', name: 'Business 💼', price: '€194' },
-                { keys: ['elite', '494'], plan: 'elite', name: 'Elite 👑', price: '€494' }
-            ];
-
-            for(const p of planMap) {
-                if(p.keys.some(k => lower.includes(k)) && bqStep >= 4) {
-                    bqData.plan = p.plan;
-                    currentPlan = p.plan;
-                    document.getElementById('pay-plan-name').textContent = p.name;
-                    document.getElementById('pay-plan-price').textContent = p.price;
-
-                    // Sauvegarder le plan choisi dans Supabase
-                    await saveUserToDB({
-                        email: bqData.email,
-                        prenom: bqData.prenom || bqData.email.split('@')[0],
-                        plan: p.plan,
-                        tiktok_pseudo: bqData.tiktok || '',
-                        platforms: bqData.tiktok ? ['tiktok'] : []
-                    });
-
-                    bqAIMsg("Parfait ! 🎉 " + p.name + " c'est exactement ce qu'il te faut.\n\nJe t'emmène vers le paiement pour activer ton agent IA maintenant !");
-                    setTimeout(() => { showPage('step1'); }, 2000);
-                    return;
-                }
-            }
-
-            // Options contextuelles selon l'étape
-            let opts = [];
-            if(bqStep === 2) opts = ['🎯 Coaching / Formation', '📦 E-commerce', '💼 Service / Freelance', '🚀 Autre'];
-            else if(bqStep === 3) opts = ['💰 1 000€/mois', '🚀 5 000€/mois', '🔥 10 000€+/mois'];
-
-            bqAIMsg(reply, opts);
         }
     } catch(err) {
         document.getElementById('bq-typing').style.display = 'none';
-        bqAIMsg('Nexa analyse ton profil... Réessaie dans quelques secondes 🔄');
+        bqAIMsg('Nexa analyse tes données... Continue !');
     }
 }
 </script>
