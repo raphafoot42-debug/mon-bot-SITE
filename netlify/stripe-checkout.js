@@ -1,12 +1,8 @@
 const PRICE_IDS = {
     'starter':       'price_1THSyjP8svYH1bkOt686fqqC',
-    'starter-once':  'price_1THSyjP8svYH1bkOt686fqqC',
     'pro':           'price_1THSzsP8svYH1bkOndl82cmU',
-    'pro-once':      'price_1THSzsP8svYH1bkOndl82cmU',
     'business':      'price_1TP3ihP8svYH1bkOOITtQVaA',
-    'business-once': 'price_1TP3ihP8svYH1bkOOITtQVaA',
     'elite':         'price_1TJ8XPP8svYH1bkOWwjjcZ87',
-    'elite-once':    'price_1TJ8XPP8svYH1bkOWwjjcZ87',
 };
 
 exports.handler = async function(event, context) {
@@ -16,55 +12,44 @@ exports.handler = async function(event, context) {
         'Access-Control-Allow-Headers': 'Content-Type'
     };
 
-    if(event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
-    }
-
-    if(event.httpMethod !== 'POST') {
-        return { statusCode: 405, headers, body: 'Method not allowed' };
-    }
+    if(event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
     try {
-        // Ajout de clientStripeConnectId dans la récupération des données
-        const { plan, email, success_url, cancel_url, priceId, clientStripeConnectId } = JSON.parse(event.body || '{}');
+        const { plan, email, clientStripeConnectId, isAmbassadorMode } = JSON.parse(event.body || '{}');
 
-        if(!email) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email manquant' }) };
+        // 1. Gestion du mode "Ambassadeur Gratuit" (Pas de paiement Stripe immédiat)
+        if (isAmbassadorMode) {
+            return { 
+                statusCode: 200, 
+                headers, 
+                body: JSON.stringify({ message: 'Mode ambassadeur activé via Supabase' }) 
+            };
         }
 
-        const finalPriceId = priceId || PRICE_IDS[plan];
-        if(!finalPriceId) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Plan invalide' }) };
-        }
-
+        const finalPriceId = PRICE_IDS[plan];
         const isOnce = plan && plan.includes('-once');
         
-        const host = event.headers.host || 'steady-centaur-82e10a.netlify.app';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = `${protocol}://${host}`;
-
         const stripeParams = new URLSearchParams({
             'payment_method_types[]': 'card',
             'mode': isOnce ? 'payment' : 'subscription',
             'customer_email': email,
             'line_items[0][price]': finalPriceId,
             'line_items[0][quantity]': '1',
-            'success_url': success_url || (baseUrl + '/dashboard.html?payment=success'),
-            'cancel_url': cancel_url || (baseUrl + '/#pricing'),
-            'locale': 'fr',
-            'allow_promotion_codes': 'true'
+            'success_url': 'https://steady-centaur-82e10a.netlify.app/dashboard.html?payment=success',
+            'cancel_url': 'https://steady-centaur-82e10a.netlify.app/#pricing',
+            'locale': 'fr'
         });
 
-        // --- LOGIQUE D'AFFILIATION / COMMISSION 5% ---
-        // Si un ID Stripe Connect est fourni (acct_...), on active le partage des revenus
+        // 2. LOGIQUE D'AFFILIATION (80% pour nous, 20% pour l'affilié)
+        // Note: Dans Stripe Connect, l'application_fee est ce que NOUS on garde.
         if (clientStripeConnectId && clientStripeConnectId.startsWith('acct_')) {
+            const myCommission = '80'; // On prend 80%
+            
             if (isOnce) {
-                // Pour un paiement unique : on prend 5% de frais d'application
-                stripeParams.append('payment_intent_data[application_fee_percent]', '5');
+                stripeParams.append('payment_intent_data[application_fee_percent]', myCommission);
                 stripeParams.append('transfer_data[destination]', clientStripeConnectId);
             } else {
-                // Pour un abonnement : on prend 5% sur chaque récurrence
-                stripeParams.append('subscription_data[application_fee_percent]', '5');
+                stripeParams.append('subscription_data[application_fee_percent]', myCommission);
                 stripeParams.append('subscription_data[transfer_data][destination]', clientStripeConnectId);
             }
         }
@@ -79,24 +64,9 @@ exports.handler = async function(event, context) {
         });
 
         const session = await stripeResponse.json();
-
-        if(session.error) {
-            console.error('Erreur API Stripe:', session.error);
-            return { statusCode: 400, headers, body: JSON.stringify({ error: session.error.message }) };
-        }
-
-        return { 
-            statusCode: 200, 
-            headers, 
-            body: JSON.stringify({ url: session.url, id: session.id }) 
-        };
+        return { statusCode: 200, headers, body: JSON.stringify({ url: session.url }) };
 
     } catch(err) {
-        console.error('Erreur interne serveur:', err);
-        return { 
-            statusCode: 500, 
-            headers, 
-            body: JSON.stringify({ error: 'Erreur lors de la création de la session de paiement' }) 
-        };
+        return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
     }
 };
