@@ -195,16 +195,7 @@
 </header>
 
             <!-- SECTION AMBASSADEUR / PARTENARIAT -->              
-<div class="ambassador-card" style="margin-top: 30px; border: 2px dashed #007bff; border-radius: 12px; padding: 25px; background: #f8fbff; text-align: center;">
-    <h3 style="color: #007bff; margin-bottom: 15px;">🤝 Modèle Partenaire (Revenue Share)</h3>
-    <p style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
-        <strong>Idéal pour débuter :</strong> Vous accédez à tous nos outils gratuitement (0€/mois).<br>
-        En échange, nous partageons les revenus : <strong>Vous gardez 20%</strong> de chaque vente que vous réalisez, et nous conservons 80% pour l'infrastructure.
-    </p>
-    <button onclick="handleAmbassadorSignup()" class="btn-primary" style="background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-        Activer le mode Ambassadeur
-    </button>
-</div>
+
            
            <!-- STARTER -->
             <div class="pricing-card">
@@ -297,24 +288,7 @@
 </section>
 
 <!-- LE CODE JAVASCRIPT À METTRE TOUT EN BAS AVANT </body> -->
-<script>
-const STRIPE_PLANS = {
-  "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", prospects: 10 },
-  "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", prospects: 80 },
-  "price_1TT4XwP8svYH1bkOoPQgfYmF": { name: "Business Annuel", prospects: 300 },
-  "price_1TT4XNP8svYH1bkORkrNN1P6": { name: "Elite Annuel", prospects: 750 }
-};
 
-function startTunnel(id) {
-    // Si c'est un prix annuel (commence par price_)
-    if (id.startsWith('price_')) {
-        console.log("Lancement du paiement annuel Stripe ID:", id);
-        // Ici ton code pour rediriger vers Stripe avec l'ID sélectionné
-    } else {
-        console.log("Lancement du forfait mensuel:", id);
-    }
-}
-</script>
 <!-- CONFIGURATION COMMISSIONS CLIENT -->
 <div id="nexa-commission-setup" style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
     <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
@@ -332,46 +306,7 @@ function startTunnel(id) {
     <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
     <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte à Nexa.</p>
 
-    <script>
-        async function saveAndSyncStripe() {
-            const stripeId = document.getElementById('clientStripeId').value.trim();
-            const statusLabel = document.getElementById('stripeStatus');
-            const btn = document.getElementById('btnSaveStripe');
 
-            if (!stripeId.startsWith('acct_')) {
-                statusLabel.innerText = "❌ ID invalide. Il doit commencer par 'acct_'";
-                statusLabel.style.color = "#ff4d4d";
-                return;
-            }
-
-            btn.innerText = "Synchronisation...";
-            btn.disabled = true;
-
-            try {
-                // 1. Sauvegarde dans Supabase pour ce client spécifique
-                const { data, error } = await sb.from('profiles').update({ 
-                    stripe_connect_id: stripeId,
-                    commission_rate: 0.05 // On fixe les 5% ici
-                }).eq('id', user_id); // Assure-toi que user_id est défini dans ton script principal
-
-                if (error) throw error;
-
-                // 2. Message de succès
-                statusLabel.innerText = "✅ Configuration activée ! Les 5% Nexa sont configurés.";
-                statusLabel.style.color = "var(--accent)";
-                btn.innerText = "Enregistré";
-                
-                console.log("Stripe Connect lié pour le client :", stripeId);
-                
-            } catch (err) {
-                console.error(err);
-                statusLabel.innerText = "❌ Erreur lors de l'enregistrement.";
-                statusLabel.style.color = "#ff4d4d";
-                btn.disabled = false;
-                btn.innerText = "Réessayer";
-            }
-        }
-    </script>
 </div>
 <!-- TÉMOIGNAGES -->
 <section style="padding:80px 0;background:var(--bg);">
@@ -438,6 +373,18 @@ function startTunnel(id) {
         </div>
     </div>
 </section>
+
+
+<div class="ambassador-card" style="margin-top: 30px; border: 2px dashed #007bff; border-radius: 12px; padding: 25px; background: #f8fbff; text-align: center;">
+    <h3 style="color: #007bff; margin-bottom: 15px;">🤝 Modèle Partenaire (Revenue Share)</h3>
+    <p style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 20px;">
+        <strong>Idéal pour débuter :</strong> Vous accédez à tous nos outils gratuitement (0€/mois).<br>
+        En échange, nous partageons les revenus : <strong>Vous gardez 20%</strong> de chaque vente que vous réalisez, et nous conservons 80% pour l'infrastructure.
+    </p>
+    <button onclick="handleAmbassadorSignup()" class="btn-primary" style="background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        Activer le mode Ambassadeur
+    </button>
+</div>
 
 <!-- FAQ -->
 <section style="padding:80px 0;background:var(--bg-light);">
@@ -910,6 +857,67 @@ function startTunnel(id) {
 </div>
 
 <script>
+// ===== SYSTÈME D'AFFILIATION =====
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    // Valider que l'ID commence bien par acct_
+    if(ref && ref.startsWith('acct_')) {
+        localStorage.setItem('nexa_partner_id', ref);
+        // Nettoyer l'URL sans recharger la page
+        const cleanUrl = window.location.pathname + 
+            (window.location.search.replace(/[?&]ref=[^&]*/g, '').replace(/^&/, '?') || '');
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+})();
+
+// ===== STRIPE PLANS ANNUELS =====
+const STRIPE_PLANS = {
+    "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", prospects: 10 },
+    "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", prospects: 80 },
+    "price_1TT4XwP8svYH1bkOoPQgfYmF": { name: "Business Annuel", prospects: 300 },
+    "price_1TT4XNP8svYH1bkORkrNN1P6": { name: "Elite Annuel", prospects: 750 }
+};
+
+// ===== SAVE AND SYNC STRIPE =====
+async function saveAndSyncStripe() {
+    const stripeId = document.getElementById('clientStripeId') ? 
+        document.getElementById('clientStripeId').value.trim() : '';
+    const statusLabel = document.getElementById('stripeStatus');
+    const btn = document.getElementById('btnSaveStripe');
+    if(!statusLabel || !btn) return;
+
+    if(!stripeId.startsWith('acct_')) {
+        statusLabel.innerText = "❌ ID invalide. Il doit commencer par 'acct_'";
+        statusLabel.style.color = "#ff4d4d";
+        return;
+    }
+    btn.innerText = "Synchronisation...";
+    btn.disabled = true;
+    try {
+        const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+        if(sb && user.id) {
+            const { error } = await sb.from('users').update({
+                stripe_connect_id: stripeId,
+                commission_rate: 0.05
+            }).eq('id', user.id);
+            if(error) throw error;
+        }
+        // Sauvegarder en localStorage aussi
+        user.stripe_connect_id = stripeId;
+        localStorage.setItem('nexaai_user', JSON.stringify(user));
+        statusLabel.innerText = "✅ Configuration activée ! Les 5% Nexa sont configurés.";
+        statusLabel.style.color = "var(--accent)";
+        btn.innerText = "Enregistré";
+    } catch(err) {
+        console.error(err);
+        statusLabel.innerText = "❌ Erreur lors de l'enregistrement.";
+        statusLabel.style.color = "#ff4d4d";
+        btn.disabled = false;
+        btn.innerText = "Réessayer";
+    }
+}
+
 // ===== CONFIG =====
 const STRIPE_PK = 'pk_test_51TH5S2P8svYH1bkONQyzCOzUff4OrRBFLAu0REAMGK1043xGSQZlW8Ohw3aXYxdfNbgQhvHQsVx6LXeIQbUxpdzu00iEbgUt7K';
 // ✅ Netlify Functions — clés cachées côté serveur
@@ -1261,7 +1269,12 @@ async function modalPay() {
                 plan: modalSelectedPlan,
                 email: td.email,
                 success_url: window.location.origin + window.location.pathname + '?payment=success&plan=' + modalSelectedPlan,
-                cancel_url: window.location.origin + window.location.pathname + '?payment=cancel'
+                cancel_url: window.location.origin + window.location.pathname + '?payment=cancel',
+                // Système d'affiliation
+                clientStripeConnectId: (function() {
+                    const pid = localStorage.getItem('nexa_partner_id');
+                    return (pid && pid.startsWith('acct_')) ? pid : null;
+                })()
             })
         });
 
@@ -1418,7 +1431,12 @@ async function processPayment() {
                 plan: currentPlan,
                 email: userData.email,
                 success_url: window.location.origin + window.location.pathname + '?payment=success&plan=' + currentPlan,
-                cancel_url: window.location.origin + window.location.pathname + '?payment=cancel'
+                cancel_url: window.location.origin + window.location.pathname + '?payment=cancel',
+                // Système d'affiliation — ID validé avant envoi
+                clientStripeConnectId: (function() {
+                    const pid = localStorage.getItem('nexa_partner_id');
+                    return (pid && pid.startsWith('acct_')) ? pid : null;
+                })()
             })
         });
 
