@@ -15,23 +15,20 @@ exports.handler = async function(event, context) {
     if(event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
     try {
-        const { plan, email, clientStripeConnectId, isAmbassadorMode } = JSON.parse(event.body || '{}');
+        const body = JSON.parse(event.body || '{}');
+        const { plan, email, clientStripeConnectId, isAmbassadorMode } = body;
 
-        // 1. Gestion du mode "Ambassadeur Gratuit" (Pas de paiement Stripe immédiat)
-        if (isAmbassadorMode) {
-            return { 
-                statusCode: 200, 
-                headers, 
-                body: JSON.stringify({ message: 'Mode ambassadeur activé via Supabase' }) 
-            };
+        // 1. Sécurité : Vérifier si le plan existe
+        const finalPriceId = PRICE_IDS[plan];
+        if (!finalPriceId) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: "Plan de paiement invalide." }) };
         }
 
-        const finalPriceId = PRICE_IDS[plan];
-        const isOnce = plan && plan.includes('-once');
-        
+        // 2. Préparation des paramètres Stripe
+        // On force 'payment' pour les ventes de crédits (plus stable que subscription ici)
         const stripeParams = new URLSearchParams({
             'payment_method_types[]': 'card',
-            'mode': isOnce ? 'payment' : 'subscription',
+            'mode': 'payment', 
             'customer_email': email,
             'line_items[0][price]': finalPriceId,
             'line_items[0][quantity]': '1',
@@ -40,20 +37,14 @@ exports.handler = async function(event, context) {
             'locale': 'fr'
         });
 
-        // 2. LOGIQUE D'AFFILIATION (80% pour nous, 20% pour l'affilié)
-        // Note: Dans Stripe Connect, l'application_fee est ce que NOUS on garde.
+        // 3. LOGIQUE D'AFFILIATION RÉPARÉE
+        // On n'ajoute ces paramètres QUE si l'ID partenaire est valide et présent
         if (clientStripeConnectId && clientStripeConnectId.startsWith('acct_')) {
-            const myCommission = '80'; // On prend 80%
-            
-            if (isOnce) {
-                stripeParams.append('payment_intent_data[application_fee_percent]', myCommission);
-                stripeParams.append('transfer_data[destination]', clientStripeConnectId);
-            } else {
-                stripeParams.append('subscription_data[application_fee_percent]', myCommission);
-                stripeParams.append('subscription_data[transfer_data][destination]', clientStripeConnectId);
-            }
+            stripeParams.append('payment_intent_data[application_fee_percent]', '80');
+            stripeParams.append('transfer_data[destination]', clientStripeConnectId);
         }
 
+        // 4. Appel à Stripe
         const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
             method: 'POST',
             headers: {
@@ -64,9 +55,17 @@ exports.handler = async function(event, context) {
         });
 
         const session = await stripeResponse.json();
+
+        // 5. Vérification du succès de Stripe
+        if (session.error) {
+            console.error("Erreur Stripe détaillée:", session.error);
+            return { statusCode: 400, headers, body: JSON.stringify({ error: session.error.message }) };
+        }
+
         return { statusCode: 200, headers, body: JSON.stringify({ url: session.url }) };
 
     } catch(err) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+        console.error("Erreur Serveur:", err.message);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: "Erreur interne du serveur." }) };
     }
 };
