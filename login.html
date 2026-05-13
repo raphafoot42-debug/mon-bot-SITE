@@ -12,66 +12,61 @@
 </button>
 
 <script>
-// --- Utilitaires de sécurité ---
+// NOTE: client_key OAuth TikTok = identifiant public côté navigateur (ce n'est pas un secret).
+// Le secret (client_secret) doit rester UNIQUEMENT côté serveur (Netlify env).
+const TIKTOK_CLIENT_KEY = "sbaw1dltizgdnu9xs8"; // remplace par ta vraie client_key
+
 function base64url(buffer) {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function sha256(text) {
+async function sha256Bytes(text) {
   const data = new TextEncoder().encode(text);
-  return crypto.subtle.digest('SHA-256', data);
+  return crypto.subtle.digest("SHA-256", data);
 }
 
-// Générateur sécurisé (Web Crypto API)
 function generateSecureString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
   const array = new Uint32Array(length);
-  window.crypto.getRandomValues(array);
-  let v = '';
-  for (let i = 0; i < length; i++) {
-    v += chars[array[i] % chars.length];
-  }
+  crypto.getRandomValues(array);
+  let v = "";
+  for (let i = 0; i < length; i++) v += chars[array[i] % chars.length];
   return v;
 }
 
-document.getElementById('login').onclick = async () => {
-  // 1. Génération PKCE
+document.getElementById("login").onclick = async () => {
+  // PKCE
   const verifier = generateSecureString(64);
-  sessionStorage.setItem('pkce_verifier', verifier);
-  const challenge = base64url(await sha256(verifier));
+  sessionStorage.setItem("pkce_verifier", verifier);
+  const challenge = base64url(await sha256Bytes(verifier));
 
-  // 2. Génération State (Protection CSRF)
+  // CSRF state (même clé que ton dashboard)
   const state = generateSecureString(16);
-  sessionStorage.setItem('auth_state', state);
+  sessionStorage.setItem("oauth_state", state);
 
-  // 3. Configuration des clés (Split pour éviter détection robots)
-  const part1 = "sbaw1dlti";
-  const part2 = "zgdnu9xs8";
-
-  // 4. Construction de l'URL de redirection dynamique pour Netlify
   const currentOrigin = window.location.origin;
-  const redirectUri = currentOrigin + '/.netlify/functions/tiktok-callback';
+
+  // IMPORTANT:
+  // - Ce redirect_uri doit être EXACTEMENT celui enregistré dans TikTok.
+  // - Ce doit être une PAGE (pas la function), sinon le serveur ne peut pas lire pkce_verifier.
+  // Exemple: crée tiktok-bridge.html et enregistre: https://TON_DOMAINE/tiktok-bridge.html
+  const redirectUri = currentOrigin + "/tiktok-bridge.html";
 
   const params = new URLSearchParams({
-    client_key: part1 + part2,
-    response_type: 'code',
-    scope: 'user.info.basic,video.list',
+    client_key: TIKTOK_CLIENT_KEY,
+    response_type: "code",
+    // Garde uniquement les scopes autorisés sur ton app TikTok
+    scope: "user.info.basic",
     redirect_uri: redirectUri,
-    state: state, // Utilisation du state sécurisé
+    state,
     code_challenge: challenge,
-    code_challenge_method: 'S256'
+    code_challenge_method: "S256",
   });
 
-  // Redirection vers TikTok
-  window.location.href = 'https://www.tiktok.com/v2/auth/authorize/?' + params.toString();
+  window.location.href = "https://www.tiktok.com/v2/auth/authorize/?" + params.toString();
 };
 </script>
 </body>
