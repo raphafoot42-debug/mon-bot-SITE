@@ -108,7 +108,7 @@
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-number" id="st-prospects">0</div><div class="stat-label" id="stProspects">Prospects</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-msgs">0</div><div class="stat-label" id="stMsgs">Messages</div></div>
-                    <div class="stat-card"><div class="stat-number" id="st-rate">27%</div><div class="stat-label" id="stRate">Conversion</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-rate">80%</div><div class="stat-label" id="stRate">Conversion</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-revenue">€0</div><div class="stat-label" id="stRevenue">Revenu estimé</div></div>
                 </div>
                 <div style="background:var(--bg-light);border:2px solid var(--border);border-radius:15px;padding:25px;">
@@ -633,15 +633,24 @@
     </div>
     
     <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
-    <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte à Nexa.</p>
+    <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte a Nexa.</p>
 
 
 </div>
+
+<!-- REGLE 20/80 -->
+<div style="margin-top:30px; padding:20px 24px; background:linear-gradient(135deg, rgba(57,255,20,0.08) 0%, rgba(57,255,20,0.02) 100%); border:1px solid rgba(57,255,20,0.25); border-radius:12px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
+    <p style="font-size:0.95rem; color:var(--text); line-height:1.7; margin:0;">
+        <span style="color:var(--accent); font-weight:900;">&#10022; Regle des 20/80 :</span> 
+        L'IA gere <strong style="color:var(--accent);">80%</strong> de ta prospection automatique. Tu te concentres sur les <strong style="color:var(--accent);">20%</strong> restants pour encaisser tes commissions.
+    </p>
 </div>
 
-    <!-- Ordre : Supabase puis nexa.js (defer conserve cet ordre) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="js/nexa.js"></script>
+</div>
+
+<!-- Ordre : Supabase puis nexa.js (defer conserve cet ordre) -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/nexa.js"></script>
 
 </body>
 </html>
