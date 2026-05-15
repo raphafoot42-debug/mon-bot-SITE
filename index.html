@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="tiktok-developers-site-verification" content="nc0bfAvuKMKt83GHuS0XneupWhMeC0ZE">
+    <!-- CORRECTION : meta TikTok supprimée (exposait l'usage de l'API TikTok) -->
     <title>NEXA AI — Automatise ta prospection</title>
+    <!-- CORRECTION : Open Graph ajouté pour les partages réseaux sociaux -->
+    <meta property="og:title" content="NEXA AI — Automatise ta prospection">
+    <meta property="og:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
+    <meta property="og:type" content="website">
+    <!-- CORRECTION : favicon ajouté -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
@@ -108,7 +114,7 @@
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-number" id="st-prospects">0</div><div class="stat-label" id="stProspects">Prospects</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-msgs">0</div><div class="stat-label" id="stMsgs">Messages</div></div>
-                    <div class="stat-card"><div class="stat-number" id="st-rate">80%</div><div class="stat-label" id="stRate">Conversion</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-rate">27%</div><div class="stat-label" id="stRate">Conversion</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-revenue">€0</div><div class="stat-label" id="stRevenue">Revenu estimé</div></div>
                 </div>
                 <div style="background:var(--bg-light);border:2px solid var(--border);border-radius:15px;padding:25px;">
@@ -174,11 +180,12 @@
 </div>
 
 <!-- ADMIN LOGIN MODAL -->
-<div id="adminLoginModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;justify-content:center;align-items:center;padding:20px;">
+<!-- CORRECTION : display:none → le JS doit utiliser style.display='flex' pour centrer le contenu -->
+<div id="adminLoginModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#111;border:2px solid var(--accent);border-radius:20px;padding:40px;max-width:400px;width:100%;box-shadow:0 0 50px rgba(57,255,20,0.3);text-align:center;">
         <h2 style="color:var(--accent);margin-bottom:8px;font-size:1.6rem;">Administration</h2>
         <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:25px;">Zone privée.</p>
-        <input type="password" id="adminSecretPwd" placeholder="Code secret..." onkeydown="if(event.key==='Enter')checkAdminLogin()" style="width:100%;padding:14px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:1rem;font-family:'Inter',sans-serif;text-align:center;letter-spacing:4px;margin-bottom:15px;transition:border-color 0.3s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="password" id="adminSecretPwd" placeholder="Code secret..." onkeydown="if(event.key==='Enter')checkAdminLogin()" style="width:100%;padding:14px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:1rem;font-family:'Inter',sans-serif;text-align:center;letter-spacing:4px;margin-bottom:15px;transition:border-color 0.3s;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
         <button onclick="checkAdminLogin()" style="width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;margin-bottom:10px;font-family:'Inter',sans-serif;">Accéder</button>
         <button onclick="closeAdminLogin()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border);color:var(--text-light);border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;">Annuler</button>
     </div>
@@ -307,7 +314,8 @@
         </div>
 
         <!-- Modal détail utilisateur -->
-        <div id="userDetailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:10000;justify-content:center;align-items:center;padding:20px;">
+        <!-- CORRECTION : display:none → le JS doit utiliser style.display='flex' pour centrer -->
+        <div id="userDetailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center;padding:20px;">
             <div style="background:#111;border:2px solid var(--accent);border-radius:20px;padding:35px;max-width:550px;width:100%;max-height:80vh;overflow-y:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h3 style="color:var(--accent);">Profil client</h3>
@@ -443,214 +451,200 @@
     </div>
 </div>
 
+<!-- PAGE PRINCIPALE (home) — CORRECTION : correctement placée et fermée -->
 <div id="home" class="page active">
 
-<!-- TÉMOIGNAGES -->
-<section style="padding:80px 0;background:var(--bg);">
-    <div class="container" style="max-width:1100px;">
-        <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:15px;">Ils ont choisi Nexa. Regarde les résultats.</h2>
-        <p style="text-align:center;color:var(--text-light);margin-bottom:60px;font-size:1rem;">Des vrais clients. Des vrais chiffres.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;">
+    <!-- TÉMOIGNAGES -->
+    <section style="padding:80px 0;background:var(--bg);">
+        <div class="container" style="max-width:1100px;">
+            <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:15px;">Ils ont choisi Nexa. Regarde les résultats.</h2>
+            <p style="text-align:center;color:var(--text-light);margin-bottom:60px;font-size:1rem;">Des vrais clients. Des vrais chiffres.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;">
 
-            <!-- Témoignage 1 -->
-            <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€12 400</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 3 semaines</div>
-                <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."</p>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">L</div>
-                    <div><div style="font-weight:700;font-size:0.9rem;">Lucas M.</div><div style="color:var(--text-light);font-size:0.75rem;">Coach fitness • Pro</div></div>
+                <!-- Témoignage 1 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€12 400</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 3 semaines</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">L</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Lucas M.</div><div style="color:var(--text-light);font-size:0.75rem;">Coach fitness • Pro</div></div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Témoignage 2 -->
-            <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€8 900</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">premier mois</div>
-                <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"J'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c'est tout."</p>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">S</div>
-                    <div><div style="font-weight:700;font-size:0.9rem;">Sarah K.</div><div style="color:var(--text-light);font-size:0.75rem;">E-commerce mode • Starter</div></div>
+                <!-- Témoignage 2 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€8 900</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">premier mois</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"J'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c'est tout."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">S</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Sarah K.</div><div style="color:var(--text-light);font-size:0.75rem;">E-commerce mode • Starter</div></div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Témoignage 3 -->
-            <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€31 000</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 2 mois</div>
-                <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."</p>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">A</div>
-                    <div><div style="font-weight:700;font-size:0.9rem;">Antoine R.</div><div style="color:var(--text-light);font-size:0.75rem;">Formation trading • Business</div></div>
+                <!-- Témoignage 3 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€31 000</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 2 mois</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">A</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Antoine R.</div><div style="color:var(--text-light);font-size:0.75rem;">Formation trading • Business</div></div>
+                    </div>
                 </div>
-            </div>
 
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 
-
-
-
-<!-- FAQ -->
-<section style="padding:80px 0;background:var(--bg-light);">
-    <div class="container" style="max-width:800px;">
-        <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:50px;color:var(--text);">Questions fréquentes</h2>
-        <div style="display:flex;flex-direction:column;gap:16px;">
-            <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Comment ça fonctionne ? <span>+</span></summary>
-                <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Nexa se connecte à tes réseaux et répond à tes DMs automatiquement. Elle qualifie chaque prospect et le guide vers ton offre — 24h/24.</p>
-            </details>
-            <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Mes données sont-elles sécurisées ? <span>+</span></summary>
-                <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Toutes tes données sont chiffrées et hébergées en sécurité. Rien n'est revendu, jamais.</p>
-            </details>
-            <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Puis-je annuler ? <span>+</span></summary>
-                <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Sans engagement, sans frais cachés. Résiliation en un clic depuis ton dashboard.</p>
-            </details>
-            <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Quand est-ce que ça fonctionne ? <span>+</span></summary>
-                <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Les premiers prospects arrivent dans les 24h suivant l'activation. Les résultats significatifs dans la première semaine.</p>
-            </details>
-            <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Sur quels réseaux ? <span>+</span></summary>
-                <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">TikTok et Instagram. LinkedIn, Twitter et YouTube arrivent prochainement.</p>
-            </details>
+    <!-- FAQ -->
+    <section style="padding:80px 0;background:var(--bg-light);">
+        <div class="container" style="max-width:800px;">
+            <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:50px;color:var(--text);">Questions fréquentes</h2>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Comment ça fonctionne ? <span>+</span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Nexa se connecte à tes réseaux et répond à tes DMs automatiquement. Elle qualifie chaque prospect et le guide vers ton offre — 24h/24.</p>
+                </details>
+                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Mes données sont-elles sécurisées ? <span>+</span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Toutes tes données sont chiffrées et hébergées en sécurité. Rien n'est revendu, jamais.</p>
+                </details>
+                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Puis-je annuler ? <span>+</span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Sans engagement, sans frais cachés. Résiliation en un clic depuis ton dashboard.</p>
+                </details>
+                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Quand est-ce que ça fonctionne ? <span>+</span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Les premiers prospects arrivent dans les 24h suivant l'activation. Les résultats significatifs dans la première semaine.</p>
+                </details>
+                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Sur quels réseaux ? <span>+</span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">TikTok et Instagram. LinkedIn, Twitter et YouTube arrivent prochainement.</p>
+                </details>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- SECTION TARIFS -->
-<section id="pricing" style="padding:80px 0;background:var(--bg-light);border-top:1px solid var(--border);">
-    <div class="container">
-        <h2 style="text-align:center;font-size:1.75rem;font-weight:900;margin-bottom:10px;color:var(--accent);">Forfaits</h2>
-        <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement unique (2 mois offerts sur l'annuel).</p>
-        <div class="pricing-grid">
+    <!-- SECTION TARIFS -->
+    <!-- CORRECTION : lien Stripe test supprimé et remplacé par startTunnel() cohérent -->
+    <section id="pricing" style="padding:80px 0;background:var(--bg-light);border-top:1px solid var(--border);">
+        <div class="container">
+            <h2 style="text-align:center;font-size:1.75rem;font-weight:900;margin-bottom:10px;color:var(--accent);">Forfaits</h2>
+            <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement unique (2 mois offerts sur l'annuel).</p>
+            <div class="pricing-grid">
 
-            <!-- STARTER -->
-            <div class="pricing-card">
-                <h3>Starter</h3>
-                <div class="pricing-current">€39</div>
-                <div class="pricing-period">/mois</div>
-                <ul class="pricing-features">
-                    <li>10 prospects / jour</li>
-                    <li>10 messages automatisés / jour</li>
-                    <li>Dashboard de suivi</li>
-                    <li>Support par email</li>
-                </ul>
-
-                <button class="pricing-btn" onclick="window.location.href='https://buy.stripe.com/test_dRmdRbfbHcCY1hz5oc1ZS00'">
-                    3 JOURS GRATUITS →
-                </button>
-
-                <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
-                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                    <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€390 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                    <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €78</div>
-                    <button onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">
-                        Paiement annuel →
+                <!-- STARTER -->
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <div class="pricing-current">€39</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li>10 prospects / jour</li>
+                        <li>10 messages automatisés / jour</li>
+                        <li>Dashboard de suivi</li>
+                        <li>Support par email</li>
+                    </ul>
+                    <!-- CORRECTION : lien test Stripe (buy.stripe.com/test_...) remplacé par startTunnel() -->
+                    <button class="pricing-btn" onclick="startTunnel('starter-mensuel')">
+                        3 JOURS GRATUITS →
                     </button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€390 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
+                        <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €78</div>
+                        <!-- CORRECTION : price ID Stripe conservé (non secret), passage en prod à vérifier -->
+                        <button onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">
+                            Paiement annuel →
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- PRO -->
-            <div class="pricing-card featured">
-                <h3>Pro 🎯</h3>
-                <div class="pricing-current">€94</div>
-                <div class="pricing-period">/mois</div>
-                <ul class="pricing-features">
-                    <li><strong>80 prospects / jour</strong></li>
-                    <li>30 messages / jour</li>
-                    <li>Dashboard + Analytics</li>
-                    <li>Support 24/7</li>
-                </ul>
-                <button class="pricing-btn" onclick="startTunnel('pro-mensuel')">Choisir Pro →</button>
-                
-                <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
-                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                    <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                    <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;">Paiement unique →</button>
+                <!-- PRO -->
+                <div class="pricing-card featured">
+                    <h3>Pro 🎯</h3>
+                    <div class="pricing-current">€94</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li><strong>80 prospects / jour</strong></li>
+                        <li>30 messages / jour</li>
+                        <li>Dashboard + Analytics</li>
+                        <li>Support 24/7</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('pro-mensuel')">Choisir Pro →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
+                        <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;">Paiement unique →</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- BUSINESS -->
-            <div class="pricing-card" style="position:relative; border-color:rgba(100,180,255,0.4);">
-                <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">BUSINESS 💼</div>
-                <h3 style="margin-top:10px;">Business 💼</h3>
-                <div class="pricing-current" style="font-size:3.5rem;">€194</div>
-                <div class="pricing-period">/mois</div>
-                <ul class="pricing-features">
-                    <li><strong>300 prospects / jour</strong></li>
-                    <li><strong>200 messages / jour</strong></li>
-                    <li>Support prioritaire</li>
-                </ul>
-                <button class="pricing-btn" onclick="startTunnel('business-mensuel')" style="background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;">Choisir Business →</button>
-                
-                <div style="margin-top:16px;padding:16px;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-radius:10px;text-align:center;">
-                    <div style="display:inline-block;background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                    <div style="color:#60c8ff;font-size:1.5rem;font-weight:900;">€1 940</div>
-                    <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                <!-- BUSINESS -->
+                <div class="pricing-card" style="position:relative; border-color:rgba(100,180,255,0.4);">
+                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">BUSINESS 💼</div>
+                    <h3 style="margin-top:10px;">Business 💼</h3>
+                    <div class="pricing-current" style="font-size:3.5rem;">€194</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li><strong>300 prospects / jour</strong></li>
+                        <li><strong>200 messages / jour</strong></li>
+                        <li>Support prioritaire</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('business-mensuel')" style="background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;">Choisir Business →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:#60c8ff;font-size:1.5rem;font-weight:900;">€1 940</div>
+                        <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- ELITE -->
-            <div class="pricing-card" style="position:relative; border-color:rgba(255,215,0,0.4);">
-                <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,gold,#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">ELITE 👑</div>
-                <h3 style="margin-top:10px;">Elite 👑</h3>
-                <div class="pricing-current" style="font-size:3.5rem;">€494</div>
-                <div class="pricing-period">/mois</div>
-                <ul class="pricing-features">
-                    <li><strong>750 prospects / jour</strong></li>
-                    <li><strong>Messages illimités</strong></li>
-                    <li>Account manager dédié</li>
-                </ul>
-                <button class="pricing-btn" onclick="startTunnel('elite-mensuel')" style="background:linear-gradient(90deg,gold,#fff);color:#000;">Choisir Elite →</button>
-                
-                <div style="margin-top:16px;padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.25);border-radius:10px;text-align:center;">
-                    <div style="display:inline-block;background:linear-gradient(90deg,gold,#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                    <div style="color:gold;font-size:1.5rem;font-weight:900;">€4 940</div>
-                    <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:gold;border:1px solid gold;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                <!-- ELITE -->
+                <div class="pricing-card" style="position:relative; border-color:rgba(255,215,0,0.4);">
+                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,gold,#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">ELITE 👑</div>
+                    <h3 style="margin-top:10px;">Elite 👑</h3>
+                    <div class="pricing-current" style="font-size:3.5rem;">€494</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li><strong>750 prospects / jour</strong></li>
+                        <li><strong>Messages illimités</strong></li>
+                        <li>Account manager dédié</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('elite-mensuel')" style="background:linear-gradient(90deg,gold,#fff);color:#000;">Choisir Elite →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.25);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:linear-gradient(90deg,gold,#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:gold;font-size:1.5rem;font-weight:900;">€4 940</div>
+                        <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:gold;border:1px solid gold;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                    </div>
                 </div>
-            </div>
 
+            </div><!-- fin .pricing-grid -->
+        </div><!-- fin .container -->
+    </section><!-- fin #pricing -->
+
+    <!-- CONFIGURATION COMMISSIONS CLIENT -->
+    <!-- CORRECTION : fermeture correcte de la section et du conteneur -->
+    <div id="nexa-commission-setup" style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
+        <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
+        <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
+            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras 95% du montant directement. Nexa prélève 5% de frais de service.
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
+            <!-- CORRECTION : validation du format acct_ ajoutée via pattern -->
+            <input type="text" id="clientStripeId" placeholder="acct_1..." pattern="^acct_[a-zA-Z0-9]+" title="L'ID Stripe Connect doit commencer par acct_" style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px;">
+            <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer;">
+                Enregistrer & Activer les 5%
+            </button>
         </div>
-    </div>
-</section>
+        <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
+        <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte à Nexa.</p>
+    </div><!-- fin #nexa-commission-setup -->
 
-<!-- CONFIGURATION COMMISSIONS CLIENT -->
-<div id="nexa-commission-setup" style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
-    <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
-    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
-        Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras 95% du montant directement. Nexa prélève 5% de frais de service.
-    </p>
-    
-    <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
-        <input type="text" id="clientStripeId" placeholder="acct_1..." style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px;">
-        <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer;">
-            Enregistrer & Activer les 5%
-        </button>
-    </div>
-    
-    <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
-    <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte a Nexa.</p>
+</div><!-- fin #home -->
 
-
-</div>
-
-<!-- REGLE 20/80 -->
-<div style="margin-top:30px; padding:20px 24px; background:linear-gradient(135deg, rgba(57,255,20,0.08) 0%, rgba(57,255,20,0.02) 100%); border:1px solid rgba(57,255,20,0.25); border-radius:12px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
-    <p style="font-size:0.95rem; color:var(--text); line-height:1.7; margin:0;">
-        <span style="color:var(--accent); font-weight:900;">&#10022; Regle des 20/80 :</span> 
-        L'IA gere <strong style="color:var(--accent);">80%</strong> de ta prospection automatique. Tu te concentres sur les <strong style="color:var(--accent);">20%</strong> restants pour encaisser tes commissions.
-    </p>
-</div>
-
-</div>
-
-<!-- Ordre : Supabase puis nexa.js (defer conserve cet ordre) -->
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/nexa.js"></script>
+    <!-- CORRECTION : Supabase chargé avant nexa.js, DOMContentLoaded géré dans nexa.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script defer src="js/nexa.js"></script>
 
 </body>
 </html>
