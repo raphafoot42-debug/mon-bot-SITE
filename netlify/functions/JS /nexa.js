@@ -101,7 +101,7 @@ function checkTikTokReturn() {
             // Afficher le dashboard si connecté
             if(user.email) {
                 loadDashboard(user);
-                showPage('dashboard');
+                showPage('dashboard-page');
                 setTimeout(() => alert('✅ TikTok connecté ! Bienvenue ' + (tiktokInfo.displayName || '') + ' !'), 500);
             }
             return true;
@@ -191,7 +191,7 @@ window.addEventListener('load', async () => {
                     const user = { ...userData, prospects };
                     localStorage.setItem('nexaai_user', JSON.stringify(user));
                     loadDashboard(user);
-                    showPage('dashboard');
+                    showPage('dashboard-page');
                 }
             }
         } catch(e) {
@@ -239,14 +239,13 @@ async function loadUserData() {
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
         loadDashboard(user);
-        showPage('dashboard');
+        // CORRECTION : ID corrigé dashboard-page
+        showPage('dashboard-page');
     } else {
         // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
-        // CORRECTION : On initialise td (tunnel data) si ce n'est pas fait
-        td = td || {}; 
+        // CORRECTION : td est déjà déclaré globalement, pas besoin de td || {}
         td.email = authUser.email;
         showPage('bot-qualify');
-        // Petit délai pour laisser le temps au DOM de charger la page bot-qualify
         setTimeout(() => {
             if (typeof botQualifyStart === 'function') {
                 botQualifyStart(authUser.email);
@@ -254,6 +253,7 @@ async function loadUserData() {
         }, 300);
     }
     
+    // CORRECTION : currentLang déclaré globalement, changeLang appelé proprement
     if (typeof changeLang === 'function') {
         changeLang(currentLang);
     }
@@ -267,6 +267,7 @@ async function signOut() {
 
 // ===== STATE =====
 let currentPlan = 'starter';
+let currentLang = 'fr'; // CORRECTION : currentLang déclaré globalement
 let td = {}; // tunnel data (données du tunnel de qualification)
 let connected = [];
 let chatOpen = false;
@@ -403,6 +404,15 @@ function showPage(id) {
 
 // ===== TUNNEL =====
 function startTunnel(plan) {
+    // CORRECTION : résoudre les price IDs Stripe annuels vers leur plan de base
+    const priceIdMap = {
+        'price_1TT4VCP8svYH1bkOmrlIYHls': 'starter-once',
+        'price_1TT4WjP8svYH1bkO9lOHz2CW': 'pro-once',
+        'price_1TT4XwP8svYH1bkOoPQgfYmF': 'business-once',
+        'price_1TT4XNP8svYH1bkORkrNN1P6': 'elite-once'
+    };
+    if(priceIdMap[plan]) plan = priceIdMap[plan];
+
     currentPlan = plan;
     td.plan = plan;
     const isOnce = plan.includes('-once');
@@ -414,8 +424,10 @@ function startTunnel(plan) {
         'business':'€194', 'business-once':'€1940 (paiement unique)',
         'elite':'€494', 'elite-once':'€4940 (paiement unique)'
     };
-    document.getElementById('pay-plan-name').textContent = (planNames[planBase] || 'Starter') + (isOnce ? ' — Paiement unique' : '');
-    document.getElementById('pay-plan-price').textContent = planPrices[plan] || '€39';
+    const payPlanName = document.getElementById('pay-plan-name');
+    const payPlanPrice = document.getElementById('pay-plan-price');
+    if(payPlanName) payPlanName.textContent = (planNames[planBase] || 'Starter') + (isOnce ? ' — Paiement unique' : '');
+    if(payPlanPrice) payPlanPrice.textContent = planPrices[plan] || '€39';
 
     // Afficher les features du plan dans la page paiement
     const features = {
@@ -711,7 +723,7 @@ async function login() {
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
         loadDashboard(user);
-        showPage('dashboard');
+        showPage('dashboard-page');
     } else {
         // Profil pas encore créé → tunnel de qualification
         td.email = email;
@@ -1024,6 +1036,8 @@ function renderAdminUsers(users) {
             '<td><div style="display:flex;gap:6px;">' +
                 '<button data-email="' + em + '" onclick="viewUserDetail(this.dataset.email)" style="padding:5px 10px;background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:6px;cursor:pointer;font-size:0.75rem;">👁</button>' +
                 '<button data-email="' + em + '" data-susp="' + (isSuspended?1:0) + '" onclick="toggleSuspend(this.dataset.email,this.dataset.susp==1)" style="padding:5px 10px;background:transparent;border:1px solid ' + (isSuspended?'var(--accent)':'#ff4444') + ';color:' + (isSuspended?'var(--accent)':'#ff4444') + ';border-radius:6px;cursor:pointer;font-size:0.75rem;">' + (isSuspended?'✅':'🚫') + '</button>' +
+                // CORRECTION : bouton excludeUser branché
+                '<button data-email="' + em + '" onclick="excludeUser(this.dataset.email)" style="padding:5px 10px;background:transparent;border:1px solid #888;color:#888;border-radius:6px;cursor:pointer;font-size:0.75rem;" title="Exclure">🗑</button>' +
             '</div></td>'
         ].join('');
         tbody.appendChild(tr);
@@ -1086,11 +1100,13 @@ function giveAccess(event) {
     allUsers = users;
     renderAdminStats(users);
     renderAdminUsers(users);
-    // Feedback visuel
-    const btn = event.target;
-    btn.textContent = '✅ Activé !';
-    btn.style.background = '#fff';
-    setTimeout(() => { btn.textContent = '🎁 Activer'; btn.style.background = 'var(--accent)'; }, 2000);
+    // CORRECTION : utiliser getElementById pour éviter crash si event est undefined
+    const btn = (event && event.target) ? event.target : document.querySelector('[onclick*="giveAccess"]');
+    if(btn) {
+        btn.textContent = '✅ Activé !';
+        btn.style.background = '#fff';
+        setTimeout(() => { btn.textContent = '🎁 Activer'; btn.style.background = 'var(--accent)'; }, 2000);
+    }
 }
 
 // ===== CLAUDE SYSTEM PROMPT =====
