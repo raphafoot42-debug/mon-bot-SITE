@@ -1406,7 +1406,83 @@ function bqSend() {
 async function bqSendToAI(userText) {
     bqHist.push({ role: 'user', content: userText });
     const lower = userText.toLowerCase();
+    // ===== MULTILINGUE =====
+let currentLang = 'fr';
 
+const LANGS = {
+    fr: {
+        loginTitle: 'Connexion',
+        loginEmailL: 'Email',
+        loginPwdL: 'Mot de passe',
+        loginSubmit: 'Se connecter',
+        loginBack: 'Retour',
+        botTitle: 'Nexa — Ton agent IA',
+        botSub: 'Nexa connaît ton business. Pose-lui n\'importe quelle question.',
+        settingsTitle: 'Paramètres',
+        sPrenomL: 'Prénom',
+        sEmailL: 'Email',
+        sPwdL: 'Nouveau mot de passe',
+        sBusinessL: 'Nom du business',
+        sTypeL: 'Type de business',
+        sSaveBtn: 'Sauvegarder',
+        sLogoutBtn: 'Déconnexion',
+        stProspects: 'Prospects',
+        stMsgs: 'Messages',
+        stRate: 'Conversion',
+        stRevenue: 'Revenu estimé',
+    },
+    en: {
+        loginTitle: 'Login',
+        loginEmailL: 'Email',
+        loginPwdL: 'Password',
+        loginSubmit: 'Sign in',
+        loginBack: 'Back',
+        botTitle: 'Nexa — Your AI agent',
+        botSub: 'Nexa knows your business. Ask anything.',
+        settingsTitle: 'Settings',
+        sPrenomL: 'First name',
+        sEmailL: 'Email',
+        sPwdL: 'New password',
+        sBusinessL: 'Business name',
+        sTypeL: 'Business type',
+        sSaveBtn: 'Save',
+        sLogoutBtn: 'Logout',
+        stProspects: 'Prospects',
+        stMsgs: 'Messages',
+        stRate: 'Conversion',
+        stRevenue: 'Estimated revenue',
+    },
+    cn: {
+        loginTitle: '登录',
+        loginEmailL: '电子邮件',
+        loginPwdL: '密码',
+        loginSubmit: '登录',
+        loginBack: '返回',
+        botTitle: 'Nexa — 你的AI助手',
+        botSub: 'Nexa了解你的业务。随时提问。',
+        settingsTitle: '设置',
+        sPrenomL: '名字',
+        sEmailL: '电子邮件',
+        sPwdL: '新密码',
+        sBusinessL: '业务名称',
+        sTypeL: '业务类型',
+        sSaveBtn: '保存',
+        sLogoutBtn: '退出',
+        stProspects: '潜在客户',
+        stMsgs: '消息',
+        stRate: '转化率',
+        stRevenue: '预计收入',
+    }
+};
+
+function changeLang(lang) {
+    currentLang = lang;
+    const t = LANGS[lang] || LANGS['fr'];
+    Object.keys(t).forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.textContent = t[id];
+    });
+}
     // --- LOGIQUE SPÉCIALE CLOSER (Affiliation vs Payant) ---
     
     // 1. Détection Ambassadeur / Affiliation
