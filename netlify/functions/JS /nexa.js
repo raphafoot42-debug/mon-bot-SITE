@@ -726,7 +726,6 @@ function logout() { signOut(); }
 const ADMIN_PWD = null; // Mot de passe vérifié côté Netlify Functions
 let allUsers = [];
 
-
 function openAdminLogin() {
     document.getElementById('adminLoginModal').style.display = 'flex';
     setTimeout(() => document.getElementById('adminSecretPwd').focus(), 100);
