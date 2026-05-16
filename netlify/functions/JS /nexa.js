@@ -2,6 +2,11 @@
  * Fichiers à publier ensemble : index.html, css/nexa.css, js/nexa.js
  * Ordre de chargement : Stripe (head, synchrone) → Supabase (defer) → ce script (defer).
  */
+
+// ===== VARIABLES GLOBALES (déclarées en premier pour éviter les ReferenceError) =====
+let currentLang = 'fr';
+let td = {}; // tunnel data (données du tunnel de qualification)
+
 // ===== SYSTÈME D'AFFILIATION =====
 (function() {
     const params = new URLSearchParams(window.location.search);
@@ -44,14 +49,14 @@ async function saveAndSyncStripe() {
         if(sb && user.id) {
             const { error } = await sb.from('users').update({
                 stripe_connect_id: stripeId,
-                commission_rate: 0.05
+                commission_rate: 0.20
             }).eq('id', user.id);
             if(error) throw error;
         }
         // Sauvegarder en localStorage aussi
         user.stripe_connect_id = stripeId;
         localStorage.setItem('nexaai_user', JSON.stringify(user));
-        statusLabel.innerText = "✅ Configuration activée ! Les 5% Nexa sont configurés.";
+        statusLabel.innerText = "✅ Partage 20/80 activé ! Tu reçois 80% de chaque vente générée.";
         statusLabel.style.color = "var(--accent)";
         btn.innerText = "Enregistré";
     } catch(err) {
@@ -253,7 +258,7 @@ async function loadUserData() {
         }, 300);
     }
     
-    // CORRECTION : currentLang déclaré globalement, changeLang appelé proprement
+    // changeLang appelé uniquement si définie (peut être dans un autre fichier)
     if (typeof changeLang === 'function') {
         changeLang(currentLang);
     }
@@ -267,8 +272,7 @@ async function signOut() {
 
 // ===== STATE =====
 let currentPlan = 'starter';
-let currentLang = 'fr'; // CORRECTION : currentLang déclaré globalement
-let td = {}; // tunnel data (données du tunnel de qualification)
+// currentLang et td sont déclarés en haut du fichier
 let connected = [];
 let chatOpen = false;
 let chatHist = [];
@@ -318,7 +322,7 @@ function showSuccessPage(user) {
 function goToDashboard() {
     const user = JSON.parse(localStorage.getItem('nexaai_user'));
     if(user) loadDashboard(user);
-    showPage('dashboard');
+    showPage('dashboard-page');
 }
 
 // ===== MODAL ONBOARDING =====
@@ -590,7 +594,13 @@ async function loadDashboard(user) {
     document.getElementById('s-email').value = user.email || '';
     document.getElementById('s-business').value = user.business || '';
     const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
-    const planPrices = {starter:'€39/mois',pro:'€94/mois',business:'€194/mois',elite:'€494/mois',free:'—'};
+    const planPrices = {
+        starter:'€39/mois', 'starter-once':'€390 (unique)',
+        pro:'€94/mois',     'pro-once':'€940 (unique)',
+        business:'€194/mois','business-once':'€1940 (unique)',
+        elite:'€494/mois',  'elite-once':'€4940 (unique)',
+        free:'—'
+    };
     document.getElementById('s-plan').textContent = planNames[user.plan] || 'Starter';
     document.getElementById('s-price').textContent = planPrices[user.plan] || '€39/mois';
     // Prospects
@@ -1414,6 +1424,12 @@ async function bqSendToAI(userText) {
         bqAIMsg("Excellent choix ! 🤝 Plan Ambassadeur activé (80% pour toi / 20% pour Nexa).");
         bqAIMsg("Action : Copie ton lien Beacons et mets-le en bio TikTok. \n\nDis-moi 'PRET' quand c'est fait pour ouvrir ton accès.");
         await saveUserToDB({ email: bqData.email, plan: 'affiliation', prenom: bqData.prenom || 'Ambassadeur' });
+        // Redirection automatique vers le dashboard après 3 secondes
+        setTimeout(() => {
+            const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+            if (user && user.email) loadDashboard(user);
+            showPage('dashboard-page');
+        }, 3000);
         return;
     }
 
