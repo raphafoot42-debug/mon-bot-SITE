@@ -31,8 +31,9 @@ const STRIPE_PLANS = {
 
 // ===== SAVE AND SYNC STRIPE =====
 async function saveAndSyncStripe() {
-    const stripeId = document.getElementById('clientStripeId') ? 
-        document.getElementById('clientStripeId').value.trim() : '';
+    // CORRECTION: null-check propre sur clientStripeId
+    const elClientStripe = document.getElementById('clientStripeId');
+    const stripeId = elClientStripe ? elClientStripe.value.trim() : '';
     const statusLabel = document.getElementById('stripeStatus');
     const btn = document.getElementById('btnSaveStripe');
     if(!statusLabel || !btn) return;
@@ -73,11 +74,11 @@ const STRIPE_PK = 'pk_test_51TH5S2P8svYH1bkONQyzCOzUff4OrRBFLAu0REAMGK1043xGSQZl
 // ✅ Netlify Functions — clés cachées côté serveur
 const PROXY_URL = '/.netlify/functions/claude';
 const STRIPE_URL = '/.netlify/functions/stripe-checkout';
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
+const CLAUDE_MODEL = 'claude-sonnet-4-5'; // model string Anthropic API (format stable)
 let stripe = null;
 let sb = null;
 let CLIENT_STORE_URL = '';
-    // Détecter retour Stripe après paiement
+
 // ===== RETOUR TIKTOK =====
 function checkTikTokReturn() {
     const params = new URLSearchParams(window.location.search);
@@ -105,8 +106,8 @@ function checkTikTokReturn() {
             window.history.replaceState({}, document.title, window.location.pathname);
             // Afficher le dashboard si connecté
             if(user.email) {
-                loadDashboard(user);
-                showPage('dashboard-page');
+                await loadDashboard(user);
+        showPage('dashboard-page');
                 setTimeout(() => alert('✅ TikTok connecté ! Bienvenue ' + (tiktokInfo.displayName || '') + ' !'), 500);
             }
             return true;
@@ -190,14 +191,8 @@ window.addEventListener('load', async () => {
 
             const { data: { session } } = await sb.auth.getSession();
             if(session && session.user) {
-                const userData = await loadUserFromDB(session.user.email);
-                if(userData) {
-                    const prospects = await loadProspectsFromDB(userData.id);
-                    const user = { ...userData, prospects };
-                    localStorage.setItem('nexaai_user', JSON.stringify(user));
-                    loadDashboard(user);
-                    showPage('dashboard-page');
-                }
+                // Utiliser loadUserData() pour centraliser le chargement du profil
+                await loadUserData();
             }
         } catch(e) {
             console.error('[Nexa] Erreur au démarrage :', e);
@@ -235,6 +230,8 @@ async function loadUserData() {
     if(!sb) return;
     const authUser = await getAuthUser();
     if(!authUser) return;
+    // CORRECTION: reset historique chat au chargement d'un nouveau profil
+    if(typeof dashChatHist !== 'undefined') dashChatHist = [];
 
     const userData = await loadUserFromDB(authUser.email);
     
@@ -267,6 +264,9 @@ async function loadUserData() {
 async function signOut() {
     if(sb) await sb.auth.signOut();
     localStorage.removeItem('nexaai_user');
+    // CORRECTION: réinitialiser les historiques pour éviter fuites entre sessions
+    if(typeof dashChatHist !== 'undefined') dashChatHist = [];
+    if(typeof chatHist !== 'undefined') chatHist = [];
     showPage('home');
 }
 
@@ -330,12 +330,16 @@ let modalCurrentStep = 1;
 let modalSelectedPlan = 'pro';
 
 function openOnboarding() {
-    document.getElementById('onboardingModal').classList.add('active');
+    // CORRECTION: null-check avant accès classList
+    const om = document.getElementById('onboardingModal');
+    if(om) om.classList.add('active');
     modalGoStep(1);
 }
 
 function closeOnboarding() {
-    document.getElementById('onboardingModal').classList.remove('active');
+    // CORRECTION: null-check avant accès classList
+    const om = document.getElementById('onboardingModal');
+    if(om) om.classList.remove('active');
 }
 
 function modalGoStep(step) {
@@ -366,20 +370,30 @@ function modalNext(step) {
         if(!prenom || !email) { alert('Merci de remplir prénom et email !'); return; }
         td.prenom = prenom;
         td.email = email;
-        td.phone = document.getElementById('m-phone').value;
-        td.pays = document.getElementById('m-pays').value;
+        // CORRECTION: null-checks champs onboarding step 1
+        const elMPhone = document.getElementById('m-phone');
+        const elMPays = document.getElementById('m-pays');
+        td.phone = elMPhone ? elMPhone.value : '';
+        td.pays = elMPays ? elMPays.value : '';
     }
     if(step === 2) {
         const business = document.getElementById('m-business').value.trim();
         if(!business) { alert('Entre le nom de ton business !'); return; }
         td.business = business;
-        td.objectif = document.getElementById('m-objectif').value;
-        td.dms = document.getElementById('m-dms').value;
+        // CORRECTION: null-checks champs onboarding step 2
+        const elMObj = document.getElementById('m-objectif');
+        const elMDms = document.getElementById('m-dms');
+        td.objectif = elMObj ? elMObj.value : '';
+        td.dms = elMDms ? elMDms.value : '';
     }
     if(step === 3) {
-        td.tiktok = document.getElementById('m-tiktok').value;
-        td.instagram = document.getElementById('m-instagram').value;
-        td.niche = document.getElementById('m-niche').value;
+        // CORRECTION: null-checks champs onboarding step 3
+        const elMTik = document.getElementById('m-tiktok');
+        const elMInsta = document.getElementById('m-instagram');
+        const elMNiche = document.getElementById('m-niche');
+        td.tiktok = elMTik ? elMTik.value : '';
+        td.instagram = elMInsta ? elMInsta.value : '';
+        td.niche = elMNiche ? elMNiche.value : '';
     }
     modalGoStep(step + 1);
 }
@@ -515,7 +529,7 @@ async function handlePlanSelection(plan) {
             window.location.href = data.url;
             return;
         }
-        throw new Error(data.error || 'Pas d’URL de paiement renvoyée');
+        throw new Error(data.error || 'Pas d\'URL de paiement renvoyée');
     } catch(err) {
         resetStripePayButtons();
         alert('Erreur : ' + (err && err.message ? err.message : String(err)));
@@ -531,8 +545,11 @@ function goStep2() {
     const e = document.getElementById('t-email').value.trim();
     if(!p || !e) { alert('Merci de remplir ton prénom et ton email !'); return; }
     td.prenom = p; td.email = e;
-    td.phone = document.getElementById('t-phone').value;
-    td.pays = document.getElementById('t-pays').value;
+    // CORRECTION: null-checks champs tunnel step 1
+    const elTPhone = document.getElementById('t-phone');
+    const elTPays = document.getElementById('t-pays');
+    td.phone = elTPhone ? elTPhone.value : '';
+    td.pays = elTPays ? elTPays.value : '';
     showPage('step2');
 }
 
@@ -540,8 +557,11 @@ function goStep3() {
     const b = document.getElementById('t-business').value.trim();
     if(!b) { alert('Merci d\'indiquer le nom de ton business !'); return; }
     td.business = b;
-    td.dms = document.getElementById('t-dms').value;
-    td.objectif = document.getElementById('t-objectif').value;
+    // CORRECTION: null-checks champs tunnel step 2
+    const elTDms = document.getElementById('t-dms');
+    const elTObj = document.getElementById('t-objectif');
+    td.dms = elTDms ? elTDms.value : '';
+    td.objectif = elTObj ? elTObj.value : '';
     showPage('step3');
 }
 
@@ -554,6 +574,8 @@ function pickOpt(el, group, val) {
 function connectNet(platform) {
     const btn = document.getElementById(platform + '-btn');
     const status = document.getElementById(platform + '-status');
+    // CORRECTION: null-check pour éviter crash si éléments absents du DOM
+    if(!btn || !status) return;
     btn.style.opacity = '0.6';
     setTimeout(() => {
         btn.classList.add('connected');
@@ -579,20 +601,27 @@ async function loadDashboard(user) {
         const prospects = await loadProspectsFromDB(user.id);
         if(prospects.length) user.prospects = prospects;
     }
-    document.getElementById('dash-welcome').textContent = `Bienvenue ${user.prenom} 🎯`;
-    document.getElementById('st-prospects').textContent = user.prospects?.length || 0;
-    document.getElementById('st-msgs').textContent = (user.prospects?.length || 0) * 3;
-    document.getElementById('st-rate').textContent = '27%';
-    document.getElementById('st-revenue').textContent = '€0';
+    const elWelcome = document.getElementById('dash-welcome'); if(elWelcome) elWelcome.textContent = `Bienvenue ${user.prenom} 🎯`;
+    const elProspects = document.getElementById('st-prospects'); if(elProspects) elProspects.textContent = user.prospects?.length || 0;
+    const elMsgs = document.getElementById('st-msgs'); if(elMsgs) elMsgs.textContent = (user.prospects?.length || 0) * 3;
+    const elRate = document.getElementById('st-rate'); if(elRate) elRate.textContent = '27%';
+    // Calcul du revenu estimé depuis les prospects closés
+    const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
+    const planRevenue = { starter: 39, pro: 94, business: 194, elite: 494, free: 0 };
+    const revenueEstimate = closedCount * (planRevenue[user.plan] || 0);
+    // CORRECTION: null-check sur st-revenue
+    const elRevenue = document.getElementById('st-revenue');
+    if(elRevenue) elRevenue.textContent = '€' + revenueEstimate;
     // Badges
     const badges = document.getElementById('platform-badges');
-    badges.innerHTML = '';
-    if(user.platforms?.includes('tiktok')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">🎵 TikTok connecté</span>';
-    if(user.platforms?.includes('instagram')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">📸 Instagram connecté</span>';
+    // CORRECTION: null-check sur badges avant innerHTML
+    if(badges) badges.innerHTML = '';
+    if(badges && user.platforms?.includes('tiktok')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">🎵 TikTok connecté</span>';
+    if(badges && user.platforms?.includes('instagram')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">📸 Instagram connecté</span>';
     // Settings
-    document.getElementById('s-prenom').value = user.prenom || '';
-    document.getElementById('s-email').value = user.email || '';
-    document.getElementById('s-business').value = user.business || '';
+    const elPrenom = document.getElementById('s-prenom'); if(elPrenom) elPrenom.value = user.prenom || '';
+    const elEmail = document.getElementById('s-email'); if(elEmail) elEmail.value = user.email || '';
+    const elBusiness = document.getElementById('s-business'); if(elBusiness) elBusiness.value = user.business || '';
     const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
     const planPrices = {
         starter:'€39/mois', 'starter-once':'€390 (unique)',
@@ -601,8 +630,8 @@ async function loadDashboard(user) {
         elite:'€494/mois',  'elite-once':'€4940 (unique)',
         free:'—'
     };
-    document.getElementById('s-plan').textContent = planNames[user.plan] || 'Starter';
-    document.getElementById('s-price').textContent = planPrices[user.plan] || '€39/mois';
+    const elPlan = document.getElementById('s-plan'); if(elPlan) elPlan.textContent = planNames[user.plan] || 'Starter';
+    const elPrice = document.getElementById('s-price'); if(elPrice) elPrice.textContent = planPrices[user.plan] || '€39/mois';
     // Prospects
     loadProspects(user.prospects || []);
     // Message d'accueil Nexa personnalisé dans le dashboard
@@ -631,17 +660,24 @@ function loadProspects(list) {
 
 function showDash(section, el) {
     document.querySelectorAll('[id^="d-"]').forEach(s => s.style.display = 'none');
-    document.getElementById('d-' + section).style.display = 'block';
+    // CORRECTION: null-check sur la section cible
+    const elSection = document.getElementById('d-' + section);
+    if(elSection) elSection.style.display = 'block';
     document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
     if(el) el.classList.add('active');
 }
 
 async function saveSettings() {
     const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-    user.prenom = document.getElementById('s-prenom').value;
-    user.email = document.getElementById('s-email').value;
-    user.business = document.getElementById('s-business').value;
-    user.type_business = document.getElementById('s-type').value;
+    // CORRECTION: null-checks sur tous les champs settings
+    const elSPrenom = document.getElementById('s-prenom');
+    const elSEmail = document.getElementById('s-email');
+    const elSBusiness = document.getElementById('s-business');
+    const elSType = document.getElementById('s-type');
+    user.prenom = elSPrenom ? elSPrenom.value : (user.prenom || '');
+    user.email = elSEmail ? elSEmail.value : (user.email || '');
+    user.business = elSBusiness ? elSBusiness.value : (user.business || '');
+    user.type_business = elSType ? elSType.value : (user.type_business || '');
 
     // Sauvegarder dans Supabase
     await saveUserToDB({
@@ -749,12 +785,17 @@ const ADMIN_PWD = null; // Mot de passe vérifié côté Netlify Functions
 let allUsers = [];
 
 function openAdminLogin() {
-    document.getElementById('adminLoginModal').style.display = 'flex';
-    setTimeout(() => document.getElementById('adminSecretPwd').focus(), 100);
+    // CORRECTION: null-checks admin modal
+    const alm = document.getElementById('adminLoginModal');
+    if(alm) alm.style.display = 'flex';
+    setTimeout(() => { const ap = document.getElementById('adminSecretPwd'); if(ap) ap.focus(); }, 100);
 }
 function closeAdminLogin() {
-    document.getElementById('adminLoginModal').style.display = 'none';
-    document.getElementById('adminSecretPwd').value = '';
+    // CORRECTION: null-checks
+    const alm = document.getElementById('adminLoginModal');
+    if(alm) alm.style.display = 'none';
+    const asp = document.getElementById('adminSecretPwd');
+    if(asp) asp.value = '';
 }
 async function checkAdminLogin() {
     const pwd = document.getElementById('adminSecretPwd').value;
@@ -768,18 +809,25 @@ async function checkAdminLogin() {
         const data = await res.json();
         if(data.ok) {
             closeAdminLogin();
-            document.getElementById('adminPanel').style.display = 'block';
+            // CORRECTION: null-checks
+            const apanel = document.getElementById('adminPanel');
+            if(apanel) apanel.style.display = 'block';
             document.body.style.overflow = 'hidden';
             loadAdminData();
         } else {
-            document.getElementById('adminSecretPwd').style.borderColor = '#ff4444';
-            setTimeout(() => document.getElementById('adminSecretPwd').style.borderColor = 'var(--border)', 1000);
-            document.getElementById('adminSecretPwd').value = '';
+            const aspErr = document.getElementById('adminSecretPwd');
+            if(aspErr) {
+                aspErr.style.borderColor = '#ff4444';
+                setTimeout(() => { aspErr.style.borderColor = 'var(--border)'; }, 1000);
+                aspErr.value = '';
+            }
         }
     } catch(e) { alert('Erreur de connexion'); }
 }
 function closeAdminPanel() {
-    document.getElementById('adminPanel').style.display = 'none';
+    // CORRECTION: null-check
+    const ap = document.getElementById('adminPanel');
+    if(ap) ap.style.display = 'none';
     document.body.style.overflow = '';
 }
 
@@ -823,7 +871,9 @@ function row(label, value) {
 }
 
 function closeUserDetail() {
-    document.getElementById('userDetailModal').style.display = 'none';
+    // CORRECTION: null-check
+    const udm = document.getElementById('userDetailModal');
+    if(udm) udm.style.display = 'none';
 }
 
 async function toggleSuspend(email, isSuspended) {
@@ -838,7 +888,9 @@ async function toggleSuspend(email, isSuspended) {
     localStorage.setItem('nexaai_users', JSON.stringify(updated));
 
     renderAdminStats(allUsers);
-    filterAdminUsers(document.getElementById('admin-search').value);
+    // CORRECTION: null-check admin-search
+    const adminSearch = document.getElementById('admin-search');
+    filterAdminUsers(adminSearch ? adminSearch.value : '');
 }
 
 async function sendAdminMessage() {
@@ -861,8 +913,11 @@ async function sendAdminMessage() {
         }
     }
 
-    document.getElementById('msg-content').value = '';
-    document.getElementById('msg-email').value = '';
+    // CORRECTION: null-checks sur les champs admin message
+    const elMsgContent = document.getElementById('msg-content');
+    const elMsgEmail = document.getElementById('msg-email');
+    if(elMsgContent) elMsgContent.value = '';
+    if(elMsgEmail) elMsgEmail.value = '';
     alert('✅ Message envoyé' + (email ? ' à ' + email : ' à tous les clients') + ' !');
 }
 
@@ -944,14 +999,16 @@ function renderAdminStats(users) {
         return d.toDateString() === today;
     }).length;
 
-    document.getElementById('a-total').textContent = total;
-    document.getElementById('a-paying').textContent = paying;
-    document.getElementById('a-free').textContent = free;
-    document.getElementById('a-revenue').textContent = '€' + mrr;
-    document.getElementById('a-new-today').textContent = newToday;
-    document.getElementById('a-suspended').textContent = suspended;
-    document.getElementById('a-count').textContent = '(' + total + ' clients)';
-    document.getElementById('a-last-update').textContent = 'Mis à jour : ' + new Date().toLocaleTimeString('fr-FR');
+    // CORRECTION: null-checks sur tous les éléments stats admin
+    const elATotal = document.getElementById('a-total'); if(elATotal) elATotal.textContent = total;
+    const elAPaying = document.getElementById('a-paying'); if(elAPaying) elAPaying.textContent = paying;
+    const elAFree = document.getElementById('a-free'); if(elAFree) elAFree.textContent = free;
+    const elARevenue = document.getElementById('a-revenue'); if(elARevenue) elARevenue.textContent = '€' + mrr;
+    const elANewToday = document.getElementById('a-new-today'); if(elANewToday) elANewToday.textContent = newToday;
+    // CORRECTION: null-checks stats admin (suite)
+    const elASusp = document.getElementById('a-suspended'); if(elASusp) elASusp.textContent = suspended;
+    const elACount = document.getElementById('a-count'); if(elACount) elACount.textContent = '(' + total + ' clients)';
+    const elALast = document.getElementById('a-last-update'); if(elALast) elALast.textContent = 'Mis à jour : ' + new Date().toLocaleTimeString('fr-FR');
 
     // Graphique revenus par mois
     renderRevenueChart(users);
@@ -1106,7 +1163,8 @@ function giveAccess(event) {
     if(i !== -1) { users[i].plan = plan; }
     else { users.push({id:Date.now(), prenom:email.split('@')[0], email, plan, createdAt:new Date().toISOString(), prospects:[], platforms:[]}); }
     localStorage.setItem('nexaai_users', JSON.stringify(users));
-    document.getElementById('gift-email').value = '';
+    // CORRECTION: null-check gift-email
+    const ge = document.getElementById('gift-email'); if(ge) ge.value = '';
     allUsers = users;
     renderAdminStats(users);
     renderAdminUsers(users);
@@ -1209,6 +1267,7 @@ function optClick(opt) { sendChatMsg(opt); }
 
 
 let awaitingAdminPwd = false;
+let dashChatHist = []; // historique du chat dashboard pour la mémoire de contexte
 
 async function sendChatMsg(text) {
     // Détecter "admin" pour accès admin via chatbot
@@ -1231,7 +1290,9 @@ async function sendChatMsg(text) {
                 addMsg('ai', '✅ Accès accordé ! Ouverture du panel admin...');
                 setTimeout(() => {
                     toggleChat();
-                    document.getElementById('adminPanel').style.display = 'block';
+                    // CORRECTION: null-check adminPanel
+                    const ap1233 = document.getElementById('adminPanel');
+                    if(ap1233) ap1233.style.display = 'block';
                     document.body.style.overflow = 'hidden';
                     loadAdminData();
                 }, 800);
@@ -1247,8 +1308,11 @@ async function sendChatMsg(text) {
 
     addMsg('user', text);
     chatHist.push({role:'user', content:text});
-    document.getElementById('typingBubble').style.display = 'block';
-    document.getElementById('chatMsgs').scrollTop = 99999;
+    // CORRECTION: null-checks typingBubble et chatMsgs
+    const tb = document.getElementById('typingBubble');
+    const cm = document.getElementById('chatMsgs');
+    if(tb) tb.style.display = 'block';
+    if(cm) cm.scrollTop = 99999;
     try {
         const res = await fetch(PROXY_URL, {
             method:'POST',
@@ -1261,14 +1325,16 @@ async function sendChatMsg(text) {
             })
         });
         const data = await res.json();
-        document.getElementById('typingBubble').style.display = 'none';
+        // CORRECTION: null-check typingBubble
+        const tb2 = document.getElementById('typingBubble');
+        if(tb2) tb2.style.display = 'none';
         if(data.content?.[0]) {
             let reply = data.content[0].text;
             chatHist.push({role:'assistant',content:reply});
             if(reply.includes('REDIRECT')) {
                 reply = reply.replace('REDIRECT','');
                 addMsg('ai', reply.trim());
-                setTimeout(() => { toggleChat(); document.getElementById('pricing').scrollIntoView({behavior:'smooth'}); }, 1500);
+                setTimeout(() => { toggleChat(); const pr = document.getElementById('pricing'); if(pr) pr.scrollIntoView({behavior:'smooth'}); }, 1500);
                 return;
             }
             let opts = [];
@@ -1286,7 +1352,9 @@ async function sendChatMsg(text) {
             else if(lower2.includes('pro')) setTimeout(()=>{toggleChat();startTunnel('pro');},800);
         }
     } catch(err) {
-        document.getElementById('typingBubble').style.display = 'none';
+        // CORRECTION: null-check typingBubble dans catch
+        const tb3 = document.getElementById('typingBubble');
+        if(tb3) tb3.style.display = 'none';
         addMsg('ai','Connexion instable, réessaie ! 🔄');
     }
 }
@@ -1294,10 +1362,13 @@ async function sendChatMsg(text) {
 // ===== DASH BOT CHAT =====
 async function sendDashMsg() {
     const inp = document.getElementById('dash-input');
+    // CORRECTION: null-checks inp et msgs
+    if(!inp) return;
     const text = inp.value.trim();
     if(!text) return;
     inp.value = '';
     const msgs = document.getElementById('dash-msgs');
+    if(!msgs) return;
     const ud = document.createElement('div');
     ud.className = 'dash-msg-user';
     ud.textContent = text;
@@ -1321,16 +1392,19 @@ async function sendDashMsg() {
             + ' | Pays: ' + (user.pays||nr)
             + ' | En tant que Nexa agent IA personnel, utilise ces infos pour conseiller ultra-personnalise, aider a rediger des messages de closing, calculer le potentiel de revenus et motiver avec des donnees concretes.';
         const fullSystem = SYS + '\n\nContexte client: ' + ctx;
+        dashChatHist.push({ role: 'user', content: text });
         const res = await fetch(PROXY_URL, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:400,system:fullSystem,messages:[{role:'user',content:text}]})
+            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:400,system:fullSystem,messages:dashChatHist})
         });
         const data = await res.json();
         if(data.content?.[0]) {
+            const replyText = data.content[0].text;
+            dashChatHist.push({ role: 'assistant', content: replyText });
             const ad = document.createElement('div');
             ad.className = 'dash-msg-ai';
-            ad.innerHTML = data.content[0].text.replace(/\n/g,'<br>');
+            ad.innerHTML = replyText.replace(/\n/g,'<br>');
             msgs.appendChild(ad);
             msgs.scrollTop = msgs.scrollHeight;
         }
@@ -1367,17 +1441,24 @@ function botQualifyStart(email) {
     bqHist = [];
     bqStep = 0;
     bqData = { email };
-    document.getElementById('bq-msgs').innerHTML = '';
-    document.getElementById('bq-opts').innerHTML = '';
-    document.getElementById('bq-progress').style.width = '0%';
+    // CORRECTION: null-checks éléments bot qualify
+    const bqMsgsEl = document.getElementById('bq-msgs');
+    const bqOptsEl = document.getElementById('bq-opts');
+    const bqProgEl = document.getElementById('bq-progress');
+    if(bqMsgsEl) bqMsgsEl.innerHTML = '';
+    if(bqOptsEl) bqOptsEl.innerHTML = '';
+    if(bqProgEl) bqProgEl.style.width = '0%';
     bqAIMsg("Salut ! 👋 Moi c'est Nexa, ton agent IA personnel.\n\nPour commencer ce voyage ensemble... c'est quoi ton prénom ?");
 }
 
 function bqAIMsg(text, opts=[]) {
+    // CORRECTION: null-check bq-msgs
     const msgs = document.getElementById('bq-msgs');
+    if(!msgs) return;
     const d = document.createElement('div');
     d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;animation:slideL 0.3s ease;margin-bottom:10px;';
-    d.innerHTML = text.replace(/\n/g,'<br>');
+    d.innerHTML = text.replace(/
+/g,'<br>');
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
     const optsDiv = document.getElementById('bq-opts');
@@ -1394,7 +1475,9 @@ function bqAIMsg(text, opts=[]) {
 }
 
 function bqUserMsg(text) {
-    document.getElementById('bq-opts').innerHTML = '';
+    // CORRECTION: null-checks bq-opts et bq-msgs
+    const bqOpts2 = document.getElementById('bq-opts');
+    if(bqOpts2) bqOpts2.innerHTML = '';
     const msgs = document.getElementById('bq-msgs');
     const d = document.createElement('div');
     d.style.cssText = 'background:linear-gradient(90deg,var(--accent),#2dd10f);color:#000;border-radius:14px;padding:12px 16px;max-width:85%;align-self:flex-end;font-weight:600;font-size:0.88rem;animation:slideR 0.3s ease;margin-left:auto;margin-bottom:10px;';
@@ -1415,6 +1498,12 @@ function bqSend() {
 async function bqSendToAI(userText) {
     bqHist.push({ role: 'user', content: userText });
     const lower = userText.toLowerCase();
+
+    // Capturer le prénom à la première étape (bqStep === 0)
+    if(bqStep === 0 && !bqData.prenom) {
+        const prenom = userText.trim().split(' ')[0];
+        bqData.prenom = prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
+    }
 
     // --- LOGIQUE SPÉCIALE CLOSER (Affiliation vs Payant) ---
     
@@ -1453,7 +1542,9 @@ async function bqSendToAI(userText) {
     }
 
     // --- LOGIQUE NORMALE (IA) ---
-    document.getElementById('bq-typing').style.display = 'block';
+    // CORRECTION: null-check bq-typing
+    const bqTyp = document.getElementById('bq-typing');
+    if(bqTyp) bqTyp.style.display = 'block';
     try {
         const res = await fetch(PROXY_URL, {
             method: 'POST',
@@ -1461,14 +1552,24 @@ async function bqSendToAI(userText) {
             body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 500, system: BQ_PROMPT, messages: bqHist })
         });
         const data = await res.json();
-        document.getElementById('bq-typing').style.display = 'none';
+        // CORRECTION: null-check bq-typing hide
+        const bqTypH = document.getElementById('bq-typing');
+        if(bqTypH) bqTypH.style.display = 'none';
 
         if(data.content?.[0]) {
             let reply = data.content[0].text;
             bqHist.push({ role: 'assistant', content: reply });
 
+            // Incrémenter l'étape et mettre à jour la barre de progression
+            bqStep++;
+            const progress = Math.min((bqStep / 5) * 100, 100);
+            const progressBar = document.getElementById('bq-progress');
+            if(progressBar) progressBar.style.width = progress + '%';
+
             if(reply.includes('CHOIX_FORFAIT')) {
                 reply = reply.replace('CHOIX_FORFAIT', '').trim();
+                bqStep = 5; // étape finale atteinte
+                if(progressBar) progressBar.style.width = '100%';
                 bqAIMsg(reply, [
                     '🤝 Plan Ambassadeur — €0',
                     '⚡ Starter — €39/mois',
@@ -1481,7 +1582,9 @@ async function bqSendToAI(userText) {
             }
         }
     } catch(err) {
-        document.getElementById('bq-typing').style.display = 'none';
+        // CORRECTION: null-check bq-typing dans catch
+        const bqTypC = document.getElementById('bq-typing');
+        if(bqTypC) bqTypC.style.display = 'none';
         bqAIMsg('Nexa analyse tes données... Continue !');
     }
 }
