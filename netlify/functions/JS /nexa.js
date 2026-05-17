@@ -6,6 +6,12 @@
 // ===== VARIABLES GLOBALES (déclarées en premier pour éviter les ReferenceError) =====
 let currentLang = 'fr';
 let td = {}; // tunnel data (données du tunnel de qualification)
+let dashChatHist = []; // historique du chat dashboard (déclaré globalement pour signOut et loadUserData)
+// State — déclaré ici pour être disponible dans signOut() et toutes les fonctions
+let currentPlan = 'starter';
+let connected = [];
+let chatOpen = false;
+let chatHist = [];
 
 // ===== SYSTÈME D'AFFILIATION =====
 (function() {
@@ -60,6 +66,7 @@ async function saveAndSyncStripe() {
         statusLabel.innerText = "✅ Partage 20/80 activé ! Tu reçois 80% de chaque vente générée.";
         statusLabel.style.color = "var(--accent)";
         btn.innerText = "Enregistré";
+        btn.disabled = false; // CORRECTION: réactiver le bouton après succès
     } catch(err) {
         console.error(err);
         statusLabel.innerText = "❌ Erreur lors de l'enregistrement.";
@@ -74,20 +81,21 @@ const STRIPE_PK = 'pk_test_51TH5S2P8svYH1bkONQyzCOzUff4OrRBFLAu0REAMGK1043xGSQZl
 // ✅ Netlify Functions — clés cachées côté serveur
 const PROXY_URL = '/.netlify/functions/claude';
 const STRIPE_URL = '/.netlify/functions/stripe-checkout';
-const CLAUDE_MODEL = 'claude-sonnet-4-5'; // model string Anthropic API (format stable)
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514'; // model string Anthropic API (format stable)
 let stripe = null;
 let sb = null;
 let CLIENT_STORE_URL = '';
 
 // ===== RETOUR TIKTOK =====
-function checkTikTokReturn() {
+async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await loadDashboard)
     const params = new URLSearchParams(window.location.search);
     const tiktok = params.get('tiktok');
     const data = params.get('data');
 
     if(tiktok === 'success' && data) {
         try {
-            const tiktokInfo = JSON.parse(decodeURIComponent(data));
+            let tiktokInfo = {};
+            try { tiktokInfo = JSON.parse(decodeURIComponent(data)); } catch(parseErr) { console.error('TikTok data parse error:', parseErr); return false; }
             // Sauvegarder les infos TikTok
             const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
             user.tiktok_pseudo = tiktokInfo.username || tiktokInfo.displayName || '';
@@ -107,7 +115,7 @@ function checkTikTokReturn() {
             // Afficher le dashboard si connecté
             if(user.email) {
                 await loadDashboard(user);
-        showPage('dashboard-page');
+                showPage('dashboard-page');
                 setTimeout(() => alert('✅ TikTok connecté ! Bienvenue ' + (tiktokInfo.displayName || '') + ' !'), 500);
             }
             return true;
@@ -124,10 +132,13 @@ function checkTikTokReturn() {
     return false;
 }
 
-function checkStripeReturn() {
+async function checkStripeReturn() {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
-    const plan = params.get('plan') || localStorage.getItem('nexaai_pending_plan') || 'starter';
+    // CORRECTION: valider le plan avant utilisation pour éviter toute manipulation d'URL
+    const validPlans = ['starter','pro','business','elite','starter-once','pro-once','business-once','elite-once'];
+    const rawPlan = params.get('plan') || localStorage.getItem('nexaai_pending_plan') || 'starter';
+    const plan = validPlans.includes(rawPlan) ? rawPlan : 'starter';
 
     if(payment === 'success') {
         // Paiement réussi — mettre à jour le plan et afficher succès
@@ -137,22 +148,21 @@ function checkStripeReturn() {
         localStorage.setItem('nexaai_user', JSON.stringify(user));
         localStorage.removeItem('nexaai_pending_plan');
 
-        // Mettre à jour dans Supabase
+        // Mettre à jour dans Supabase — CORRECTION: await pour éviter perte de données si la page recharge
         if(sb && user.email) {
-            sb.from('users').update({ plan: planBase }).eq('email', user.email).then(() => {
-                // Enregistrer le paiement
-                sb.from('users').select('id').eq('email', user.email).single().then(({ data }) => {
-                    if(data) {
-                        const prices = {starter:39,'starter-once':390,pro:94,'pro-once':940,business:194,'business-once':1940,elite:494,'elite-once':4940};
-                        sb.from('paiements').insert([{
-                            user_id: data.id,
-                            plan: planBase,
-                            montant: prices[plan] || 39,
-                            type_paiement: plan.includes('-once') ? 'unique' : 'mensuel'
-                        }]);
-                    }
-                });
-            });
+            try {
+                await sb.from('users').update({ plan: planBase }).eq('email', user.email);
+                const { data: userRow } = await sb.from('users').select('id').eq('email', user.email).single();
+                if(userRow) {
+                    const prices = {starter:39,'starter-once':390,pro:94,'pro-once':940,business:194,'business-once':1940,elite:494,'elite-once':4940};
+                    await sb.from('paiements').insert([{
+                        user_id: userRow.id,
+                        plan: planBase,
+                        montant: prices[plan] || 39,
+                        type_paiement: plan.includes('-once') ? 'unique' : 'mensuel'
+                    }]);
+                }
+            } catch(e) { console.error('Supabase payment sync error:', e); }
         }
 
         // Nettoyer l'URL
@@ -186,8 +196,8 @@ window.addEventListener('load', async () => {
                 "https://aubjtlxwqndfawdidwfq.supabase.co",
                 "sb_publishable_ac-EaAMzdCCmFRxU6Iny9A_NgMHlUHB"
             );
-            if(checkTikTokReturn()) return;
-            if(checkStripeReturn()) return;
+            if(await checkTikTokReturn()) return;
+            if(await checkStripeReturn()) return;
 
             const { data: { session } } = await sb.auth.getSession();
             if(session && session.user) {
@@ -231,7 +241,7 @@ async function loadUserData() {
     const authUser = await getAuthUser();
     if(!authUser) return;
     // CORRECTION: reset historique chat au chargement d'un nouveau profil
-    if(typeof dashChatHist !== 'undefined') dashChatHist = [];
+    dashChatHist = [];
 
     const userData = await loadUserFromDB(authUser.email);
     
@@ -240,8 +250,7 @@ async function loadUserData() {
         const prospects = await loadProspectsFromDB(userData.id);
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
-        loadDashboard(user);
-        // CORRECTION : ID corrigé dashboard-page
+        await loadDashboard(user); // CORRECTION: await ajouté
         showPage('dashboard-page');
     } else {
         // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
@@ -265,17 +274,13 @@ async function signOut() {
     if(sb) await sb.auth.signOut();
     localStorage.removeItem('nexaai_user');
     // CORRECTION: réinitialiser les historiques pour éviter fuites entre sessions
-    if(typeof dashChatHist !== 'undefined') dashChatHist = [];
-    if(typeof chatHist !== 'undefined') chatHist = [];
+    dashChatHist = [];
+    chatHist = [];
     showPage('home');
 }
 
 // ===== STATE =====
-let currentPlan = 'starter';
-// currentLang et td sont déclarés en haut du fichier
-let connected = [];
-let chatOpen = false;
-let chatHist = [];
+// currentPlan, connected, chatOpen, chatHist sont déclarés globalement en haut du fichier
 
 // ===== PAGE SUCCÈS =====
 function showSuccessPage(user) {
@@ -298,9 +303,9 @@ function showSuccessPage(user) {
             <div class="tunnel-wrap">
                 <div class="tunnel-card" style="text-align:center;max-width:550px;margin: 0 auto; padding: 40px;">
                     <div style="font-size:4rem;margin-bottom:20px;">🎉</div>
-                    <h2 style="color:var(--accent);font-size:2rem;margin-bottom:15px;">Bienvenue ${user.prenom || ''} !</h2>
+                    <h2 style="color:var(--accent);font-size:2rem;margin-bottom:15px;">Bienvenue ${escHtml(user.prenom || '')} !</h2>
                     <p style="color:var(--text-light);font-size:1rem;line-height:1.7;margin-bottom:30px;">
-                        Ton plan <strong style="color:var(--accent);">${planName}</strong> est activé. Nexa est prête à travailler pour toi 24h/24.
+                        Ton plan <strong style="color:var(--accent);">${escHtml(planName)}</strong> est activé. Nexa est prête à travailler pour toi 24h/24.
                     </p>
                     <div style="background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.3);border-radius:12px;padding:20px;margin-bottom:30px;text-align:left;">
                         <p style="color:var(--accent);font-weight:700;margin-bottom:12px;">✅ Prochaines étapes :</p>
@@ -319,10 +324,10 @@ function showSuccessPage(user) {
 }
 
 // Fonction de secours pour le bouton du dashboard
-function goToDashboard() {
+async function goToDashboard() {
     const user = JSON.parse(localStorage.getItem('nexaai_user'));
-    if(user) loadDashboard(user);
-    showPage('dashboard-page');
+    if(user) { await loadDashboard(user); showPage('dashboard-page'); }
+    else showPage('home'); // CORRECTION: éviter dashboard vide si user null
 }
 
 // ===== MODAL ONBOARDING =====
@@ -365,9 +370,14 @@ function modalGoStep(step) {
 
 function modalNext(step) {
     if(step === 1) {
-        const prenom = document.getElementById('m-prenom').value.trim();
-        const email = document.getElementById('m-email').value.trim();
+        const elMPrenom = document.getElementById('m-prenom');
+        const elMEmail = document.getElementById('m-email');
+        if(!elMPrenom || !elMEmail) return; // CORRECTION: null-check
+        const prenom = elMPrenom.value.trim();
+        const email = elMEmail.value.trim();
         if(!prenom || !email) { alert('Merci de remplir prénom et email !'); return; }
+        // CORRECTION: validation format email
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Merci d\'entrer un email valide !'); return; }
         td.prenom = prenom;
         td.email = email;
         // CORRECTION: null-checks champs onboarding step 1
@@ -377,7 +387,9 @@ function modalNext(step) {
         td.pays = elMPays ? elMPays.value : '';
     }
     if(step === 2) {
-        const business = document.getElementById('m-business').value.trim();
+        const elMBusiness = document.getElementById('m-business');
+        if(!elMBusiness) return; // CORRECTION: null-check
+        const business = elMBusiness.value.trim();
         if(!business) { alert('Entre le nom de ton business !'); return; }
         td.business = business;
         // CORRECTION: null-checks champs onboarding step 2
@@ -483,6 +495,7 @@ async function handlePlanSelection(plan) {
         if(!email && sb) {
             const { data: { user } } = await sb.auth.getUser();
             if(user) email = user.email;
+            if(email) td.email = email; // CORRECTION: synchroniser td.email pour éviter perte de contexte
         }
         if(!email) {
             alert('Email requis ! Connecte-toi ou passe par le tunnel avec ton email.');
@@ -541,9 +554,14 @@ function processPayment() { handlePlanSelection(currentPlan || 'starter'); }
 
 
 function goStep2() {
-    const p = document.getElementById('t-prenom').value.trim();
-    const e = document.getElementById('t-email').value.trim();
+    const elTPrenom = document.getElementById('t-prenom');
+    const elTEmail = document.getElementById('t-email');
+    if(!elTPrenom || !elTEmail) return; // CORRECTION: null-check
+    const p = elTPrenom.value.trim();
+    const e = elTEmail.value.trim();
     if(!p || !e) { alert('Merci de remplir ton prénom et ton email !'); return; }
+    // CORRECTION: validation format email
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('Merci d\'entrer un email valide !'); return; }
     td.prenom = p; td.email = e;
     // CORRECTION: null-checks champs tunnel step 1
     const elTPhone = document.getElementById('t-phone');
@@ -554,7 +572,9 @@ function goStep2() {
 }
 
 function goStep3() {
-    const b = document.getElementById('t-business').value.trim();
+    const elTBusiness = document.getElementById('t-business');
+    if(!elTBusiness) return; // CORRECTION: null-check
+    const b = elTBusiness.value.trim();
     if(!b) { alert('Merci d\'indiquer le nom de ton business !'); return; }
     td.business = b;
     // CORRECTION: null-checks champs tunnel step 2
@@ -601,14 +621,15 @@ async function loadDashboard(user) {
         const prospects = await loadProspectsFromDB(user.id);
         if(prospects.length) user.prospects = prospects;
     }
-    const elWelcome = document.getElementById('dash-welcome'); if(elWelcome) elWelcome.textContent = `Bienvenue ${user.prenom} 🎯`;
+    const elWelcome = document.getElementById('dash-welcome'); if(elWelcome) elWelcome.textContent = `Bienvenue ${user.prenom || ''} 🎯`;
     const elProspects = document.getElementById('st-prospects'); if(elProspects) elProspects.textContent = user.prospects?.length || 0;
     const elMsgs = document.getElementById('st-msgs'); if(elMsgs) elMsgs.textContent = (user.prospects?.length || 0) * 3;
     const elRate = document.getElementById('st-rate'); if(elRate) elRate.textContent = '27%';
     // Calcul du revenu estimé depuis les prospects closés
     const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
     const planRevenue = { starter: 39, pro: 94, business: 194, elite: 494, free: 0 };
-    const revenueEstimate = closedCount * (planRevenue[user.plan] || 0);
+    // CORRECTION: utiliser le prix du produit client si renseigné, sinon le tarif du plan
+    const revenueEstimate = closedCount * (parseFloat(user.prix_produit) || planRevenue[user.plan] || 0);
     // CORRECTION: null-check sur st-revenue
     const elRevenue = document.getElementById('st-revenue');
     if(elRevenue) elRevenue.textContent = '€' + revenueEstimate;
@@ -637,24 +658,29 @@ async function loadDashboard(user) {
     // Message d'accueil Nexa personnalisé dans le dashboard
     const welcomeMsg = document.getElementById('dash-welcome-msg');
     if(welcomeMsg) {
-        welcomeMsg.innerHTML = 'Salut ' + (user.prenom||'') + ' ! 👋 Je suis Nexa, ton agent IA personnel.<br><br>Je connais ton business <strong>' + (user.business||'') + '</strong> par coeur. Je suis la pour t\'aider a closer plus, optimiser tes messages et faire grandir tes revenus.<br><br>On attaque quoi aujourd\'hui ?';
+        welcomeMsg.innerHTML = 'Salut ' + escHtml(user.prenom||'') + ' ! 👋 Je suis Nexa, ton agent IA personnel.<br><br>Je connais ton business <strong>' + escHtml(user.business||'') + '</strong> par coeur. Je suis la pour t\'aider a closer plus, optimiser tes messages et faire grandir tes revenus.<br><br>On attaque quoi aujourd\'hui ?';
     }
     const navOverview = document.querySelector('.sidebar-menu a[data-dash="overview"]');
     if(navOverview) showDash('overview', navOverview);
 }
 
+function escHtml(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function loadProspects(list) {
     const tbody = document.getElementById('prospects-body');
+    if(!tbody) return; // CORRECTION: null-check
     if(!list.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:40px;">Aucun prospect pour l\'instant. Le bot commence d\u00e8s que tes r\u00e9seaux sont connect\u00e9s !</td></tr>';
         return;
     }
     tbody.innerHTML = list.map(p => `
         <tr>
-            <td>${p.name}</td><td>${p.network}</td>
+            <td>${escHtml(p.name)}</td><td>${escHtml(p.network)}</td>
             <td><span class="badge ${p.status==='closed'?'badge-green':'badge-orange'}">${p.status==='closed'?'✓ Closé':'⏳ En cours'}</span></td>
-            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-light);font-size:0.82rem;">${p.lastMsg||'—'}</td>
-            <td style="color:var(--text-light);font-size:0.82rem;">${new Date(p.date).toLocaleDateString('fr-FR')}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-light);font-size:0.82rem;">${escHtml(p.lastMsg||'—')}</td>
+            <td style="color:var(--text-light);font-size:0.82rem;">${p.date && !isNaN(new Date(p.date)) ? new Date(p.date).toLocaleDateString('fr-FR') : '—'}</td>
         </tr>`).join('');
 }
 
@@ -675,9 +701,12 @@ async function saveSettings() {
     const elSBusiness = document.getElementById('s-business');
     const elSType = document.getElementById('s-type');
     user.prenom = elSPrenom ? elSPrenom.value : (user.prenom || '');
-    user.email = elSEmail ? elSEmail.value : (user.email || '');
+    // CORRECTION: ne pas permettre de changer l'email (causerait un doublon dans Supabase via upsert)
+    // L'email est en lecture seule dans les settings — on garde l'email original
     user.business = elSBusiness ? elSBusiness.value : (user.business || '');
     user.type_business = elSType ? elSType.value : (user.type_business || '');
+    // Forcer l'affichage à l'email original pour éviter toute confusion
+    if(elSEmail) elSEmail.value = user.email || '';
 
     // Sauvegarder dans Supabase
     await saveUserToDB({
@@ -693,21 +722,28 @@ async function saveSettings() {
     localStorage.setItem('nexaai_user', JSON.stringify(user));
 
     const btn = document.getElementById('sSaveBtn');
-    btn.textContent = '✅ Sauvegardé !';
-    setTimeout(() => { btn.textContent = 'Sauvegarder'; }, 2000);
+    if(btn) { // CORRECTION: null-check
+        btn.textContent = '✅ Sauvegardé !';
+        setTimeout(() => { btn.textContent = 'Sauvegarder'; }, 2000);
+    }
 }
 
 // ===== AUTH =====
 async function register() {
-    const email = document.getElementById('regEmail').value.trim();
-    const pwd = document.getElementById('regPwd').value.trim();
-    const pwd2 = document.getElementById('regPwd2').value.trim();
+    const elRegEmail = document.getElementById('regEmail');
+    const elRegPwd = document.getElementById('regPwd');
+    const elRegPwd2 = document.getElementById('regPwd2');
+    if(!elRegEmail || !elRegPwd || !elRegPwd2) return; // CORRECTION: null-check
+    const email = elRegEmail.value.trim();
+    const pwd = elRegPwd.value.trim();
+    const pwd2 = elRegPwd2.value.trim();
 
     if(!email || !pwd) { alert('Merci de remplir tous les champs !'); return; }
     if(pwd !== pwd2) { alert('Les mots de passe ne correspondent pas !'); return; }
     if(pwd.length < 6) { alert('Le mot de passe doit faire au moins 6 caractères !'); return; }
 
     const btn = document.getElementById('regBtn');
+    if(!btn) return; // CORRECTION: null-check
     btn.textContent = '⏳ Création...'; btn.disabled = true;
 
     if(!sb) { alert('Erreur de connexion, rechargez la page'); btn.textContent = 'Créer mon compte'; btn.disabled = false; return; }
@@ -728,29 +764,43 @@ async function register() {
         platforms: [],
         status: 'actif'
     };
-    await saveUserToDB(newUser);
+    try {
+        await saveUserToDB(newUser);
+    } catch(dbErr) {
+        console.error('saveUserToDB error:', dbErr);
+        // Ne pas bloquer l'inscription si Supabase échoue
+    }
+
+    btn.textContent = 'Créer mon compte'; btn.disabled = false; // CORRECTION: réactiver le bouton après saveUserToDB
 
     // Garder aussi en localStorage pour l'admin
-    const localUser = { ...newUser, id: Date.now(), createdAt: new Date().toISOString(), prospects: [] };
+    // CORRECTION: utiliser l'ID Supabase Auth pour éviter la divergence avec les requêtes BDD
+    const localUser = { ...newUser, id: (data.user?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2))), createdAt: new Date().toISOString(), prospects: [] };
     const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     if(!users.find(u => u.email === email)) { users.push(localUser); localStorage.setItem('nexaai_users', JSON.stringify(users)); }
     localStorage.setItem('nexaai_user', JSON.stringify(localUser));
     td.email = email;
 
-    btn.textContent = 'Créer mon compte'; btn.disabled = false;
     showPage('bot-qualify');
     setTimeout(() => botQualifyStart(email), 300);
 }
 
 async function login() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pwd = document.getElementById('loginPassword').value.trim();
+    const elLoginEmail = document.getElementById('loginEmail');
+    const elLoginPwd = document.getElementById('loginPassword');
+    if(!elLoginEmail || !elLoginPwd) return; // CORRECTION: null-check
+    const email = elLoginEmail.value.trim();
+    const pwd = elLoginPwd.value.trim();
     if(!email || !pwd) { alert('Merci de remplir tous les champs !'); return; }
 
     const btn = document.querySelector('#login .btn-primary');
     if(btn) { btn.textContent = '⏳ Connexion...'; btn.disabled = true; }
 
-    if(!sb) { alert('Erreur de connexion, rechargez la page'); return; }
+    if(!sb) {
+        alert('Erreur de connexion, rechargez la page');
+        if(btn) { btn.textContent = 'Se connecter'; btn.disabled = false; } // CORRECTION: réactiver le bouton
+        return;
+    }
 
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
 
@@ -768,7 +818,7 @@ async function login() {
         const prospects = await loadProspectsFromDB(userData.id);
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
-        loadDashboard(user);
+        await loadDashboard(user); // CORRECTION: await ajouté
         showPage('dashboard-page');
     } else {
         // Profil pas encore créé → tunnel de qualification
@@ -778,27 +828,28 @@ async function login() {
     }
 }
 
-function logout() { signOut(); }
+async function logout() { await signOut(); }
 
 // ===== ADMIN =====
-const ADMIN_PWD = null; // Mot de passe vérifié côté Netlify Functions
+// La vérification du mot de passe admin est gérée côté serveur (Netlify Function claude).
+// Aucun secret n'est stocké côté client.
 let allUsers = [];
 
 function openAdminLogin() {
-    // CORRECTION: null-checks admin modal
     const alm = document.getElementById('adminLoginModal');
     if(alm) alm.style.display = 'flex';
     setTimeout(() => { const ap = document.getElementById('adminSecretPwd'); if(ap) ap.focus(); }, 100);
 }
 function closeAdminLogin() {
-    // CORRECTION: null-checks
     const alm = document.getElementById('adminLoginModal');
     if(alm) alm.style.display = 'none';
     const asp = document.getElementById('adminSecretPwd');
     if(asp) asp.value = '';
 }
 async function checkAdminLogin() {
-    const pwd = document.getElementById('adminSecretPwd').value;
+    const aspEl = document.getElementById('adminSecretPwd');
+    if(!aspEl) return;
+    const pwd = aspEl.value;
     if(!pwd) return;
     try {
         const res = await fetch(PROXY_URL, {
@@ -806,14 +857,24 @@ async function checkAdminLogin() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ adminAuth: true, password: pwd })
         });
-        const data = await res.json();
+        const rawAdmin = await res.text();
+        let data = {};
+        try { data = rawAdmin ? JSON.parse(rawAdmin) : {}; } catch(e) { throw new Error('Réponse serveur invalide'); }
         if(data.ok) {
             closeAdminLogin();
-            // CORRECTION: null-checks
             const apanel = document.getElementById('adminPanel');
             if(apanel) apanel.style.display = 'block';
             document.body.style.overflow = 'hidden';
             loadAdminData();
+            // CORRECTION: démarrer le polling uniquement à l'ouverture du panel
+            if(!_adminIntervalId) {
+                _adminIntervalId = setInterval(() => {
+                    if(!_adminLoading) {
+                        _adminLoading = true;
+                        loadAdminData().finally(() => { _adminLoading = false; });
+                    }
+                }, 10000);
+            }
         } else {
             const aspErr = document.getElementById('adminSecretPwd');
             if(aspErr) {
@@ -825,10 +886,11 @@ async function checkAdminLogin() {
     } catch(e) { alert('Erreur de connexion'); }
 }
 function closeAdminPanel() {
-    // CORRECTION: null-check
     const ap = document.getElementById('adminPanel');
     if(ap) ap.style.display = 'none';
     document.body.style.overflow = '';
+    // CORRECTION: arrêter le polling à la fermeture du panel
+    if(_adminIntervalId) { clearInterval(_adminIntervalId); _adminIntervalId = null; }
 }
 
 
@@ -839,6 +901,7 @@ function viewUserDetail(email) {
     if(!user) return;
     const modal = document.getElementById('userDetailModal');
     const content = document.getElementById('userDetailContent');
+    if(!modal || !content) return; // CORRECTION: null-check
     const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
     const date = new Date(user.created_at || user.createdAt || Date.now()).toLocaleDateString('fr-FR');
 
@@ -865,8 +928,8 @@ function viewUserDetail(email) {
 
 function row(label, value) {
     return '<div style="display:flex;justify-content:space-between;padding:10px;background:#000;border-radius:8px;">' +
-        '<span style="color:var(--text-light);font-size:0.85rem;">' + label + '</span>' +
-        '<span style="color:var(--text);font-weight:600;font-size:0.85rem;">' + value + '</span>' +
+        '<span style="color:var(--text-light);font-size:0.85rem;">' + escHtml(String(label)) + '</span>' +
+        '<span style="color:var(--text);font-weight:600;font-size:0.85rem;">' + escHtml(String(value)) + '</span>' +
         '</div>';
 }
 
@@ -894,9 +957,14 @@ async function toggleSuspend(email, isSuspended) {
 }
 
 async function sendAdminMessage() {
-    const email = document.getElementById('msg-email').value.trim();
-    const msg = document.getElementById('msg-content').value.trim();
-    if(!msg) { alert('Écris un message !'); return; }
+    const elMsgEmail2 = document.getElementById('msg-email');
+    const elMsgContent2 = document.getElementById('msg-content');
+    if(!elMsgEmail2 || !elMsgContent2) return; // CORRECTION: null-check
+    const email = elMsgEmail2.value.trim();
+    const rawMsg = elMsgContent2.value.trim();
+    if(!rawMsg) { alert('Écris un message !'); return; }
+    // Sanitisation : limiter la longueur et supprimer les balises HTML
+    const msg = rawMsg.replace(/<[^>]*>/g, '').slice(0, 2000);
 
     // Sauvegarder le message dans Supabase
     if(sb) {
@@ -905,19 +973,19 @@ async function sendAdminMessage() {
             if(userRow) {
                 await sb.from('prospects').insert([{
                     user_id: userRow.id,
-                    nom: 'Message Admin',
-                    statut: 'message',
-                    dernier_message: msg
+                    name: 'Message Admin',
+                    status: 'message',
+                    lastMsg: msg,
+                    network: 'admin',
+                    date: new Date().toISOString()
                 }]);
             }
         }
     }
 
-    // CORRECTION: null-checks sur les champs admin message
-    const elMsgContent = document.getElementById('msg-content');
-    const elMsgEmail = document.getElementById('msg-email');
-    if(elMsgContent) elMsgContent.value = '';
-    if(elMsgEmail) elMsgEmail.value = '';
+    // Vider les champs (utilise les variables déjà déclarées en haut)
+    elMsgContent2.value = '';
+    elMsgEmail2.value = '';
     alert('✅ Message envoyé' + (email ? ' à ' + email : ' à tous les clients') + ' !');
 }
 
@@ -937,12 +1005,15 @@ function exportCSV() {
     ]);
 
     const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM UTF-8 pour Excel
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'nexaai_clients_' + new Date().toISOString().split('T')[0] + '.csv';
+    // CORRECTION: appendChild requis pour Firefox (sinon a.click() est silencieux)
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
@@ -974,12 +1045,9 @@ async function loadAdminData() {
     renderAdminUsers(allUsers);
 }
 
-// Rafraîchir automatiquement toutes les 10s si le panel est ouvert
-setInterval(() => {
-    if(document.getElementById('adminPanel').style.display === 'block') {
-        loadAdminData();
-    }
-}, 10000);
+// CORRECTION: l'intervalle admin démarre à l'ouverture et s'arrête à la fermeture (évite polling permanent)
+let _adminIntervalId = null;
+let _adminLoading = false;
 
 function renderAdminStats(users) {
     const total = users.length;
@@ -1082,13 +1150,14 @@ function renderAdminUsers(users) {
         const statusColor = isSuspended ? '#ff4444' : (plan !== 'free' ? 'var(--accent)' : '#888');
         const statusLabel = isSuspended ? '🚫 Suspendu' : (plan !== 'free' ? '✅ Actif' : '⭕ Gratuit');
 
-        var em = (u.email||'').replace(/'/g, '');
+        // CORRECTION: utiliser escHtml() plutôt que des remplacements manuels dupliqués
+        var em = escHtml(u.email || '');
         var tr = document.createElement('tr');
         if(isSuspended) tr.style.opacity = '0.5';
         tr.innerHTML = [
-            '<td style="font-weight:600;">' + (u.prenom||'-') + '</td>',
-            '<td style="color:var(--text-light);font-size:0.82rem;">' + (u.email||'-') + '</td>',
-            '<td style="color:var(--text-light);font-size:0.82rem;">' + (u.business||'-') + '</td>',
+            '<td style="font-weight:600;">' + escHtml(u.prenom||'-') + '</td>',
+            '<td style="color:var(--text-light);font-size:0.82rem;">' + escHtml(u.email||'-') + '</td>',
+            '<td style="color:var(--text-light);font-size:0.82rem;">' + escHtml(u.business||'-') + '</td>',
             '<td><span style="background:' + planColors[plan] + '22;color:' + planColors[plan] + ';padding:4px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;">' + planNames[plan] + '</span></td>',
             '<td><select data-email="' + em + '" onchange="adminChangePlan(this,this.dataset.email)" style="padding:5px 8px;background:#000;border:1px solid var(--border);border-radius:6px;color:var(--text-light);font-size:0.8rem;cursor:pointer;">' +
                 '<option value="free"' + (plan==='free'?' selected':'') + '>Gratuit</option>' +
@@ -1112,10 +1181,14 @@ function renderAdminUsers(users) {
 }
 
 function filterAdminUsers(search) {
-    const filter = document.getElementById('admin-filter').value;
+    // CORRECTION: fusion des deux versions — recherche texte + filtre dropdown + recherche business
+    const filterEl = document.getElementById('admin-filter');
+    const filter = filterEl ? filterEl.value : '';
+    const q = (search || '').toLowerCase();
     let filtered = allUsers.filter(u =>
-        (u.email || '').toLowerCase().includes((search || '').toLowerCase()) ||
-        (u.prenom || '').toLowerCase().includes((search || '').toLowerCase())
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.prenom || '').toLowerCase().includes(q) ||
+        (u.business || '').toLowerCase().includes(q)
     );
     if(filter === 'paying') filtered = filtered.filter(u => u.plan && u.plan !== 'free');
     else if(filter === 'free') filtered = filtered.filter(u => !u.plan || u.plan === 'free');
@@ -1146,25 +1219,37 @@ async function adminChangePlan(sel, email) {
 
 function excludeUser(email) {
     if(!confirm(`⚠️ Exclure ${email} du site ? Cette action est irréversible.`)) return;
+    // CORRECTION: supprimer aussi dans Supabase
+    if(sb) sb.from('users').delete().eq('email', email).catch(e => console.error('Supabase delete error:', e));
     let users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     users = users.filter(u => u.email !== email);
     localStorage.setItem('nexaai_users', JSON.stringify(users));
-    allUsers = users;
-    renderAdminStats(users);
-    renderAdminUsers(users);
+    allUsers = allUsers.filter(u => u.email !== email);
+    renderAdminStats(allUsers);
+    renderAdminUsers(allUsers);
 }
 
 function giveAccess(event) {
-    const email = document.getElementById('gift-email').value.trim();
-    const plan = document.getElementById('gift-plan').value;
+    const elGiftEmail = document.getElementById('gift-email');
+    const elGiftPlan = document.getElementById('gift-plan');
+    if(!elGiftEmail || !elGiftPlan) return; // CORRECTION: null-check
+    const email = elGiftEmail.value.trim();
+    const plan = elGiftPlan.value;
     if(!email) { alert('Entre un email !'); return; }
+    // CORRECTION: valider le format email avant insertion
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Email invalide !'); return; }
     const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     const i = users.findIndex(u => u.email === email);
     if(i !== -1) { users[i].plan = plan; }
-    else { users.push({id:Date.now(), prenom:email.split('@')[0], email, plan, createdAt:new Date().toISOString(), prospects:[], platforms:[]}); }
+    else { users.push({id:(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)), prenom:email.split('@')[0], email, plan, createdAt:new Date().toISOString(), prospects:[], platforms:[]}); }
     localStorage.setItem('nexaai_users', JSON.stringify(users));
-    // CORRECTION: null-check gift-email
-    const ge = document.getElementById('gift-email'); if(ge) ge.value = '';
+    // CORRECTION: synchroniser aussi dans Supabase pour que le plan persiste
+    if(sb) {
+        sb.from('users').upsert([{ email, plan }], { onConflict: 'email' })
+            .catch(e => console.error('Supabase giveAccess error:', e));
+    }
+    // CORRECTION: null-check gift-email (utilise elGiftEmail déjà déclaré)
+    elGiftEmail.value = '';
     allUsers = users;
     renderAdminStats(users);
     renderAdminUsers(users);
@@ -1245,6 +1330,7 @@ RÈGLES ABSOLUES :
 function toggleChat() {
     chatOpen = !chatOpen;
     const win = document.getElementById('chatWindow');
+    if(!win) return; // CORRECTION: null-check
     win.style.display = chatOpen ? 'flex' : 'none';
     if(chatOpen && chatHist.length === 0) {
         addMsg('ai', "Salut 👋 Moi c'est Nexa.\n\nJe vais être directe — en combien de temps tu veux automatiser ta prospection ?", [
@@ -1255,10 +1341,24 @@ function toggleChat() {
 
 function addMsg(type, text, opts=[]) {
     const msgs = document.getElementById('chatMsgs');
-    const optHtml = opts.length ? `<div class="chat-opts-row">${opts.map(o=>`<button class="copt" onclick="optClick('${o.replace(/'/g,"\\'")}')">${o}</button>`).join('')}</div>` : '';
+    if(!msgs) return;
     const d = document.createElement('div');
     d.className = type==='ai' ? 'cmsg-ai' : 'cmsg-user';
-    d.innerHTML = text.replace(/\n/g,'<br>') + optHtml;
+    // Échapper le texte avant injection innerHTML (protège contre réponses IA malformées)
+    d.innerHTML = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    // CORRECTION: boutons créés via DOM (textContent + onclick closure) — élimine le XSS inline onclick
+    if(opts.length) {
+        const row = document.createElement('div');
+        row.className = 'chat-opts-row';
+        opts.forEach(o => {
+            const btn = document.createElement('button');
+            btn.className = 'copt';
+            btn.textContent = o; // textContent = jamais d'injection HTML
+            btn.onclick = () => optClick(o);
+            row.appendChild(btn);
+        });
+        d.appendChild(row);
+    }
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
 }
@@ -1267,7 +1367,8 @@ function optClick(opt) { sendChatMsg(opt); }
 
 
 let awaitingAdminPwd = false;
-let dashChatHist = []; // historique du chat dashboard pour la mémoire de contexte
+let _chatSending = false; // guard contre les double-envois
+// dashChatHist est déclaré globalement en haut du fichier
 
 async function sendChatMsg(text) {
     // Détecter "admin" pour accès admin via chatbot
@@ -1279,22 +1380,34 @@ async function sendChatMsg(text) {
     }
     if(awaitingAdminPwd) {
         addMsg('user', '••••••');
+        // CORRECTION: ne pas conserver le mot de passe dans l'historique (évite fuite en logs)
+        const pwdToSend = text.trim();
+        chatHist = chatHist.filter(m => m.content !== text); // retirer le message s'il a été ajouté
         // Vérification admin via Netlify (function claude)
         fetch(PROXY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ adminAuth: true, password: text.trim() })
-        }).then(r => r.json()).then(data => {
+            body: JSON.stringify({ adminAuth: true, password: pwdToSend })
+        }).then(r => r.text()).then(raw => {
+            let data = {};
+            try { data = raw ? JSON.parse(raw) : {}; } catch(e) { data = {}; }
             awaitingAdminPwd = false;
             if(data.ok) {
                 addMsg('ai', '✅ Accès accordé ! Ouverture du panel admin...');
                 setTimeout(() => {
                     toggleChat();
-                    // CORRECTION: null-check adminPanel
                     const ap1233 = document.getElementById('adminPanel');
                     if(ap1233) ap1233.style.display = 'block';
                     document.body.style.overflow = 'hidden';
                     loadAdminData();
+                    if(!_adminIntervalId) {
+                        _adminIntervalId = setInterval(() => {
+                            if(!_adminLoading) {
+                                _adminLoading = true;
+                                loadAdminData().finally(() => { _adminLoading = false; });
+                            }
+                        }, 10000);
+                    }
                 }, 800);
             } else {
                 addMsg('ai', '❌ Mot de passe incorrect. Réessaie !');
@@ -1306,6 +1419,8 @@ async function sendChatMsg(text) {
         return;
     }
 
+    if(_chatSending) return; // CORRECTION: éviter double-envoi (vérifié en premier, avant tout affichage)
+    _chatSending = true;
     addMsg('user', text);
     chatHist.push({role:'user', content:text});
     // CORRECTION: null-checks typingBubble et chatMsgs
@@ -1320,11 +1435,17 @@ async function sendChatMsg(text) {
             body:JSON.stringify({
                 model:CLAUDE_MODEL,
                 max_tokens:400,
-                system: SYS + (CLIENT_STORE_URL ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL : ''),
+                system: SYS + (CLIENT_STORE_URL
+                    // CORRECTION: valider format URL et limiter à 200 chars pour éviter prompt injection
+                    && /^https?:\/\/[^\s]{1,200}$/.test(CLIENT_STORE_URL.trim())
+                    ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL.trim().slice(0, 200)
+                    : ''),
                 messages:chatHist
             })
         });
-        const data = await res.json();
+        const rawChat = await res.text();
+        let data = {};
+        try { data = rawChat ? JSON.parse(rawChat) : {}; } catch(e) { throw new Error('Réponse serveur invalide'); }
         // CORRECTION: null-check typingBubble
         const tb2 = document.getElementById('typingBubble');
         if(tb2) tb2.style.display = 'none';
@@ -1334,6 +1455,7 @@ async function sendChatMsg(text) {
             if(reply.includes('REDIRECT')) {
                 reply = reply.replace('REDIRECT','');
                 addMsg('ai', reply.trim());
+                _chatSending = false; // CORRECTION: libérer le guard avant le return
                 setTimeout(() => { toggleChat(); const pr = document.getElementById('pricing'); if(pr) pr.scrollIntoView({behavior:'smooth'}); }, 1500);
                 return;
             }
@@ -1345,14 +1467,12 @@ async function sendChatMsg(text) {
             else if(lower.includes('starter')) opts = ['✅ Je prends le Starter','💎 C\'est quoi le Pro ?'];
             else if(lower.includes('pro')) opts = ['🔥 Je prends le Pro !','🔰 Le Starter suffit ?'];
             addMsg('ai', reply, opts);
-            const lower2 = text.toLowerCase();
-            if(lower2.includes('starter')) setTimeout(()=>{toggleChat();startTunnel('starter');},800);
-            else if(lower2.includes('elite')) setTimeout(()=>{toggleChat();startTunnel('elite');},800);
-            else if(lower2.includes('business')) setTimeout(()=>{toggleChat();startTunnel('business');},800);
-            else if(lower2.includes('pro')) setTimeout(()=>{toggleChat();startTunnel('pro');},800);
         }
+        _chatSending = false; // CORRECTION: libérer le guard (aussi si content vide)
     } catch(err) {
-        // CORRECTION: null-check typingBubble dans catch
+        // CORRECTION: retirer le message user du historique si l'appel API échoue
+        chatHist.pop();
+        _chatSending = false; // CORRECTION: libérer le guard en cas d'erreur
         const tb3 = document.getElementById('typingBubble');
         if(tb3) tb3.style.display = 'none';
         addMsg('ai','Connexion instable, réessaie ! 🔄');
@@ -1374,6 +1494,14 @@ async function sendDashMsg() {
     ud.textContent = text;
     msgs.appendChild(ud);
     msgs.scrollTop = msgs.scrollHeight;
+    // Indicateur de chargement (id unique pour éviter conflits)
+    const loadingId = 'dash-loading-' + Date.now();
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'dash-msg-ai';
+    loadingDiv.id = loadingId;
+    loadingDiv.textContent = '...';
+    msgs.appendChild(loadingDiv);
+    msgs.scrollTop = msgs.scrollHeight;
     try {
         const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
         const nr = 'Non renseigne';
@@ -1393,22 +1521,40 @@ async function sendDashMsg() {
             + ' | En tant que Nexa agent IA personnel, utilise ces infos pour conseiller ultra-personnalise, aider a rediger des messages de closing, calculer le potentiel de revenus et motiver avec des donnees concretes.';
         const fullSystem = SYS + '\n\nContexte client: ' + ctx;
         dashChatHist.push({ role: 'user', content: text });
+        // CORRECTION: tronquer l'historique pour éviter de dépasser la limite de tokens API
+        if(dashChatHist.length > 20) dashChatHist = dashChatHist.slice(-20);
         const res = await fetch(PROXY_URL, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:400,system:fullSystem,messages:dashChatHist})
         });
-        const data = await res.json();
+        const rawDash = await res.text();
+        let data = {};
+        try { data = rawDash ? JSON.parse(rawDash) : {}; } catch(e) { throw new Error('Réponse serveur invalide'); }
+        const loadEl = document.getElementById(loadingId);
+        if(loadEl) loadEl.remove(); // CORRECTION: retirer l'indicateur
         if(data.content?.[0]) {
             const replyText = data.content[0].text;
             dashChatHist.push({ role: 'assistant', content: replyText });
             const ad = document.createElement('div');
             ad.className = 'dash-msg-ai';
-            ad.innerHTML = replyText.replace(/\n/g,'<br>');
+            // CORRECTION: échapper le texte avant injection innerHTML
+            ad.innerHTML = replyText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
             msgs.appendChild(ad);
             msgs.scrollTop = msgs.scrollHeight;
+        } else {
+            // CORRECTION: afficher un message d'erreur si la réponse est vide
+            const ed = document.createElement('div');
+            ed.className = 'dash-msg-ai';
+            ed.textContent = 'Réponse vide, réessaie !';
+            msgs.appendChild(ed);
         }
     } catch(err) {
+        // CORRECTION: retirer le message user du historique ET du DOM si l'appel API échoue
+        dashChatHist.pop();
+        if(ud && ud.parentNode) ud.remove();
+        const loadElErr = document.getElementById(loadingId);
+        if(loadElErr) loadElErr.remove(); // CORRECTION: retirer l'indicateur en cas d'erreur
         const ed = document.createElement('div');
         ed.className = 'dash-msg-ai';
         ed.textContent = 'Connexion instable, réessaie !';
@@ -1457,11 +1603,12 @@ function bqAIMsg(text, opts=[]) {
     if(!msgs) return;
     const d = document.createElement('div');
     d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;animation:slideL 0.3s ease;margin-bottom:10px;';
-    d.innerHTML = text.replace(/
-/g,'<br>');
+    // CORRECTION: échapper le texte avant injection innerHTML
+    d.innerHTML = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     msgs.appendChild(d);
     msgs.scrollTop = msgs.scrollHeight;
     const optsDiv = document.getElementById('bq-opts');
+    if(!optsDiv) return; // CORRECTION: null-check
     optsDiv.innerHTML = '';
     if(opts.length) {
         opts.forEach(o => {
@@ -1479,6 +1626,7 @@ function bqUserMsg(text) {
     const bqOpts2 = document.getElementById('bq-opts');
     if(bqOpts2) bqOpts2.innerHTML = '';
     const msgs = document.getElementById('bq-msgs');
+    if(!msgs) return; // CORRECTION: null-check
     const d = document.createElement('div');
     d.style.cssText = 'background:linear-gradient(90deg,var(--accent),#2dd10f);color:#000;border-radius:14px;padding:12px 16px;max-width:85%;align-self:flex-end;font-weight:600;font-size:0.88rem;animation:slideR 0.3s ease;margin-left:auto;margin-bottom:10px;';
     d.textContent = text;
@@ -1489,6 +1637,7 @@ function bqUserMsg(text) {
 
 function bqSend() {
     const inp = document.getElementById('bq-input');
+    if(!inp) return;
     const t = inp.value.trim();
     if(!t) return;
     inp.value = '';
@@ -1510,15 +1659,19 @@ async function bqSendToAI(userText) {
     // 1. Détection Ambassadeur / Affiliation
     if (lower.includes('ambassadeur') || lower.includes('affiliation') || lower.includes('gratuit')) {
         bqData.plan = 'affiliation';
-        bqAIMsg("Excellent choix ! 🤝 Plan Ambassadeur activé (80% pour toi / 20% pour Nexa).");
-        bqAIMsg("Action : Copie ton lien Beacons et mets-le en bio TikTok. \n\nDis-moi 'PRET' quand c'est fait pour ouvrir ton accès.");
-        await saveUserToDB({ email: bqData.email, plan: 'affiliation', prenom: bqData.prenom || 'Ambassadeur' });
-        // Redirection automatique vers le dashboard après 3 secondes
-        setTimeout(() => {
-            const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-            if (user && user.email) loadDashboard(user);
+        try {
+            await saveUserToDB({ email: bqData.email, plan: 'affiliation', prenom: bqData.prenom || 'Ambassadeur' });
+            // CORRECTION: pop() uniquement si saveUserToDB réussit — évite état incohérent
+            bqHist.pop();
+            bqAIMsg("Excellent choix ! 🤝 Plan Ambassadeur activé (80% pour toi / 20% pour Nexa).");
+            bqAIMsg("Action : Copie ton lien Beacons et mets-le en bio TikTok. \n\nDis-moi 'PRET' quand c'est fait pour ouvrir ton accès.");
+            const userAff = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+            if (userAff && userAff.email) await loadDashboard(userAff);
             showPage('dashboard-page');
-        }, 3000);
+        } catch(saveErr) {
+            console.error('saveUserToDB error (affiliation):', saveErr);
+            bqAIMsg("Une erreur est survenue, réessaie !");
+        }
         return;
     }
 
@@ -1533,10 +1686,17 @@ async function bqSendToAI(userText) {
     for(const p of planMap) {
         if(p.keys.some(k => lower.includes(k)) && bqStep >= 4) {
             bqData.plan = p.plan;
-            bqAIMsg(`Option ${p.name} sélectionnée ! 🔥 On lance l'artillerie lourde.`);
-            bqAIMsg("Pour injecter mon IA sur ton compte, envoie-moi ton NOM complet et l'URL de ton tunnel.");
-            bqAIMsg("Je t'envoie le lien de paiement sécurisé juste après.");
-            await saveUserToDB({ email: bqData.email, plan: p.plan, prenom: bqData.prenom || 'Client Premium' });
+            try {
+                await saveUserToDB({ email: bqData.email, plan: p.plan, prenom: bqData.prenom || 'Client Premium' });
+                // CORRECTION: pop() uniquement si saveUserToDB réussit — évite état incohérent
+                bqHist.pop();
+                bqAIMsg(`Option ${p.name} sélectionnée ! 🔥 On lance l'artillerie lourde.`);
+                bqAIMsg("Pour injecter mon IA sur ton compte, envoie-moi ton NOM complet et l'URL de ton tunnel.");
+                bqAIMsg("Je t'envoie le lien de paiement sécurisé juste après.");
+            } catch(saveErr) {
+                console.error('saveUserToDB error (plan):', saveErr);
+                bqAIMsg("Une erreur est survenue, réessaie !");
+            }
             return;
         }
     }
@@ -1551,7 +1711,9 @@ async function bqSendToAI(userText) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 500, system: BQ_PROMPT, messages: bqHist })
         });
-        const data = await res.json();
+        const raw = await res.text();
+        let data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch(e) { throw new Error('Réponse serveur invalide (HTTP ' + res.status + ')'); }
         // CORRECTION: null-check bq-typing hide
         const bqTypH = document.getElementById('bq-typing');
         if(bqTypH) bqTypH.style.display = 'none';
@@ -1560,15 +1722,11 @@ async function bqSendToAI(userText) {
             let reply = data.content[0].text;
             bqHist.push({ role: 'assistant', content: reply });
 
-            // Incrémenter l'étape et mettre à jour la barre de progression
-            bqStep++;
-            const progress = Math.min((bqStep / 5) * 100, 100);
             const progressBar = document.getElementById('bq-progress');
-            if(progressBar) progressBar.style.width = progress + '%';
 
             if(reply.includes('CHOIX_FORFAIT')) {
                 reply = reply.replace('CHOIX_FORFAIT', '').trim();
-                bqStep = 5; // étape finale atteinte
+                bqStep = 5;
                 if(progressBar) progressBar.style.width = '100%';
                 bqAIMsg(reply, [
                     '🤝 Plan Ambassadeur — €0',
@@ -1578,11 +1736,21 @@ async function bqSendToAI(userText) {
                     '👑 Elite — €494/mois'
                 ]);
             } else {
+                bqStep++;
+                const progress = Math.min((bqStep / 5) * 100, 100);
+                if(progressBar) progressBar.style.width = progress + '%';
                 bqAIMsg(reply);
             }
+        } else {
+            // CORRECTION: masquer le spinner si la réponse est vide (évite spinner bloqué indéfiniment)
+            const bqTypEmpty = document.getElementById('bq-typing');
+            if(bqTypEmpty) bqTypEmpty.style.display = 'none';
+            bqAIMsg('Nexa réfléchit encore... Réessaie !');
         }
     } catch(err) {
-        // CORRECTION: null-check bq-typing dans catch
+        // CORRECTION: retirer le message user du historique si l'appel API échoue
+        // (évite deux messages 'user' consécutifs qui invalident l'API)
+        bqHist.pop();
         const bqTypC = document.getElementById('bq-typing');
         if(bqTypC) bqTypC.style.display = 'none';
         bqAIMsg('Nexa analyse tes données... Continue !');
