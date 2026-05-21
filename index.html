@@ -3,18 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CORRECTION : meta TikTok supprimée (exposait l'usage de l'API TikTok) -->
     <title>NEXA AI — Automatise ta prospection</title>
-    <!-- CORRECTION : Open Graph ajouté pour les partages réseaux sociaux -->
     <meta property="og:title" content="NEXA AI — Automatise ta prospection">
     <meta property="og:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
     <meta property="og:type" content="website">
-    <!-- CORRECTION : favicon ajouté -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+    <meta property="og:image" content="https://nexaai.fr/og-image.png">
+    <meta property="og:url" content="https://nexaai.fr">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NEXA AI — Automatise ta prospection">
+    <meta name="twitter:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
+    <meta name="twitter:image" content="https://nexaai.fr/og-image.png">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✦%3C/text%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://js.stripe.com/v3/"></script>
     <link rel="stylesheet" href="css/nexa.css">
+    <style>
+        /* FAQ — indicateur +/- */
+        details summary .faq-icon::before { content: '+'; }
+        details[open] summary .faq-icon::before { content: '−'; }
+    </style>
 </head>
 <body>
 
@@ -61,7 +69,7 @@
             <div class="form-group"><label>Confirme le mot de passe *</label><input type="password" id="regPwd2" placeholder="Répète ton mot de passe" onkeydown="if(event.key==='Enter')register()"></div>
             <button class="btn btn-primary btn-full" onclick="register()" id="regBtn" style="margin-bottom:12px;">Créer mon compte</button>
             <div style="text-align:center;color:var(--text-light);font-size:0.85rem;">
-                Déjà un compte ? <button onclick="showPage('login')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;font-family:'Inter',sans-serif;">Se connecter</button>
+                Déjà un compte ? <button onclick="showPage('login')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;font-family:inherit;">Se connecter</button>
             </div>
         </div>
     </div>
@@ -89,8 +97,8 @@
             </div>
             <div id="bq-opts" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
             <div style="display:flex;gap:8px;">
-                <input type="text" id="bq-input" placeholder="Tape ta réponse..." onkeydown="if(event.key==='Enter')bqSend()" style="flex:1;padding:12px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:0.9rem;font-family:'Inter',sans-serif;transition:all 0.3s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                <button onclick="bqSend()" style="background:var(--accent);border:none;border-radius:10px;width:44px;height:44px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all 0.3s;flex-shrink:0;">➤</button>
+                <input type="text" id="bq-input" aria-label="Tape ta réponse" placeholder="Tape ta réponse..." onkeydown="if(event.key==='Enter')bqSend()" style="flex:1;padding:12px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:0.9rem;font-family:inherit;transition:border-color 0.3s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                <button onclick="bqSend()" aria-label="Envoyer" style="background:var(--accent);border:none;border-radius:10px;width:44px;height:44px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:transform 0.3s;flex-shrink:0;">➤</button>
             </div>
         </div>
     </div>
@@ -114,7 +122,7 @@
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-number" id="st-prospects">0</div><div class="stat-label" id="stProspects">Prospects</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-msgs">0</div><div class="stat-label" id="stMsgs">Messages</div></div>
-                    <div class="stat-card"><div class="stat-number" id="st-rate">27%</div><div class="stat-label" id="stRate">Conversion</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-rate">0%</div><div class="stat-label" id="stRate">Conversion</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-revenue">€0</div><div class="stat-label" id="stRevenue">Revenu estimé</div></div>
                 </div>
                 <div style="background:var(--bg-light);border:2px solid var(--border);border-radius:15px;padding:25px;">
@@ -163,11 +171,12 @@
                             <option value="coaching">Coaching / Formation</option>
                             <option value="ecommerce">E-commerce</option>
                             <option value="service">Service / Freelance</option>
+                            <option value="saas">💻 SaaS</option>
                             <option value="autre">Autre</option>
                         </select>
                     </div>
                     <h3 style="color:var(--accent);margin:25px 0 20px;">Abonnement</h3>
-                    <div style="background:rgba(57,255,20,0.05);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:20px;display:flex;justify-content:space-between;">
+                    <div style="background:rgba(var(--accent-rgb),0.05);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:20px;display:flex;justify-content:space-between;">
                         <div><span style="font-weight:700;" id="s-plan">Starter</span><div style="color:var(--text-light);font-size:0.8rem;">Abonnement mensuel</div></div>
                         <div style="color:var(--accent);font-weight:900;" id="s-price">€39/mois</div>
                     </div>
@@ -179,154 +188,17 @@
     </div>
 </div>
 
-<!-- ADMIN LOGIN MODAL -->
-<!-- CORRECTION : display:none → le JS doit utiliser style.display='flex' pour centrer le contenu -->
-<div id="adminLoginModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#111;border:2px solid var(--accent);border-radius:20px;padding:40px;max-width:400px;width:100%;box-shadow:0 0 50px rgba(57,255,20,0.3);text-align:center;">
-        <h2 style="color:var(--accent);margin-bottom:8px;font-size:1.6rem;">Administration</h2>
-        <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:25px;">Zone privée.</p>
-        <input type="password" id="adminSecretPwd" placeholder="Code secret..." onkeydown="if(event.key==='Enter')checkAdminLogin()" style="width:100%;padding:14px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:1rem;font-family:'Inter',sans-serif;text-align:center;letter-spacing:4px;margin-bottom:15px;transition:border-color 0.3s;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-        <button onclick="checkAdminLogin()" style="width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;margin-bottom:10px;font-family:'Inter',sans-serif;">Accéder</button>
-        <button onclick="closeAdminLogin()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border);color:var(--text-light);border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;">Annuler</button>
-    </div>
-</div>
+<!--
+  ⚠️  SÉCURITÉ ADMIN — Le modal de login admin et le panel entier ont été retirés du HTML public.
+       Le mot de passe ne doit JAMAIS être vérifié en JS côté client (visible dans DevTools).
+       Implémenter une Edge Function Supabase qui :
+         1. Reçoit le mot de passe via POST
+         2. Le valide côté serveur (bcrypt ou variable d'env)
+         3. Retourne un JWT signé à durée limitée
+       Puis injecter le panel admin dynamiquement UNIQUEMENT après validation du JWT.
+-->
 
-<!-- ADMIN PANEL COMPLET -->
-<div id="adminPanel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:9998;overflow-y:auto;">
-    <div style="max-width:1200px;margin:0 auto;padding:30px 20px;">
 
-        <!-- Header -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid var(--border);">
-            <div style="display:flex;align-items:center;gap:15px;">
-                <span style="font-size:1.8rem;">👑</span>
-                <div>
-                    <div style="font-weight:900;font-size:1.4rem;color:var(--accent);">NEXA AI — Admin</div>
-                    <div style="color:var(--text-light);font-size:0.8rem;" id="a-last-update">Chargement...</div>
-                </div>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button onclick="exportCSV()" style="padding:10px 18px;background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">📥 Export CSV</button>
-                <button onclick="loadAdminData()" style="padding:10px 18px;background:transparent;border:1px solid var(--border);color:var(--text-light);border-radius:8px;cursor:pointer;font-size:0.85rem;">🔄 Actualiser</button>
-                <button onclick="closeAdminPanel()" style="padding:10px 18px;background:transparent;border:1px solid #ff4444;color:#ff4444;border-radius:8px;cursor:pointer;font-size:0.85rem;">✕ Fermer</button>
-            </div>
-        </div>
-
-        <!-- Stats -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin-bottom:30px;">
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-total">0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">Inscrits total</div>
-            </div>
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-paying">0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">Comptes payants</div>
-            </div>
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-free">0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">Comptes gratuits</div>
-            </div>
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-revenue">€0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">MRR estimé</div>
-            </div>
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-new-today">0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">Inscrits aujourd'hui</div>
-            </div>
-            <div style="background:#111;border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:var(--accent);" id="a-suspended">0</div>
-                <div style="color:var(--text-light);font-size:0.8rem;margin-top:4px;">Comptes suspendus</div>
-            </div>
-        </div>
-
-        <!-- Graphique revenus par mois -->
-        <div style="background:#111;border:1px solid var(--border);border-radius:12px;padding:25px;margin-bottom:25px;">
-            <h3 style="color:var(--accent);margin-bottom:20px;font-size:1rem;">Revenus mensuels</h3>
-            <div id="revenue-chart" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 10px;"></div>
-            <div id="revenue-chart-labels" style="display:flex;gap:8px;padding:8px 10px 0;"></div>
-        </div>
-
-        <!-- Actions rapides -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
-
-            <!-- Donner accès gratuit -->
-            <div style="background:#111;border:2px solid var(--accent);border-radius:12px;padding:20px;">
-                <h3 style="color:var(--accent);margin-bottom:15px;font-size:0.95rem;">Accès offert</h3>
-                <div style="display:flex;flex-direction:column;gap:10px;">
-                    <input type="email" id="gift-email" placeholder="Email de l'utilisateur" style="padding:10px 14px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;font-family:'Inter',sans-serif;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                    <select id="gift-plan" style="padding:10px 14px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--accent);font-family:'Inter',sans-serif;outline:none;">
-                        <option value="starter">Starter</option>
-                        <option value="pro">Pro</option>
-                        <option value="business">Business</option>
-                        <option value="elite">Elite</option>
-                    </select>
-                    <button onclick="giveAccess()" style="padding:10px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;">🎁 Activer</button>
-                </div>
-            </div>
-
-            <!-- Envoyer un message -->
-            <div style="background:#111;border:1px solid var(--border);border-radius:12px;padding:20px;">
-                <h3 style="color:var(--accent);margin-bottom:15px;font-size:0.95rem;">Message client</h3>
-                <div style="display:flex;flex-direction:column;gap:10px;">
-                    <input type="email" id="msg-email" placeholder="Email du client (vide = tous)" style="padding:10px 14px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;font-family:'Inter',sans-serif;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                    <textarea id="msg-content" placeholder="Ton message..." rows="3" style="padding:10px 14px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;font-family:'Inter',sans-serif;resize:vertical;"></textarea>
-                    <button onclick="sendAdminMessage()" style="padding:10px;background:#333;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;cursor:pointer;">✉️ Envoyer</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Liste utilisateurs -->
-        <div style="background:#111;border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-            <div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-                <h3 style="color:var(--accent);font-size:1rem;">Clients <span id="a-count" style="color:var(--text-light);font-size:0.85rem;"></span></h3>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <select id="admin-filter" onchange="filterAdminUsers(document.getElementById('admin-search').value)" style="padding:8px 12px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text-light);font-family:'Inter',sans-serif;outline:none;font-size:0.82rem;">
-                        <option value="all">Tous</option>
-                        <option value="paying">Payants</option>
-                        <option value="free">Gratuits</option>
-                        <option value="suspended">Suspendus</option>
-                        <option value="starter">Starter</option>
-                        <option value="pro">Pro</option>
-                        <option value="business">Business</option>
-                        <option value="elite">Elite</option>
-                    </select>
-                    <input type="text" id="admin-search" placeholder="Rechercher..." oninput="filterAdminUsers(this.value)" style="padding:8px 14px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;font-family:'Inter',sans-serif;font-size:0.85rem;width:180px;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                </div>
-            </div>
-            <div style="overflow-x:auto;">
-                <table class="prospects-table" style="margin-top:0;">
-                    <thead>
-                        <tr>
-                            <th>Prénom</th>
-                            <th>Email</th>
-                            <th>Business</th>
-                            <th>Forfait</th>
-                            <th>Changer</th>
-                            <th>Date</th>
-                            <th>Prospects</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-users"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Modal détail utilisateur -->
-        <!-- CORRECTION : display:none → le JS doit utiliser style.display='flex' pour centrer -->
-        <div id="userDetailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center;padding:20px;">
-            <div style="background:#111;border:2px solid var(--accent);border-radius:20px;padding:35px;max-width:550px;width:100%;max-height:80vh;overflow-y:auto;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h3 style="color:var(--accent);">Profil client</h3>
-                    <button onclick="closeUserDetail()" style="background:transparent;border:none;color:var(--text-light);font-size:1.5rem;cursor:pointer;">✕</button>
-                </div>
-                <div id="userDetailContent"></div>
-            </div>
-        </div>
-
-    </div>
-</div>
 
 <!-- FLOATING CHATBOT -->
 <button id="chatBtn" onclick="toggleChat()">🤖</button>
@@ -338,8 +210,8 @@
     <div id="chatMsgs"></div>
     <div id="typingBubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
     <div class="chat-input-row">
-        <input id="chatInput" type="text" placeholder="Votre message..." onkeydown="if(event.key==='Enter'){sendChatMsg(this.value.trim());this.value=''}" oninput="if(awaitingAdminPwd)this.type='password';else this.type='text';">
-        <button class="chat-send-btn" onclick="sendChatMsg(document.getElementById('chatInput').value.trim());document.getElementById('chatInput').value=''">➤</button>
+        <input id="chatInput" type="text" placeholder="Votre message..." autocomplete="off" onkeydown="if(event.key==='Enter'){sendChatMsg(this.value.trim());this.value=''}" style="caret-color:var(--text);">
+        <button class="chat-send-btn" aria-label="Envoyer" onclick="(function(){var i=document.getElementById('chatInput');var v=i.value.trim();if(!v)return;i.value='';sendChatMsg(v);})()">➤</button>
     </div>
 </div>
 
@@ -407,7 +279,7 @@
             <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="m-tiktok" placeholder="@tonpseudo"></div>
             <div class="form-group"><label>Pseudo Instagram</label><input type="text" id="m-instagram" placeholder="@tonpseudo"></div>
             <div class="form-group"><label>Niche / Type de contenu</label><input type="text" id="m-niche" placeholder="Ex: Coaching fitness, dropshipping..."></div>
-            <div style="background:rgba(57,255,20,0.06);border:1px solid rgba(57,255,20,0.2);border-radius:10px;padding:15px;margin-bottom:20px;">
+            <div style="background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;padding:15px;margin-bottom:20px;">
                 <p style="color:var(--accent);font-weight:700;font-size:0.85rem;margin-bottom:6px;">🔒 Connexion sécurisée</p>
                 <p style="color:var(--text-light);font-size:0.8rem;">Nexa utilisera ces infos pour personnaliser ta prospection. La vraie connexion OAuth arrive bientôt.</p>
             </div>
@@ -444,14 +316,14 @@
                     <div class="plan-desc">750 prospects/jour<br>Messages illimités</div>
                 </div>
             </div>
-            <button class="btn btn-primary btn-full" id="modalPayBtn" onclick="modalPay()" style="margin-bottom:10px;">🔒 Activer mon plan →</button>
+            <button class="btn btn-primary btn-full" id="modalPayBtn" onclick="modalPayGuard()" style="margin-bottom:10px;">🔒 Activer mon plan →</button>
             <button class="btn btn-secondary btn-full" onclick="modalPrev(4)">← Retour</button>
             <p style="text-align:center;color:var(--text-light);font-size:0.75rem;margin-top:12px;">Sans engagement • Résiliable à tout moment • Paiement sécurisé Stripe</p>
         </div>
     </div>
 </div>
 
-<!-- PAGE PRINCIPALE (home) — CORRECTION : correctement placée et fermée -->
+<!-- PAGE PRINCIPALE -->
 <div id="home" class="page active">
 
     <!-- TÉMOIGNAGES -->
@@ -459,10 +331,11 @@
         <div class="container" style="max-width:1100px;">
             <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:15px;">Ils ont choisi Nexa. Regarde les résultats.</h2>
             <p style="text-align:center;color:var(--text-light);margin-bottom:60px;font-size:1rem;">Des vrais clients. Des vrais chiffres.</p>
+            <p style="text-align:center;color:var(--text-light);font-size:0.72rem;margin-top:-45px;margin-bottom:40px;opacity:0.6;">* Résultats individuels variables. Les performances présentées ne sont pas garanties et dépendent de l'activité de chaque utilisateur.</p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;">
 
                 <!-- Témoignage 1 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€12 400</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 3 semaines</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."</p>
@@ -473,7 +346,7 @@
                 </div>
 
                 <!-- Témoignage 2 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€8 900</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">premier mois</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"J'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c'est tout."</p>
@@ -484,7 +357,7 @@
                 </div>
 
                 <!-- Témoignage 3 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€31 000</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 2 mois</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."</p>
@@ -503,24 +376,24 @@
         <div class="container" style="max-width:800px;">
             <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:50px;color:var(--text);">Questions fréquentes</h2>
             <div style="display:flex;flex-direction:column;gap:16px;">
-                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Comment ça fonctionne ? <span>+</span></summary>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Comment ça fonctionne ? <span class="faq-icon"></span></summary>
                     <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Nexa se connecte à tes réseaux et répond à tes DMs automatiquement. Elle qualifie chaque prospect et le guide vers ton offre — 24h/24.</p>
                 </details>
-                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Mes données sont-elles sécurisées ? <span>+</span></summary>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Mes données sont-elles sécurisées ? <span class="faq-icon"></span></summary>
                     <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Toutes tes données sont chiffrées et hébergées en sécurité. Rien n'est revendu, jamais.</p>
                 </details>
-                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Puis-je annuler ? <span>+</span></summary>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Puis-je annuler ? <span class="faq-icon"></span></summary>
                     <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Sans engagement, sans frais cachés. Résiliation en un clic depuis ton dashboard.</p>
                 </details>
-                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Quand est-ce que ça fonctionne ? <span>+</span></summary>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Quand est-ce que ça fonctionne ? <span class="faq-icon"></span></summary>
                     <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Les premiers prospects arrivent dans les 24h suivant l'activation. Les résultats significatifs dans la première semaine.</p>
                 </details>
-                <details style="background:var(--black,#000);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
-                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Sur quels réseaux ? <span>+</span></summary>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Sur quels réseaux ? <span class="faq-icon"></span></summary>
                     <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">TikTok et Instagram. LinkedIn, Twitter et YouTube arrivent prochainement.</p>
                 </details>
             </div>
@@ -528,11 +401,10 @@
     </section>
 
     <!-- SECTION TARIFS -->
-    <!-- CORRECTION : lien Stripe test supprimé et remplacé par startTunnel() cohérent -->
-    <section id="pricing" style="padding:80px 0;background:var(--bg-light);border-top:1px solid var(--border);">
+    <section id="pricing" style="padding:80px 0;background:var(--bg);border-top:2px solid var(--border);">
         <div class="container">
             <h2 style="text-align:center;font-size:1.75rem;font-weight:900;margin-bottom:10px;color:var(--accent);">Forfaits</h2>
-            <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement unique (2 mois offerts sur l'annuel).</p>
+            <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement annuel (10 mois payés = 12 mois d'accès).</p>
             <div class="pricing-grid">
 
                 <!-- STARTER -->
@@ -546,17 +418,16 @@
                         <li>Dashboard de suivi</li>
                         <li>Support par email</li>
                     </ul>
-                    <!-- CORRECTION : lien test Stripe (buy.stripe.com/test_...) remplacé par startTunnel() -->
-                    <button class="pricing-btn" onclick="startTunnel('starter-mensuel')">
+                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_STARTER_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Starter mensuel -->
+                    <button class="pricing-btn" onclick="startTunnel('price_1THSyjP8svYH1bkOt686fqqC')">
                         3 JOURS GRATUITS →
                     </button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
+                    <div style="margin-top:16px;padding:16px;background:rgba(var(--accent-rgb),0.05);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;text-align:center;">
                         <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
                         <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€390 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
                         <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €78</div>
-                        <!-- CORRECTION : price ID Stripe conservé (non secret), passage en prod à vérifier -->
                         <button onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">
-                            Paiement annuel →
+                            Paiement unique →
                         </button>
                     </div>
                 </div>
@@ -572,17 +443,19 @@
                         <li>Dashboard + Analytics</li>
                         <li>Support 24/7</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('pro-mensuel')">Choisir Pro →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:10px;text-align:center;">
+                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_PRO_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Pro mensuel -->
+                    <button class="pricing-btn" onclick="startTunnel('price_1THSzsP8svYH1bkOndl82cmU')">Choisir Pro →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(var(--accent-rgb),0.05);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;text-align:center;">
                         <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
                         <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;">Paiement unique →</button>
+                        <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €188</div>
+                        <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">Paiement unique →</button>
                     </div>
                 </div>
 
                 <!-- BUSINESS -->
-                <div class="pricing-card" style="position:relative; border-color:rgba(100,180,255,0.4);">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">BUSINESS 💼</div>
+                <div class="pricing-card" style="position:relative; border-color:rgba(var(--blue-rgb),0.4);">
+                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">MEILLEURE VALEUR</div>
                     <h3 style="margin-top:10px;">Business 💼</h3>
                     <div class="pricing-current" style="font-size:3.5rem;">€194</div>
                     <div class="pricing-period">/mois</div>
@@ -591,17 +464,19 @@
                         <li><strong>200 messages / jour</strong></li>
                         <li>Support prioritaire</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('business-mensuel')" style="background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;">Choisir Business →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(100,180,255,0.06);border:1px solid rgba(100,180,255,0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,#4a9eff,#60c8ff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:#60c8ff;font-size:1.5rem;font-weight:900;">€1 940</div>
-                        <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_BUSINESS_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Business mensuel -->
+                    <button class="pricing-btn" onclick="startTunnel('price_1TP3ihP8svYH1bkOOITtQVaA')" style="background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;">Choisir Business →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(var(--blue-rgb),0.06);border:1px solid rgba(var(--blue-rgb),0.25);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:var(--blue-light);font-size:1.5rem;font-weight:900;">€1940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
+                        <div style="color:var(--blue-light);font-size:0.8rem;margin:6px 0 10px;">Économie de €388</div>
+                        <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:var(--blue);border:1px solid var(--blue);border-radius:8px;font-weight:700;">Paiement unique →</button>
                     </div>
                 </div>
 
                 <!-- ELITE -->
-                <div class="pricing-card" style="position:relative; border-color:rgba(255,215,0,0.4);">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,gold,#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">ELITE 👑</div>
+                <div class="pricing-card" style="position:relative; border-color:rgba(var(--gold-rgb),0.4);">
+                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--gold),#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">TOP PERFORMANCE</div>
                     <h3 style="margin-top:10px;">Elite 👑</h3>
                     <div class="pricing-current" style="font-size:3.5rem;">€494</div>
                     <div class="pricing-period">/mois</div>
@@ -610,11 +485,13 @@
                         <li><strong>Messages illimités</strong></li>
                         <li>Account manager dédié</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('elite-mensuel')" style="background:linear-gradient(90deg,gold,#fff);color:#000;">Choisir Elite →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,gold,#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:gold;font-size:1.5rem;font-weight:900;">€4 940</div>
-                        <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:gold;border:1px solid gold;border-radius:8px;font-weight:700;">Paiement unique →</button>
+                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_ELITE_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Elite mensuel -->
+                    <button class="pricing-btn" onclick="startTunnel('price_1TJ8XPP8svYH1bkOWwjjcZ87')" style="background:linear-gradient(90deg,var(--gold),#fff);color:#000;">Choisir Elite →</button>
+                    <div style="margin-top:16px;padding:16px;background:rgba(var(--gold-rgb),0.05);border:1px solid rgba(var(--gold-rgb),0.25);border-radius:10px;text-align:center;">
+                        <div style="display:inline-block;background:linear-gradient(90deg,var(--gold),#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
+                        <div style="color:var(--gold);font-size:1.5rem;font-weight:900;">€4940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
+                        <div style="color:var(--gold);font-size:0.8rem;margin:6px 0 10px;">Économie de €988</div>
+                        <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:8px;font-weight:700;">Paiement unique →</button>
                     </div>
                 </div>
 
@@ -623,17 +500,15 @@
     </section><!-- fin #pricing -->
 
     <!-- CONFIGURATION COMMISSIONS CLIENT -->
-    <!-- CORRECTION : fermeture correcte de la section et du conteneur -->
-    <div id="nexa-commission-setup" style="margin-top:40px; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(57,255,20,0.3); border-radius:15px; text-align:center; max-width:600px; margin-left:auto; margin-right:auto;">
+    <div id="nexa-commission-setup" style="display:none;margin:40px auto 0; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(var(--accent-rgb),0.3); border-radius:15px; text-align:center; max-width:600px;">
         <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
         <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
-            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras 95% du montant directement. Nexa prélève 5% de frais de service.
+            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras <strong>20%</strong> du montant directement sur ton compte Stripe. Nexa prélève <strong>80%</strong> de frais de service.
         </p>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
-            <!-- CORRECTION : validation du format acct_ ajoutée via pattern -->
-            <input type="text" id="clientStripeId" placeholder="acct_1..." pattern="^acct_[a-zA-Z0-9]+" title="L'ID Stripe Connect doit commencer par acct_" style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px;">
-            <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer;">
-                Enregistrer & Activer les 5%
+            <input type="text" id="clientStripeId" placeholder="acct_1..." pattern="^acct_[a-zA-Z0-9]+" title="L'ID Stripe Connect doit commencer par acct_" style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px; font-family:inherit;">
+            <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit;">
+                Enregistrer & Activer le 80/20
             </button>
         </div>
         <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
@@ -642,9 +517,25 @@
 
 </div><!-- fin #home -->
 
-    <!-- CORRECTION : Supabase chargé avant nexa.js, DOMContentLoaded géré dans nexa.js -->
+    <!-- Ordre fixe : Stripe → Supabase → nexa.js (pas de defer, pas d'injection dynamique) -->
+    <script>
+        function modalPayGuard() {
+            if (typeof handleModalPay === 'function') {
+                handleModalPay();
+            } else {
+                var selected = document.querySelectorAll('.plan-select-card.selected');
+                if (selected.length !== 1) {
+                    var err = document.getElementById('modal-pay-error');
+                    if(err) err.style.display = 'block';
+                    return;
+                }
+                modalPay();
+            }
+        }
+    </script>
+    <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="js/nexa.js"></script>
+    <script src="js/nexa.js"></script>
 
 </body>
 </html>
