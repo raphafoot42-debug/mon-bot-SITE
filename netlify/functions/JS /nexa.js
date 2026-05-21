@@ -56,14 +56,14 @@ async function saveAndSyncStripe() {
         if(sb && user.id) {
             const { error } = await sb.from('users').update({
                 stripe_connect_id: stripeId,
-                commission_rate: 0.20
+                commission_rate: 0.80
             }).eq('id', user.id);
             if(error) throw error;
         }
         // Sauvegarder en localStorage aussi
         user.stripe_connect_id = stripeId;
         localStorage.setItem('nexaai_user', JSON.stringify(user));
-        statusLabel.innerText = "✅ Partage 20/80 activé ! Tu reçois 80% de chaque vente générée.";
+        statusLabel.innerText = "✅ Partage 80/20 activé ! Nexa génère les ventes, tu reçois 20% de chaque vente générée.";
         statusLabel.style.color = "var(--accent)";
         btn.innerText = "Enregistré";
         btn.disabled = false; // CORRECTION: réactiver le bouton après succès
@@ -250,8 +250,18 @@ async function loadUserData() {
         const prospects = await loadProspectsFromDB(userData.id);
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
-        await loadDashboard(user); // CORRECTION: await ajouté
-        showPage('dashboard-page');
+
+        // Vérification — si profil déjà complet (plan défini ou stripe configuré) → dashboard direct, pas de requalification
+        const profileComplete = user.plan && user.plan !== 'free' || user.stripe_connect_id;
+        if(profileComplete) {
+            await loadDashboard(user);
+            showPage('dashboard-page');
+        } else {
+            // Profil existant mais incomplet → reprendre la qualification
+            td.email = user.email;
+            showPage('bot-qualify');
+            setTimeout(() => { if(typeof botQualifyStart === 'function') botQualifyStart(user.email); }, 300);
+        }
     } else {
         // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
         // CORRECTION : td est déjà déclaré globalement, pas besoin de td || {}
@@ -414,6 +424,25 @@ function modalPrev(step) {
     modalGoStep(step - 1);
 }
 
+// Validation étape 3 : au moins un réseau social obligatoire
+function validateStep3() {
+    const elMTik = document.getElementById('m-tiktok');
+    const elMInsta = document.getElementById('m-instagram');
+    const elMNiche = document.getElementById('m-niche');
+    const errEl = document.getElementById('step3-error');
+    const tiktok = elMTik ? elMTik.value.trim() : '';
+    const insta = elMInsta ? elMInsta.value.trim() : '';
+    if(!tiktok && !insta) {
+        if(errEl) errEl.style.display = 'block';
+        return;
+    }
+    if(errEl) errEl.style.display = 'none';
+    td.tiktok = tiktok;
+    td.instagram = insta;
+    td.niche = elMNiche ? elMNiche.value.trim() : '';
+    modalGoStep(4);
+}
+
 function selectModalPlan(el, plan) {
     document.querySelectorAll('.plan-select-card').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
@@ -425,11 +454,70 @@ function modalPay() {
     handlePlanSelection(modalSelectedPlan || 'pro');
 }
 
+// Appelée par modalPayGuard() dans le HTML — vérifie qu'un plan est sélectionné avant de payer
+function handleModalPay() {
+    const selected = document.querySelector('.plan-select-card.selected');
+    const errEl = document.getElementById('modal-pay-error');
+    if (!selected) {
+        if(errEl) errEl.style.display = 'block';
+        return;
+    }
+    if(errEl) errEl.style.display = 'none';
+    modalPay();
+}
+
 // ===== NAVIGATION =====
 function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const p = document.getElementById(id);
     if(p) { p.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+
+// ===== LANGUE =====
+const LANGS = {
+    fr: {
+        loginTitle: 'Connexion', loginEmailL: 'Email', loginPwdL: 'Mot de passe',
+        loginSubmit: 'Se connecter', loginBack: 'Retour',
+        botTitle: 'Nexa — Ton agent IA', botSub: 'Nexa connaît ton business. Pose-lui n\'importe quelle question.',
+        settingsTitle: 'Paramètres', sPrenomL: 'Prénom', sEmailL: 'Email',
+        sPwdL: 'Nouveau mot de passe', sBusinessL: 'Nom du business', sTypeL: 'Type de business',
+        sSaveBtn: 'Sauvegarder', sLogoutBtn: 'Déconnexion',
+        stProspects: 'Prospects', stMsgs: 'Messages', stRate: 'Conversion', stRevenue: 'Revenu estimé',
+        chatHdrTitle: 'Nexa', loginBtn: 'Connexion', signupBtn: 'S\'inscrire'
+    },
+    en: {
+        loginTitle: 'Login', loginEmailL: 'Email', loginPwdL: 'Password',
+        loginSubmit: 'Sign in', loginBack: 'Back',
+        botTitle: 'Nexa — Your AI agent', botSub: 'Nexa knows your business. Ask anything.',
+        settingsTitle: 'Settings', sPrenomL: 'First name', sEmailL: 'Email',
+        sPwdL: 'New password', sBusinessL: 'Business name', sTypeL: 'Business type',
+        sSaveBtn: 'Save', sLogoutBtn: 'Logout',
+        stProspects: 'Prospects', stMsgs: 'Messages', stRate: 'Conversion', stRevenue: 'Est. Revenue',
+        chatHdrTitle: 'Nexa', loginBtn: 'Login', signupBtn: 'Sign up'
+    },
+    cn: {
+        loginTitle: '登录', loginEmailL: '邮箱', loginPwdL: '密码',
+        loginSubmit: '登录', loginBack: '返回',
+        botTitle: 'Nexa — 你的AI助手', botSub: 'Nexa了解你的业务，随时提问。',
+        settingsTitle: '设置', sPrenomL: '名字', sEmailL: '邮箱',
+        sPwdL: '新密码', sBusinessL: '业务名称', sTypeL: '业务类型',
+        sSaveBtn: '保存', sLogoutBtn: '退出',
+        stProspects: '潜在客户', stMsgs: '消息', stRate: '转化率', stRevenue: '预估收入',
+        chatHdrTitle: 'Nexa', loginBtn: '登录', signupBtn: '注册'
+    }
+};
+
+function changeLang(lang) {
+    currentLang = lang || 'fr';
+    const t = LANGS[currentLang] || LANGS.fr;
+    // Mettre à jour tous les éléments traduits
+    Object.entries(t).forEach(([id, text]) => {
+        const el = document.getElementById(id);
+        if(el) {
+            if(el.tagName === 'INPUT' || el.tagName === 'BUTTON') el.textContent = text;
+            else el.textContent = text;
+        }
+    });
 }
 
 // ===== TUNNEL =====
@@ -624,7 +712,12 @@ async function loadDashboard(user) {
     const elWelcome = document.getElementById('dash-welcome'); if(elWelcome) elWelcome.textContent = `Bienvenue ${user.prenom || ''} 🎯`;
     const elProspects = document.getElementById('st-prospects'); if(elProspects) elProspects.textContent = user.prospects?.length || 0;
     const elMsgs = document.getElementById('st-msgs'); if(elMsgs) elMsgs.textContent = (user.prospects?.length || 0) * 3;
-    const elRate = document.getElementById('st-rate'); if(elRate) elRate.textContent = '27%';
+    const elRate = document.getElementById('st-rate');
+    if(elRate) {
+        const totalP = (user.prospects || []).length;
+        const closedP = (user.prospects || []).filter(p => p.status === 'closed').length;
+        elRate.textContent = totalP > 0 ? Math.round((closedP / totalP) * 100) + '%' : '—';
+    }
     // Calcul du revenu estimé depuis les prospects closés
     const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
     const planRevenue = { starter: 39, pro: 94, business: 194, elite: 494, free: 0 };
@@ -643,6 +736,47 @@ async function loadDashboard(user) {
     const elPrenom = document.getElementById('s-prenom'); if(elPrenom) elPrenom.value = user.prenom || '';
     const elEmail = document.getElementById('s-email'); if(elEmail) elEmail.value = user.email || '';
     const elBusiness = document.getElementById('s-business'); if(elBusiness) elBusiness.value = user.business || '';
+    const elSType = document.getElementById('s-type'); if(elSType && user.type_business) elSType.value = user.type_business;
+    // Injecter la section Affiliation dans les paramètres si pas encore présente
+    const dSettings = document.getElementById('d-settings');
+    if(dSettings && !document.getElementById('s-aff-section')) {
+        const affSection = document.createElement('div');
+        affSection.id = 's-aff-section';
+        affSection.style.cssText = 'margin-top:30px;padding:20px;background:rgba(57,255,20,0.04);border:1px solid rgba(57,255,20,0.2);border-radius:14px;';
+        affSection.innerHTML = `
+            <h3 style="color:var(--accent);font-size:1rem;font-weight:800;margin-bottom:6px;">🤝 Affiliation / Ambassadeur</h3>
+            <p style="color:var(--text-light);font-size:0.82rem;margin-bottom:18px;">Configure ton mode d'affiliation pour recevoir 20% automatiquement sur Stripe.</p>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">Mode</label>
+                <select id="s-aff-mode" onchange="onAffModeChange()" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);">
+                    <option value="">— Choisir un mode —</option>
+                    <option value="ia_close">🤖 Mode 1 — L'IA close pour moi (Nexa 80% / moi 20%)</option>
+                    <option value="lien">🔗 Mode 2 — Je partage mon lien (Nexa 80% / moi 20%)</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">ID Stripe Connect <span style="color:#ff4444;">*</span></label>
+                <input type="text" id="s-aff-stripe" placeholder="acct_xxxxxxxxxxxxxxxx" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);box-sizing:border-box;">
+                <p style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">Trouve ton ID sur <a href="https://dashboard.stripe.com" target="_blank" style="color:var(--accent);">dashboard.stripe.com</a></p>
+            </div>
+            <div id="s-aff-url-group" class="form-group" style="margin-bottom:14px;display:none;">
+                <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">URL de ton tunnel de vente</label>
+                <input type="text" id="s-aff-url" placeholder="https://ton-site.com/vente" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);box-sizing:border-box;">
+            </div>
+            <p id="s-aff-status" style="font-size:0.82rem;margin-bottom:10px;min-height:18px;"></p>
+            <p id="s-aff-link" style="display:none;font-size:0.82rem;color:var(--accent);word-break:break-all;margin-bottom:12px;padding:10px;background:rgba(57,255,20,0.06);border-radius:8px;"></p>
+            <button id="sAffSaveBtn" onclick="saveAffiliationSettings()" style="padding:12px 24px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.88rem;cursor:pointer;">Sauvegarder</button>
+        `;
+        dSettings.appendChild(affSection);
+    }
+    const elAffMode = document.getElementById('s-aff-mode'); if(elAffMode && user.affiliation_mode) { elAffMode.value = user.affiliation_mode; onAffModeChange(); }
+    const elAffStripe = document.getElementById('s-aff-stripe'); if(elAffStripe && user.stripe_connect_id) elAffStripe.value = user.stripe_connect_id;
+    const elAffUrl = document.getElementById('s-aff-url'); if(elAffUrl && user.store_url) elAffUrl.value = user.store_url;
+    const elAffLink = document.getElementById('s-aff-link');
+    if(elAffLink && user.stripe_connect_id && user.stripe_connect_id.startsWith('acct_')) {
+        elAffLink.style.display = 'block';
+        elAffLink.textContent = '🔗 Ton lien : ' + window.location.origin + '?ref=' + user.stripe_connect_id;
+    }
     const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
     const planPrices = {
         starter:'€39/mois', 'starter-once':'€390 (unique)',
@@ -685,8 +819,11 @@ function loadProspects(list) {
 }
 
 function showDash(section, el) {
-    document.querySelectorAll('[id^="d-"]').forEach(s => s.style.display = 'none');
-    // CORRECTION: null-check sur la section cible
+    const dashSections = ['overview', 'prospects', 'bot', 'settings'];
+    dashSections.forEach(s => {
+        const el2 = document.getElementById('d-' + s);
+        if(el2) el2.style.display = 'none';
+    });
     const elSection = document.getElementById('d-' + section);
     if(elSection) elSection.style.display = 'block';
     document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
@@ -701,14 +838,10 @@ async function saveSettings() {
     const elSBusiness = document.getElementById('s-business');
     const elSType = document.getElementById('s-type');
     user.prenom = elSPrenom ? elSPrenom.value : (user.prenom || '');
-    // CORRECTION: ne pas permettre de changer l'email (causerait un doublon dans Supabase via upsert)
-    // L'email est en lecture seule dans les settings — on garde l'email original
     user.business = elSBusiness ? elSBusiness.value : (user.business || '');
     user.type_business = elSType ? elSType.value : (user.type_business || '');
-    // Forcer l'affichage à l'email original pour éviter toute confusion
     if(elSEmail) elSEmail.value = user.email || '';
 
-    // Sauvegarder dans Supabase
     await saveUserToDB({
         email: user.email,
         prenom: user.prenom,
@@ -718,14 +851,85 @@ async function saveSettings() {
         platforms: user.platforms || []
     });
 
-    // Mettre à jour localStorage
     localStorage.setItem('nexaai_user', JSON.stringify(user));
 
     const btn = document.getElementById('sSaveBtn');
-    if(btn) { // CORRECTION: null-check
+    if(btn) {
         btn.textContent = '✅ Sauvegardé !';
         setTimeout(() => { btn.textContent = 'Sauvegarder'; }, 2000);
     }
+}
+
+// ===== AFFILIATION SETTINGS =====
+async function saveAffiliationSettings() {
+    const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+    const elAffMode = document.getElementById('s-aff-mode');
+    const elAffStripe = document.getElementById('s-aff-stripe');
+    const elAffUrl = document.getElementById('s-aff-url');
+    const elAffStatus = document.getElementById('s-aff-status');
+    const elAffLink = document.getElementById('s-aff-link');
+    const btn = document.getElementById('sAffSaveBtn');
+
+    const mode = elAffMode ? elAffMode.value : '';
+    const stripeId = elAffStripe ? elAffStripe.value.trim() : '';
+    const storeUrl = elAffUrl ? elAffUrl.value.trim() : '';
+
+    // Validation Stripe ID
+    if (!stripeId.startsWith('acct_')) {
+        if(elAffStatus) { elAffStatus.textContent = "❌ L'ID Stripe doit commencer par acct_"; elAffStatus.style.color = '#ff4444'; }
+        return;
+    }
+    // Validation URL si mode IA close
+    if (mode === 'ia_close' && storeUrl && !/^https?:\/\/.+/.test(storeUrl)) {
+        if(elAffStatus) { elAffStatus.textContent = "❌ L'URL doit commencer par https://"; elAffStatus.style.color = '#ff4444'; }
+        return;
+    }
+
+    if(btn) { btn.textContent = '⏳ Sauvegarde...'; btn.disabled = true; }
+
+    try {
+        user.affiliation_mode = mode;
+        user.stripe_connect_id = stripeId;
+        if(storeUrl) user.store_url = storeUrl;
+        if(!user.plan || user.plan === 'free') user.plan = 'affiliation';
+
+        await saveUserToDB({
+            email: user.email,
+            affiliation_mode: mode,
+            stripe_connect_id: stripeId,
+            store_url: storeUrl || user.store_url || '',
+            plan: user.plan,
+            commission_rate: 0.80
+        });
+
+        localStorage.setItem('nexaai_user', JSON.stringify(user));
+
+        // Afficher le lien d'affiliation généré
+        const affLink = window.location.origin + '?ref=' + stripeId;
+        if(elAffLink) {
+            elAffLink.style.display = 'block';
+            elAffLink.textContent = '🔗 Ton lien : ' + affLink;
+        }
+        if(elAffStatus) {
+            elAffStatus.textContent = mode === 'ia_close'
+                ? '✅ Mode activé ! Nexa close tes DMs, tu reçois 20% de chaque vente.'
+                : '✅ Mode activé ! Partage ton lien, tu reçois 20% à chaque abonnement.';
+            elAffStatus.style.color = 'var(--accent)';
+        }
+        if(btn) { btn.textContent = '✅ Sauvegardé !'; setTimeout(() => { btn.textContent = 'Sauvegarder'; btn.disabled = false; }, 2000); }
+    } catch(err) {
+        console.error('saveAffiliationSettings error:', err);
+        if(elAffStatus) { elAffStatus.textContent = '❌ Erreur lors de la sauvegarde.'; elAffStatus.style.color = '#ff4444'; }
+        if(btn) { btn.textContent = 'Réessayer'; btn.disabled = false; }
+    }
+}
+
+// Afficher/masquer le champ URL selon le mode choisi
+function onAffModeChange() {
+    const mode = document.getElementById('s-aff-mode');
+    const urlGroup = document.getElementById('s-aff-url-group');
+    if(!mode || !urlGroup) return;
+    urlGroup.style.display = mode.value === 'ia_close' ? 'block' : 'none';
 }
 
 // ===== AUTH =====
@@ -1575,7 +1779,7 @@ FORFAITS :
 - Pro : €94/mois — 80 prospects/jour
 - Business : €194/mois — 300 prospects/jour
 - Elite : €494/mois — 750 prospects/jour
-- Ambassadeur : €0 (Affiliation 80/20)
+- Ambassadeur : €0 (Affiliation 20/80 — tu reçois 20% sur chaque vente via ton lien)
 
 ÉTAPE 1 : Prénom.
 ÉTAPE 2 : Business (Nom, Produit, Prix, Cible).
@@ -1584,9 +1788,23 @@ FORFAITS :
 ÉTAPE 5 : Recommander le forfait. Termine par "CHOIX_FORFAIT".`;
 
 function botQualifyStart(email) {
+    // Vérification — si l'utilisateur a déjà tout configuré, ne pas repasser par le bot
+    const existingUser = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+    if(existingUser.email === email) {
+        const alreadyDone = (existingUser.plan && existingUser.plan !== 'free') || existingUser.stripe_connect_id;
+        if(alreadyDone) {
+            loadDashboard(existingUser).then(() => showPage('dashboard-page'));
+            return;
+        }
+        // Préremplir bqData avec ce qu'on a déjà pour ne pas redemander
+        if(existingUser.prenom) bqData.prenom = existingUser.prenom;
+        if(existingUser.business) bqData.business = existingUser.business;
+        if(existingUser.tiktok_pseudo) bqData.tiktok = existingUser.tiktok_pseudo;
+    }
+
     bqHist = [];
     bqStep = 0;
-    bqData = { email };
+    bqData = { ...bqData, email };
     // CORRECTION: null-checks éléments bot qualify
     const bqMsgsEl = document.getElementById('bq-msgs');
     const bqOptsEl = document.getElementById('bq-opts');
@@ -1659,20 +1877,114 @@ async function bqSendToAI(userText) {
     // 1. Détection Ambassadeur / Affiliation
     if (lower.includes('ambassadeur') || lower.includes('affiliation') || lower.includes('gratuit')) {
         bqData.plan = 'affiliation';
+        bqHist.pop();
+        // Étape A — choisir le mode d'affiliation
+        bqData._affStep = 'choose_mode';
+        bqAIMsg(
+            "Super ! 🤝 Plan Ambassadeur — voici comment ça marche :\n\n" +
+            "🔹 Mode 1 — L'IA close pour toi : Nexa gère tes DMs et close tes ventes. Nexa prend 80%, tu reçois 20% de chaque vente.\n\n" +
+            "🔹 Mode 2 — Tu partages ton lien : Tu mets ton lien en bio TikTok. À chaque abonnement Nexa via ton lien, tu reçois 20%, Nexa garde 80%.\n\nLequel tu choisis ?",
+            ['🤖 Mode 1 — L\'IA close pour moi', '🔗 Mode 2 — Je partage mon lien']
+        );
+        return;
+    }
+
+    // 1b. Suite du flow ambassadeur — choix du mode
+    if (bqData._affStep === 'choose_mode') {
+        bqHist.pop();
+        if (lower.includes('mode 1') || lower.includes('ia close') || lower.includes('close pour moi')) {
+            bqData._affMode = 'ia_close';
+            bqData._affStep = 'ask_stripe';
+            bqAIMsg(
+                "Parfait 🤖 Pour que Nexa puisse reverser tes 20% automatiquement, j'ai besoin de ton identifiant Stripe Connect.\n\n" +
+                "👉 Va sur dashboard.stripe.com → ton ID commence par acct_\n\nEnvoie-moi ton ID Stripe :"
+            );
+        } else {
+            bqData._affMode = 'lien';
+            bqData._affStep = 'ask_stripe';
+            bqAIMsg(
+                "Top 🔗 Pour que Nexa génère ton lien d'affiliation et reverse tes 20%, j'ai besoin de ton identifiant Stripe Connect.\n\n" +
+                "👉 Va sur dashboard.stripe.com → ton ID commence par acct_\n\nEnvoie-moi ton ID Stripe :"
+            );
+        }
+        return;
+    }
+
+    // 1c. Suite du flow ambassadeur — réception ID Stripe
+    if (bqData._affStep === 'ask_stripe') {
+        bqHist.pop();
+        const stripeIdMatch = userText.trim().match(/acct_[a-zA-Z0-9]+/);
+        if (!stripeIdMatch) {
+            bqAIMsg("❌ Cet ID ne semble pas valide. Il doit commencer par acct_ suivi de lettres et chiffres.\n\nRéessaie :");
+            return;
+        }
+        bqData.stripe_connect_id = stripeIdMatch[0];
+        bqData._affStep = 'ask_product_url';
+        if (bqData._affMode === 'ia_close') {
+            bqAIMsg("✅ ID Stripe enregistré !\n\nMaintenant envoie-moi l'URL de ton tunnel de vente (le lien vers ton produit) :");
+        } else {
+            bqData._affStep = 'done';
+            // Finaliser directement pour le mode lien
+            await _finalizeAmbassadeur();
+        }
+        return;
+    }
+
+    // 1d. Suite du flow ambassadeur — URL produit (mode IA close uniquement)
+    if (bqData._affStep === 'ask_product_url') {
+        bqHist.pop();
+        const urlMatch = userText.trim().match(/https?:\/\/[^\s]+/);
+        if (!urlMatch) {
+            bqAIMsg("❌ Je n'ai pas reconnu d'URL valide. Elle doit commencer par https://\n\nRéessaie :");
+            return;
+        }
+        bqData.store_url = urlMatch[0];
+        bqData._affStep = 'done';
+        await _finalizeAmbassadeur();
+        return;
+    }
+
+    // Helper interne — finalise l'enregistrement ambassadeur
+    async function _finalizeAmbassadeur() {
         try {
-            await saveUserToDB({ email: bqData.email, plan: 'affiliation', prenom: bqData.prenom || 'Ambassadeur' });
-            // CORRECTION: pop() uniquement si saveUserToDB réussit — évite état incohérent
-            bqHist.pop();
-            bqAIMsg("Excellent choix ! 🤝 Plan Ambassadeur activé (80% pour toi / 20% pour Nexa).");
-            bqAIMsg("Action : Copie ton lien Beacons et mets-le en bio TikTok. \n\nDis-moi 'PRET' quand c'est fait pour ouvrir ton accès.");
+            await saveUserToDB({
+                email: bqData.email,
+                plan: 'affiliation',
+                prenom: bqData.prenom || 'Ambassadeur',
+                stripe_connect_id: bqData.stripe_connect_id || '',
+                store_url: bqData.store_url || '',
+                affiliation_mode: bqData._affMode || 'lien'
+            });
+            // Mettre à jour localStorage
             const userAff = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-            if (userAff && userAff.email) await loadDashboard(userAff);
+            userAff.stripe_connect_id = bqData.stripe_connect_id || '';
+            userAff.store_url = bqData.store_url || '';
+            userAff.affiliation_mode = bqData._affMode || 'lien';
+            userAff.plan = 'affiliation';
+            localStorage.setItem('nexaai_user', JSON.stringify(userAff));
+
+            if (bqData._affMode === 'ia_close') {
+                const affLink = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
+                bqAIMsg(
+                    "🎉 Tout est configuré !\n\n" +
+                    "🤖 Nexa va maintenant closer tes DMs et reverser 20% de chaque vente sur ton compte Stripe.\n\n" +
+                    "🔗 Ton lien d'affiliation (partage-le aussi) :\n" + affLink +
+                    "\n\nAccède à ton dashboard pour suivre tes ventes 👇"
+                );
+            } else {
+                const affLink = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
+                bqAIMsg(
+                    "🎉 Tout est configuré !\n\n" +
+                    "🔗 Ton lien d'affiliation :\n" + affLink +
+                    "\n\nMets ce lien en bio TikTok. À chaque abonnement Nexa via ce lien, tu reçois 20% automatiquement sur ton Stripe.\n\nAccède à ton dashboard 👇"
+                );
+            }
+            if (userAff.email) await loadDashboard(userAff);
             showPage('dashboard-page');
         } catch(saveErr) {
             console.error('saveUserToDB error (affiliation):', saveErr);
             bqAIMsg("Une erreur est survenue, réessaie !");
         }
-        return;
     }
 
     // 2. Détection Forfaits Payants
@@ -1732,7 +2044,7 @@ async function bqSendToAI(userText) {
                     '🤝 Plan Ambassadeur — €0',
                     '⚡ Starter — €39/mois',
                     '🚀 Pro — €94/mois',
-                    'Business — €194/mois',
+                    '💼 Business — €194/mois',
                     '👑 Elite — €494/mois'
                 ]);
             } else {
