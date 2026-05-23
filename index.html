@@ -285,7 +285,7 @@
             </div>
             <div style="display:flex;gap:10px;">
                 <button class="btn btn-secondary" onclick="modalPrev(3)" style="flex:1;">← Retour</button>
-                <button class="btn btn-primary" onclick="modalNext(3)" style="flex:2;">Continuer →</button>
+                <button class="btn btn-primary" onclick="validateStep3()" style="flex:2;">Continuer →</button>
             </div>
         </div>
 
@@ -316,6 +316,7 @@
                     <div class="plan-desc">750 prospects/jour<br>Messages illimités</div>
                 </div>
             </div>
+            <div id="modal-pay-error" style="display:none;color:#ff6b6b;font-size:0.8rem;text-align:center;margin-bottom:10px;">⚠️ Sélectionne un plan avant de continuer</div>
             <button class="btn btn-primary btn-full" id="modalPayBtn" onclick="modalPayGuard()" style="margin-bottom:10px;">🔒 Activer mon plan →</button>
             <button class="btn btn-secondary btn-full" onclick="modalPrev(4)">← Retour</button>
             <p style="text-align:center;color:var(--text-light);font-size:0.75rem;margin-top:12px;">Sans engagement • Résiliable à tout moment • Paiement sécurisé Stripe</p>
