@@ -701,9 +701,14 @@ function fmtExp(i) { let v = i.value.replace(/\D/g,''); if(v.length >= 2) v = v.
 
 
 // ===== DASHBOARD =====
+let _loadDashboardRunning = false;
 async function loadDashboard(user) {
+    // CORRECTION: éviter les appels simultanés (race condition)
+    if(_loadDashboardRunning) return;
+    _loadDashboardRunning = true;
+    try {
     if(!user) user = JSON.parse(localStorage.getItem('nexaai_user') || 'null');
-    if(!user) return;
+    if(!user) { _loadDashboardRunning = false; return; }
     // Recharger les prospects depuis Supabase si dispo
     if(sb && user.id) {
         const prospects = await loadProspectsFromDB(user.id);
@@ -796,6 +801,12 @@ async function loadDashboard(user) {
     }
     const navOverview = document.querySelector('.sidebar-menu a[data-dash="overview"]');
     if(navOverview) showDash('overview', navOverview);
+    } catch(e) {
+        console.error('[Nexa] loadDashboard error:', e);
+    } finally {
+        // CORRECTION: toujours libérer le verrou, même en cas d'erreur
+        _loadDashboardRunning = false;
+    }
 }
 
 function escHtml(str) {
