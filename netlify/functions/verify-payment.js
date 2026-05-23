@@ -1,84 +1,197 @@
-// netlify/functions/verify-payment.js
-const PARTNER_PRICE_ID = "price_1TWJqYP8svYH1bkOi4njRmnX";
+/**
+ * NEXA VERIFY PAYMENT — Stripe Session Verification
+ * Vérifie paiement Stripe et met à jour Supabase
+ * Production-ready
+ */
+
+const PARTNER_PRICE_ID =
+  process.env.PARTNER_PRICE_ID || 'price_1TWJqYP8svYH1bkOi4njRmnX';
+
+// ════════════════════════════════════════════════════════════════
+// 🔧 UTILITIES
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * Normalise email (lowercase + trim)
+ */
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+/**
+ * Valide format email
+ */
+function isValidEmail(email) {
+  const normalized = normalizeEmail(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🌐 MAIN HANDLER
+// ════════════════════════════════════════════════════════════════
 
 exports.handler = async function (event) {
   const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers, body: "" };
+  // CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
+  // Accepte seulement POST
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
+  // Parse body
   let body;
   try {
-    body = JSON.parse(event.body || "{}");
+    body = JSON.parse(event.body || '{}');
   } catch {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid JSON" }) };
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({ error: 'Invalid JSON' }),
+    };
   }
 
   const { session_id, email } = body;
 
+  // ════════════════════════════════════════════════════════════════
+  // ✅ VALIDATION
+  // ════════════════════════════════════════════════════════════════
+
   if (!session_id || !email) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: "session_id and email are required" }) };
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({
+        error: 'session_id and email are required',
+      }),
+    };
   }
 
-  if (!process.env.STRIPE_SECRET_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: "Missing server config" }) };
+  if (!isValidEmail(email)) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({ error: 'Invalid email format' }),
+    };
+  }
+
+  // Vérifie env vars
+  if (
+    !process.env.STRIPE_SECRET_KEY ||
+    !process.env.SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_KEY
+  ) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Server configuration error' }),
+    };
   }
 
   try {
+    // ════════════════════════════════════════════════════════════════
+    // 1️⃣ FETCH STRIPE SESSION
+    // ════════════════════════════════════════════════════════════════
+
     const qs = new URLSearchParams();
-    qs.append("expand[]", "payment_intent");
-    qs.append("expand[]", "line_items");
-    qs.append("expand[]", "line_items.data.price");
+    qs.append('expand[]', 'payment_intent');
+    qs.append('expand[]', 'line_items');
+    qs.append('expand[]', 'line_items.data.price');
 
     const stripeRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(session_id)}?${qs.toString()}`,
-      { headers: { Authorization: "Bearer " + process.env.STRIPE_SECRET_KEY } }
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
+        session_id
+      )}?${qs.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+        },
+      }
     );
 
     const session = await stripeRes.json();
 
+    // Gère erreur Stripe
     if (!stripeRes.ok) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: session.error?.message || "Stripe session fetch failed" }),
+        body: JSON.stringify({
+          error: session.error?.message || 'Stripe session fetch failed',
+        }),
       };
     }
 
-    if (session.payment_status !== "paid") {
-      return { statusCode: 402, headers, body: JSON.stringify({ error: "Not paid" }) };
+    // ════════════════════════════════════════════════════════════════
+    // 2️⃣ VALIDATE PAYMENT STATUS
+    // ════════════════════════════════════════════════════════════════
+
+    if (session.payment_status !== 'paid') {
+      return {
+        statusCode: 402,
+        headers,
+        body: JSON.stringify({ error: 'Payment not completed' }),
+      };
     }
 
-    const stripeEmail = String(session.customer_details?.email || session.customer_email || "")
-      .trim()
-      .toLowerCase();
-    const requestEmail = String(email).trim().toLowerCase();
+    // ════════════════════════════════════════════════════════════════
+    // 3️⃣ VALIDATE EMAIL MATCH
+    // ════════════════════════════════════════════════════════════════
+
+    const stripeEmail = normalizeEmail(
+      session.customer_details?.email || session.customer_email || ''
+    );
+    const requestEmail = normalizeEmail(email);
 
     if (!stripeEmail || stripeEmail !== requestEmail) {
       return {
         statusCode: 403,
         headers,
-        body: JSON.stringify({ error: "Email does not match Stripe checkout session" }),
+        body: JSON.stringify({
+          error: 'Email does not match Stripe session',
+        }),
       };
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 4️⃣ VALIDATE LINE ITEMS
+    // ════════════════════════════════════════════════════════════════
+
     const lineItems = session.line_items?.data || [];
+    if (lineItems.length === 0) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'No line items in session' }),
+      };
+    }
+
     const firstPriceId = lineItems[0]?.price?.id;
-
     const isPartnerActivation =
-      session.metadata?.plan === "partner_activation" || firstPriceId === PARTNER_PRICE_ID;
+      session.metadata?.plan === 'partner_activation' ||
+      firstPriceId === PARTNER_PRICE_ID;
 
-    let planMeta = session.metadata?.plan || "starter";
-    const normalizedPlan = isPartnerActivation ? "partner" : String(planMeta).replace("-once", "");
+    let planMeta = session.metadata?.plan || 'starter';
+    const normalizedPlan = isPartnerActivation
+      ? 'partner'
+      : String(planMeta).replace('-once', '');
+
+    // ════════════════════════════════════════════════════════════════
+    // 5️⃣ UPDATE SUPABASE USER
+    // ════════════════════════════════════════════════════════════════
 
     const updateData = {
       updated_at: new Date().toISOString(),
@@ -92,14 +205,16 @@ exports.handler = async function (event) {
     }
 
     const patchRes = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(requestEmail)}`,
+      `${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(
+        requestEmail
+      )}`,
       {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + process.env.SUPABASE_SERVICE_KEY,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
           apikey: process.env.SUPABASE_SERVICE_KEY,
-          Prefer: "return=representation",
+          Prefer: 'return=representation',
         },
         body: JSON.stringify(updateData),
       }
@@ -107,37 +222,57 @@ exports.handler = async function (event) {
 
     if (!patchRes.ok) {
       const details = await patchRes.text();
-      return { statusCode: 500, headers, body: JSON.stringify({ error: "Supabase update failed", details }) };
+      console.error('Supabase PATCH failed:', details);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Database update failed' }),
+      };
     }
 
     const updatedRows = await patchRes.json();
     if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
-      return { statusCode: 404, headers, body: JSON.stringify({ error: "No user found for this email" }) };
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'User not found' }),
+      };
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 6️⃣ OPTIONAL: RECORD COMMISSION
+    // ════════════════════════════════════════════════════════════════
+
     if (session.metadata?.referrer_id) {
-      const commissionRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/affiliates_commissions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + process.env.SUPABASE_SERVICE_KEY,
-          apikey: process.env.SUPABASE_SERVICE_KEY,
-          Prefer: "resolution=merge-duplicates",
-        },
-        body: JSON.stringify({
-          partner_id: session.metadata.referrer_id,
-          referred_user_email: requestEmail,
-          amount_paid: session.amount_total / 100,
-          commission_amount: (session.amount_total / 100) * 0.2,
-          status: "paid",
-        }),
-      });
+      const commissionRes = await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/affiliates_commissions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+            apikey: process.env.SUPABASE_SERVICE_KEY,
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            partner_id: session.metadata.referrer_id,
+            referred_user_email: requestEmail,
+            amount_paid: session.amount_total / 100,
+            commission_amount: (session.amount_total / 100) * 0.2,
+            status: 'paid',
+          }),
+        }
+      );
 
       if (!commissionRes.ok) {
         const t = await commissionRes.text();
-        console.error("affiliates_commissions insert failed:", t);
+        console.warn('Commission record failed (non-blocking):', t);
       }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // ✅ SUCCESS RESPONSE
+    // ════════════════════════════════════════════════════════════════
 
     return {
       statusCode: 200,
@@ -146,10 +281,15 @@ exports.handler = async function (event) {
         valid: true,
         plan: normalizedPlan,
         isPartner: !!isPartnerActivation,
+        user: updatedRows[0] || {},
       }),
     };
   } catch (err) {
-    console.error(err);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    console.error('Verify payment handler error:', err);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Internal server error' }),
+    };
   }
 };
