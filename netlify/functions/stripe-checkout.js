@@ -8,17 +8,12 @@
 // ════════════════════════════════════════════════════════════════
 
 const PRICE_IDS = {
-  starter:
-    process.env.STRIPE_PRICE_STARTER || 'price_1THSyjP8svYH1bkOt686fqqC',
-  pro: process.env.STRIPE_PRICE_PRO || 'price_1THSzsP8svYH1bkOndl82cmU',
-  business:
-    process.env.STRIPE_PRICE_BUSINESS || 'price_1TP3ihP8svYH1bkOOITtQVaA',
-  elite: process.env.STRIPE_PRICE_ELITE || 'price_1TJ8XPP8svYH1bkOWwjjcZ87',
-  partner_activation:
-    process.env.STRIPE_PRICE_PARTNER || 'price_1TWJqYP8svYH1bkOi4njRmnX',
+  starter: process.env.STRIPE_PRICE_STARTER || 'price_1THSyjP8svYH1bkOt686fqqC',
+  pro:     process.env.STRIPE_PRICE_PRO     || 'price_1THSzsP8svYH1bkOndl82cmU',
+  // ⚠️ plans 'business', 'elite', 'partner_activation' supprimés — ne correspondent plus aux forfaits réels
 };
 
-const SUBSCRIPTION_PLANS = new Set(['starter', 'pro', 'business', 'elite']);
+const SUBSCRIPTION_PLANS = new Set(['starter', 'pro']);
 
 // ════════════════════════════════════════════════════════════════
 // 🔧 UTILITIES
@@ -48,7 +43,6 @@ function isValidEmail(email) {
  * Determine le mode checkout (payment vs subscription)
  */
 function checkoutModeForPlan(plan) {
-  if (plan === 'partner_activation') return 'payment';
   if (SUBSCRIPTION_PLANS.has(plan)) return 'subscription';
   return 'payment';
 }
@@ -56,20 +50,34 @@ function checkoutModeForPlan(plan) {
 /**
  * Résout le Connect account ID
  */
-async function resolveConnectAccountId({ referrer_id, clientStripeConnectId }) {
-  // Si le client envoie un Connect ID vérifié
-  if (
-    typeof clientStripeConnectId === 'string' &&
-    clientStripeConnectId.startsWith('acct_')
-  ) {
-    return clientStripeConnectId;
+async function resolveConnectAccountId({ referrer_id }) {
+  // CORRECTION: on n'accepte PLUS le connectId envoyé par le client (risque de fraude)
+  // Le Connect ID doit être résolu UNIQUEMENT côté serveur via Supabase
+  if (!referrer_id) return '';
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return '';
+
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/users?id=eq.${encodeURIComponent(referrer_id)}&select=stripe_connect_id`,
+      {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          apikey: key,
+        },
+      }
+    );
+    if (!res.ok) return '';
+    const rows = await res.json();
+    const connectId = rows?.[0]?.stripe_connect_id || '';
+    // Vérifie format Stripe Connect ID
+    return typeof connectId === 'string' && connectId.startsWith('acct_') ? connectId : '';
+  } catch (e) {
+    console.error('resolveConnectAccountId error:', e.message);
+    return '';
   }
-
-  // Si referrer_id, lookup DB (optional)
-  // ex: const row = await db.query(...); return row.stripe_connect_id;
-
-  void referrer_id;
-  return '';
 }
 
 /**
@@ -79,9 +87,12 @@ function appendConnectSplit({ stripeParams, mode, connectId }) {
   if (!connectId) return;
 
   if (mode === 'payment') {
-    stripeParams.append('payment_intent_data[application_fee_percent]', '20');
+    // CORRECTION: payment_intent_data utilise application_fee_amount (centimes), pas percent
+    // 20% calculé depuis le price ID n'est pas connu ici → on stocke le referrer_id dans metadata
+    // et on calcule la commission dans verify-payment.js après paiement confirmé
     stripeParams.append('payment_intent_data[transfer_data][destination]', connectId);
   } else if (mode === 'subscription') {
+    // CORRECTION: subscription_data supporte bien application_fee_percent
     stripeParams.append('subscription_data[application_fee_percent]', '20');
     stripeParams.append('subscription_data[transfer_data][destination]', connectId);
   }
@@ -92,11 +103,14 @@ function appendConnectSplit({ stripeParams, mode, connectId }) {
 // ════════════════════════════════════════════════════════════════
 
 exports.handler = async function (event) {
+  const allowedOrigin = process.env.SITE_URL || '';
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
+    'X-Content-Type-Options': 'nosniff',
   };
 
   // CORS preflight
@@ -134,7 +148,7 @@ exports.handler = async function (event) {
     };
   }
 
-  const { plan, email, clientStripeConnectId, referrer_id } = body;
+  const { plan, email, referrer_id } = body;
 
   // ════════════════════════════════════════════════════════════════
   // ✅ VALIDATION
@@ -159,8 +173,9 @@ exports.handler = async function (event) {
 
   const mode = checkoutModeForPlan(plan);
   const base = getSiteUrl();
-  const success_url = `${base}/dashboard.html?payment=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancel_url = `${base}/#pricing`;
+  // ✅ SPA sur index.html — pas de /Netlify/dashboard.html (404 sur Netlify)
+  const success_url = `${base}/?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancel_url  = `${base}/#pricing`;
 
   try {
     // ════════════════════════════════════════════════════════════════
@@ -187,10 +202,7 @@ exports.handler = async function (event) {
     // 2️⃣ ADD CONNECT SPLIT
     // ════════════════════════════════════════════════════════════════
 
-    const connectId = await resolveConnectAccountId({
-      referrer_id,
-      clientStripeConnectId,
-    });
+    const connectId = await resolveConnectAccountId({ referrer_id });
     appendConnectSplit({ stripeParams, mode, connectId });
 
     // ════════════════════════════════════════════════════════════════
