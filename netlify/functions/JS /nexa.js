@@ -428,7 +428,7 @@ function modalNext(step) {
         const email = elMEmail.value.trim();
         if(!prenom || !email) { toast('⚠️ Merci de remplir prénom et email !', 'err'); return; }
         // CORRECTION: validation format email
-        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('⚠️ Merci d'entrer un email valide !', 'err'); return; }
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast(`⚠️ Merci d'entrer un email valide !`, 'err'); return; }
         td.prenom = prenom;
         td.email = email;
         // CORRECTION: null-checks champs onboarding step 1
@@ -689,7 +689,7 @@ function goStep2() {
     const e = elTEmail.value.trim();
     if(!p || !e) { toast('⚠️ Merci de remplir ton prénom et ton email !', 'err'); return; }
     // CORRECTION: validation format email
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast('⚠️ Merci d'entrer un email valide !', 'err'); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast(`⚠️ Merci d'entrer un email valide !`, 'err'); return; }
     td.prenom = p; td.email = e;
     // CORRECTION: null-checks champs tunnel step 1
     const elTPhone = document.getElementById('t-phone');
@@ -703,7 +703,7 @@ function goStep3() {
     const elTBusiness = document.getElementById('t-business');
     if(!elTBusiness) return; // CORRECTION: null-check
     const b = elTBusiness.value.trim();
-    if(!b) { toast('⚠️ Merci d'indiquer le nom de ton business !', 'err'); return; }
+    if(!b) { toast(`⚠️ Merci d'indiquer le nom de ton business !`, 'err'); return; }
     td.business = b;
     // CORRECTION: null-checks champs tunnel step 2
     const elTDms = document.getElementById('t-dms');
@@ -1917,24 +1917,22 @@ async function sendChatMsg(text) {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                model:CLAUDE_MODEL,
-                max_tokens:400,
+                message: text,
+                history: chatHist.slice(0, -1),
                 system: SYS + (CLIENT_STORE_URL
-                    // CORRECTION: valider format URL et limiter à 200 chars pour éviter prompt injection
                     && /^https?:\/\/[^\s]{1,200}$/.test(CLIENT_STORE_URL.trim())
                     ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL.trim().slice(0, 200)
-                    : ''),
-                messages:chatHist
+                    : '')
             })
         });
         const rawChat = await res.text();
         let data = {};
         try { data = rawChat ? JSON.parse(rawChat) : {}; } catch(e) { throw new Error('Réponse serveur invalide'); }
-        // CORRECTION: null-check typingBubble
         const tb2 = document.getElementById('typingBubble');
         if(tb2) tb2.style.display = 'none';
-        if(data.content?.[0]) {
-            let reply = data.content[0].text;
+        // claude.js retourne { reply: "..." }
+        if(data.reply) {
+            let reply = data.reply;
             chatHist.push({role:'assistant',content:reply});
             if(reply.includes('REDIRECT')) {
                 reply = reply.replace('REDIRECT','');
@@ -2008,15 +2006,16 @@ async function sendDashMsg() {
         const res = await fetch(PROXY_URL, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:400,system:fullSystem,messages:dashChatHist})
+            body:JSON.stringify({ message: text, history: dashChatHist.slice(0,-1) })
         });
         const rawDash = await res.text();
         let data = {};
         try { data = rawDash ? JSON.parse(rawDash) : {}; } catch(e) { throw new Error('Réponse serveur invalide'); }
         const loadEl = document.getElementById(loadingId);
-        if(loadEl) loadEl.remove(); // CORRECTION: retirer l'indicateur
-        if(data.content?.[0]) {
-            const replyText = data.content[0].text;
+        if(loadEl) loadEl.remove();
+        // claude.js retourne { reply: "..." }
+        if(data.reply) {
+            const replyText = data.reply;
             dashChatHist.push({ role: 'assistant', content: replyText });
             const ad = document.createElement('div');
             ad.className = 'dash-msg-ai';
