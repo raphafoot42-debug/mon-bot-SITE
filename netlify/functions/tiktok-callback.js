@@ -7,18 +7,53 @@
 // 🔧 UTILITIES
 // ════════════════════════════════════════════════════════════════
 
+const ALLOWED_ORIGIN = process.env.SITE_URL || '';
+
 const JSON_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Credentials': 'true',
   'Content-Type': 'application/json',
+  'X-Content-Type-Options': 'nosniff',
 };
 
 function redirectHeaders(location) {
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     Location: location,
   };
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🛡️ RATE LIMITING (par IP — en mémoire)
+// ════════════════════════════════════════════════════════════════
+const _ipWindows = {};
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 1000;
+
+function checkIpRate(ip) {
+  const now = Date.now();
+  _ipWindows[ip] = (_ipWindows[ip] || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (_ipWindows[ip].length >= RATE_LIMIT) {
+    const err = new Error('Rate limit dépassé');
+    err.rateLimit = true;
+    throw err;
+  }
+  _ipWindows[ip].push(now);
+}
+
+// ════════════════════════════════════════════════════════════════
+// ⏱️ FETCH AVEC TIMEOUT
+// ════════════════════════════════════════════════════════════════
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -68,11 +103,15 @@ async function exchangeCode({ code, code_verifier }) {
   });
 
   // Appelle TikTok
-  const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
-  });
+  const tokenRes = await fetchWithTimeout(
+    'https://open.tiktokapis.com/v2/oauth/token/',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    },
+    10000
+  );
 
   const tokenData = await readJsonSafe(tokenRes);
 
@@ -102,11 +141,10 @@ async function exchangeCode({ code, code_verifier }) {
   // 👤 FETCH USER PROFILE
   // ════════════════════════════════════════════════════════════════
 
-  const profileRes = await fetch(
+  const profileRes = await fetchWithTimeout(
     'https://open.tiktokapis.com/v2/user/info/?fields=open_id,avatar_url,display_name,username',
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+    10000
   );
 
   const profileData = await readJsonSafe(profileRes);
@@ -122,9 +160,10 @@ async function exchangeCode({ code, code_verifier }) {
     openId,
     profile: {
       openId,
-      username: user.username || '',
-      displayName: user.display_name || '',
-      avatar: user.avatar_url || '',
+      // Sanitisation défensive — champs venant de l'API TikTok
+      username:    (user.username     || '').replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 100),
+      displayName: (user.display_name || '').replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 100),
+      avatar:      (user.avatar_url   || '').trim().slice(0, 500),
     },
   };
 }
@@ -143,7 +182,7 @@ async function maybePersistToSupabase({
   profile,
 }) {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
     console.warn('Supabase not configured, skipping persistence');
@@ -151,7 +190,7 @@ async function maybePersistToSupabase({
   }
 
   try {
-    await fetch(`${url}/rest/v1/tiktok_accounts`, {
+    await fetchWithTimeout(`${url}/rest/v1/tiktok_accounts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +207,7 @@ async function maybePersistToSupabase({
         avatar_url: profile.avatar,
         updated_at: new Date().toISOString(),
       }),
-    });
+    }, 8000);
   } catch (err) {
     console.error('Supabase persistence failed:', err.message);
     // Non-blocking: don't throw
@@ -185,8 +224,27 @@ exports.handler = async function (event) {
     return { statusCode: 200, headers: JSON_HEADERS, body: '' };
   }
 
+  // ── Rate limiting IP ──────────────────────────────────────────
+  const ip =
+    (event.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    event.requestContext?.identity?.sourceIp ||
+    'unknown';
+
+  try {
+    checkIpRate(ip);
+  } catch (err) {
+    if (err.rateLimit) {
+      return {
+        statusCode: 429,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ success: false, message: 'Rate limited. Retry après 60s.' }),
+      };
+    }
+    throw err;
+  }
+
   const site = process.env.SITE_URL || '';
-  const dashboardPath = process.env.DASHBOARD_PATH || '/dashboard.html';
+  const dashboardPath = process.env.DASHBOARD_PATH || '/';
 
   // ════════════════════════════════════════════════════════════════
   // POST: Recommandé (from dashboard with PKCE)
