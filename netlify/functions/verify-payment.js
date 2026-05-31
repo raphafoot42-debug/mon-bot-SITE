@@ -4,26 +4,29 @@
  * Production-ready
  */
 
-const PARTNER_PRICE_ID =
-  process.env.PARTNER_PRICE_ID || 'price_1TWJqYP8svYH1bkOi4njRmnX';
+// Plans valides — doit rester synchronisé avec payment.js
+const VALID_PLANS = new Set(['starter', 'pro', 'affiliation']);
 
 // ════════════════════════════════════════════════════════════════
 // 🔧 UTILITIES
 // ════════════════════════════════════════════════════════════════
 
-/**
- * Normalise email (lowercase + trim)
- */
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
-/**
- * Valide format email
- */
 function isValidEmail(email) {
-  const normalized = normalizeEmail(email);
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -31,11 +34,14 @@ function isValidEmail(email) {
 // ════════════════════════════════════════════════════════════════
 
 exports.handler = async function (event) {
+  const allowedOrigin = process.env.SITE_URL || '';
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
+    'X-Content-Type-Options': 'nosniff',
   };
 
   // CORS preflight
@@ -111,15 +117,10 @@ exports.handler = async function (event) {
     qs.append('expand[]', 'line_items');
     qs.append('expand[]', 'line_items.data.price');
 
-    const stripeRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
-        session_id
-      )}?${qs.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
-        },
-      }
+    const stripeRes = await fetchWithTimeout(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(session_id)}?${qs.toString()}`,
+      { headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` } },
+      15000
     );
 
     const session = await stripeRes.json();
@@ -179,35 +180,34 @@ exports.handler = async function (event) {
       };
     }
 
-    const firstPriceId = lineItems[0]?.price?.id;
-    const isPartnerActivation =
-      session.metadata?.plan === 'partner_activation' ||
-      firstPriceId === PARTNER_PRICE_ID;
+    // Récupère le plan depuis les metadata Stripe (défini dans stripe-checkout.js)
+    let planMeta = String(session.metadata?.plan || 'starter').replace('-once', '');
 
-    let planMeta = session.metadata?.plan || 'starter';
-    const normalizedPlan = isPartnerActivation
-      ? 'partner'
-      : String(planMeta).replace('-once', '');
+    // ⚠️ Valider que le plan est dans la liste autorisée
+    // Empêche qu'une ancienne session avec 'business' ou 'elite' mette à jour la base
+    if (!VALID_PLANS.has(planMeta)) {
+      console.error('Plan invalide reçu de Stripe:', planMeta);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Plan invalide' }),
+      };
+    }
+
+    const normalizedPlan = planMeta;
 
     // ════════════════════════════════════════════════════════════════
     // 5️⃣ UPDATE SUPABASE USER
     // ════════════════════════════════════════════════════════════════
 
     const updateData = {
+      plan: normalizedPlan,
       updated_at: new Date().toISOString(),
       stripe_session_id: session_id,
     };
 
-    if (isPartnerActivation) {
-      updateData.is_partner = true;
-    } else {
-      updateData.plan = normalizedPlan;
-    }
-
-    const patchRes = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(
-        requestEmail
-      )}`,
+    const patchRes = await fetchWithTimeout(
+      `${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(requestEmail)}`,
       {
         method: 'PATCH',
         headers: {
@@ -217,7 +217,8 @@ exports.handler = async function (event) {
           Prefer: 'return=representation',
         },
         body: JSON.stringify(updateData),
-      }
+      },
+      10000
     );
 
     if (!patchRes.ok) {
@@ -244,7 +245,7 @@ exports.handler = async function (event) {
     // ════════════════════════════════════════════════════════════════
 
     if (session.metadata?.referrer_id) {
-      const commissionRes = await fetch(
+      const commissionRes = await fetchWithTimeout(
         `${process.env.SUPABASE_URL}/rest/v1/affiliates_commissions`,
         {
           method: 'POST',
@@ -258,10 +259,11 @@ exports.handler = async function (event) {
             partner_id: session.metadata.referrer_id,
             referred_user_email: requestEmail,
             amount_paid: session.amount_total / 100,
-            commission_amount: (session.amount_total / 100) * 0.2,
+            commission_amount: (session.amount_total / 100) * 0.2, // 20% côté serveur
             status: 'paid',
           }),
-        }
+        },
+        8000
       );
 
       if (!commissionRes.ok) {
@@ -270,17 +272,12 @@ exports.handler = async function (event) {
       }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // ✅ SUCCESS RESPONSE
-    // ════════════════════════════════════════════════════════════════
-
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         valid: true,
         plan: normalizedPlan,
-        isPartner: !!isPartnerActivation,
         user: updatedRows[0] || {},
       }),
     };
