@@ -55,7 +55,7 @@ async function register() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard.html`,
+        emailRedirectTo: `${window.location.origin}/?auth=confirmed`,
       },
     });
 
@@ -74,7 +74,8 @@ async function register() {
       const newUser = {
         id: data.user.id,
         email: data.user.email,
-        plan: 'starter',
+        plan: 'free', // plan réel après inscription — promu via bot de qualification + paiement
+        status: 'pending_verify',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -95,12 +96,19 @@ async function register() {
     // ════════════════════════════════════════════════════════════════
 
     toast('✅ Compte créé ! Confirme ton email.', 'ok');
-    document.getElementById('regEmail').value = '';
-    document.getElementById('regPwd').value = '';
-    document.getElementById('regPwd2').value = '';
+    const elRegEmail = document.getElementById('regEmail');
+    const elRegPwd   = document.getElementById('regPwd');
+    const elRegPwd2  = document.getElementById('regPwd2');
+    if (elRegEmail) elRegEmail.value = '';
+    if (elRegPwd)   elRegPwd.value   = '';
+    if (elRegPwd2)  elRegPwd2.value  = '';
 
-    // Redirige après 2s
-    setTimeout(() => showPage('login'), 2000);
+    // Affiche la page de confirmation email (même flux que nexa.js)
+    if (typeof showEmailVerifyPage === 'function') {
+      showEmailVerifyPage(email);
+    } else {
+      setTimeout(() => showPage('login'), 2000);
+    }
   } catch (err) {
     console.error('Register error:', err);
     toast(`❌ ${err.message}`, 'err');
@@ -165,30 +173,40 @@ async function login() {
     }
 
     // ════════════════════════════════════════════════════════════════
-    // 💾 SAVE USER DATA LOCALLY
+    // 💾 CHARGER LE PROFIL DEPUIS SUPABASE (source de vérité)
+    // ⚠️ NE PAS stocker le JWT dans localStorage — XSS exposure.
+    // Supabase gère la session en interne via auth.getUser().
     // ════════════════════════════════════════════════════════════════
 
-    const userData = {
-      id: data.user.id,
-      email: data.user.email,
-      token: data.session?.access_token,
-    };
+    const userData = await loadUserFromDB(data.user.email);
+    if (userData) {
+      const prospects = typeof loadProspectsFromDB === 'function'
+        ? await loadProspectsFromDB(userData.id)
+        : [];
+      const user = { ...userData, prospects };
+      LS.setUser(user);
 
-    LS.setUser(userData);
-    LS.setToken(data.session?.access_token);
+      toast('✅ Bienvenue !', 'ok');
+      const elLoginEmail = document.getElementById('loginEmail');
+      const elLoginPwd   = document.getElementById('loginPassword');
+      if (elLoginEmail) elLoginEmail.value = '';
+      if (elLoginPwd)   elLoginPwd.value   = '';
 
-    // ════════════════════════════════════════════════════════════════
-    // ✅ SUCCESS
-    // ════════════════════════════════════════════════════════════════
-
-    toast('✅ Bienvenue !', 'ok');
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
-
-    // Redirige au dashboard
-    setTimeout(() => {
-      window.location.href = '/dashboard.html';
-    }, 1000);
+      // Reste sur index.html — loadDashboard gère l'affichage
+      if (typeof loadDashboard === 'function') {
+        await loadDashboard(user);
+        showPage('dashboard-page');
+      }
+    } else {
+      // Profil pas encore créé → tunnel de qualification
+      toast('✅ Bienvenue !', 'ok');
+      if (typeof showPage === 'function') {
+        showPage('bot-qualify');
+        if (typeof botQualifyStart === 'function') {
+          setTimeout(() => botQualifyStart(data.user.email), 300);
+        }
+      }
+    }
   } catch (err) {
     console.error('Login error:', err);
     toast(`❌ ${err.message}`, 'err');
@@ -211,60 +229,26 @@ async function logout() {
 
     // Clear localStorage
     LS.clearUser();
-    LS.clearToken();
+    // ⚠️ Ne pas appeler LS.clearToken() — le token ne doit pas être en localStorage
 
-    // Message
+    // Reset des historiques chat (évite fuite de contexte entre sessions)
+    if (typeof chatHist !== 'undefined') chatHist = [];
+    if (typeof dashChatHist !== 'undefined') dashChatHist = [];
+
     toast('✅ Déconnexion réussie', 'ok');
 
-    // Redirige home
+    // Retour à la page d'accueil (même page — SPA)
     setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
+      if (typeof showPage === 'function') {
+        showPage('home');
+      } else {
+        window.location.href = '/';
+      }
+    }, 800);
   } catch (err) {
     console.error('Logout error:', err);
     toast(`❌ ${err.message}`, 'err');
   }
-}
-
-// ════════════════════════════════════════════════════════════════
-// ✅ CHECK AUTH STATUS
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Vérifie si l'utilisateur est connecté
- * Retourne l'utilisateur ou null
- */
-async function getAuthUser() {
-  try {
-    const sb = getSb();
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
-    return user || null;
-  } catch (err) {
-    console.error('getAuthUser error:', err);
-    return null;
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// 🔐 REQUIRE AUTH
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Redirige au login si pas connecté
- * À appeler au load du dashboard
- */
-async function requireAuth() {
-  const user = await getAuthUser();
-
-  if (!user) {
-    // Pas connecté
-    window.location.href = '/?auth=required';
-    return null;
-  }
-
-  return user;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -273,18 +257,10 @@ async function requireAuth() {
 
 if (typeof window !== 'undefined') {
   window.register = register;
-  window.login = login;
-  window.logout = logout;
-  window.getAuthUser = getAuthUser;
-  window.requireAuth = requireAuth;
+  window.login    = login;
+  window.logout   = logout;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    register,
-    login,
-    logout,
-    getAuthUser,
-    requireAuth,
-  };
+  module.exports = { register, login, logout };
 }
