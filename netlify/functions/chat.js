@@ -1,355 +1,244 @@
 /**
- * NEXA CHAT — Message Handler & Queue Manager
- * Production-ready avec validation, queue, error handling
+ * ═══════════════════════════════════════════════════════════════
+ * 💬 CHAT.JS — Gestion des Conversations IA (Messages TikTok)
+ * 
+ * Utilise Claude pour générer des réponses naturelles
+ * Gère l'historique + la file d'attente + typewriter effect
+ * ═══════════════════════════════════════════════════════════════
  */
 
+const Anthropic = require("@anthropic-ai/sdk");
+
+const client = new Anthropic({
+  apiKey: process.env.CLAUDE_API_KEY,
+});
+
 // ════════════════════════════════════════════════════════════════
-// 📝 SYSTEM PROMPT
+// 📦 CONFIG
 // ════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT_TEMPLATE = `
-Tu es NEXA, un assistant de conversion pour créateurs et entrepreneurs.
+const CHAT_CONFIG = {
+  preModelDelayMinMs: 800,
+  preModelDelayMaxMs: 2200,
+  maxHistoryMessages: 24,
+  typingCharMinMs: 12,
+  typingCharMaxMs: 28,
+};
 
-Objectif principal :
-- Qualifier rapidement le prospect (besoin, contexte, objection)
-- Avancer vers UNE action claire sans pression toxique
+// ════════════════════════════════════════════════════════════════
+// 🧠 SYSTEM PROMPT POUR LES CONVERSATIONS
+// ════════════════════════════════════════════════════════════════
 
-Style :
-- Messages courts (style DM), 1-3 phrases max
-- Adapte-toi au ton du prospect (cool ou pro)
-- AIDA naturel : accroche, questions, valeur, CTA
+const SYSTEM_PROMPT = `
+Tu es NEXA, un assistant de conversation pour aider un créateur / business à convertir des DM.
 
-Règles :
-- Ne mens jamais (pas de faux stock, fausse urgence, promesses chiffrées)
-- Présente le lien comme "l'étape logique suivante"
-- Max 1 lien par réponse, seulement si pertinent
-- Pas d'insultes, harcèlement, contenu sexuel ou illégal
+OBJECTIF PRINCIPAL :
+- Qualifier rapidement (besoin, contexte, objection).
+- Avancer vers UNE action claire (clic lien / réponse / rendez-vous) sans insistance toxique.
 
-Lien destination : [SALES_LINK]
+CADRE :
+- AIDA utile mais naturel : accroche courte, questions pertinentes, valeur, appel à l'action simple.
+- Style : messages courts (style DM), 1 à 3 phrases max sauf si le client demande du détail.
+- Miroir de ton : adapte-toi (plus cool ou plus pro) sans caricature.
 
-Réponds TOUJOURS en français avec au moins 1 phrase utile (jamais vide).
+RÈGLES DE CONVERSION (IMPORTANT) :
+- Ne mens pas : pas de faux stock, pas de fausse urgence, pas de promesse chiffrée inventée.
+- Ne présente pas le lien comme "la seule solution au monde". Présente-le comme "l'étape logique" quand ça match.
+- Ne spamme pas le lien : au maximum 1 lien par réponse, et seulement si pertinent.
+- Si le lien de vente est pertinent maintenant, tu peux le donner. Si ce n'est pas encore clair, pose 1 question ciblée.
+
+SÛRETÉ :
+- Pas d'insultes, pas de harcèlement, pas de contenu sexuel, pas d'incitation dangereuse.
+- Si demande illégale / piratage / contournement plateforme : refuse poliment et propose une alternative légitime.
+
+SORTIE :
+- Réponds toujours en français.
+- Réponds toujours avec au moins 1 phrase utile (jamais vide).
 `;
 
 // ════════════════════════════════════════════════════════════════
-// ⚙️ CONFIG
-// ════════════════════════════════════════════════════════════════
-
-const NEXA_CONFIG = {
-  preModelDelayMinMs: 500,
-  preModelDelayMaxMs: 1500,
-  maxHistoryMessages: 10,
-  typingCharMinMs: 10,
-  typingCharMaxMs: 20,
-  maxMessageLength: 5000,
-};
-
-// ════════════════════════════════════════════════════════════════
-// 🔄 STATE
-// ════════════════════════════════════════════════════════════════
-
-const state = {
-  history: [],
-  queue: [],
-  draining: false,
-};
-
-// ════════════════════════════════════════════════════════════════
-// ✅ VALIDATION
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Valide un message utilisateur
- */
-function validateMessage(userText) {
-  if (!userText || typeof userText !== 'string') {
-    throw new Error('Message must be non-empty string');
-  }
-
-  const text = userText.trim();
-  if (text.length < 1 || text.length > NEXA_CONFIG.maxMessageLength) {
-    throw new Error(
-      `Message must be 1-${NEXA_CONFIG.maxMessageLength} characters`
-    );
-  }
-
-  return text;
-}
-
-// ════════════════════════════════════════════════════════════════
-// 🤖 BUILD SYSTEM PROMPT
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Construit le system prompt avec le lien de vente
- */
-function buildSystemPrompt(salesLink) {
-  const link = (salesLink || '').trim() || 'https://ton-site-de-vente';
-  return SYSTEM_PROMPT_TEMPLATE.replace('[SALES_LINK]', link);
-}
-
-// ════════════════════════════════════════════════════════════════
-// 📚 HISTORY MANAGEMENT
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Trim l'historique (garde max 10 messages)
- */
-function trimHistory() {
-  if (state.history.length > NEXA_CONFIG.maxHistoryMessages) {
-    state.history = state.history.slice(-NEXA_CONFIG.maxHistoryMessages);
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// ⏱️ UTILS
+// 🔧 HELPER FUNCTIONS
 // ════════════════════════════════════════════════════════════════
 
 function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
-// ════════════════════════════════════════════════════════════════
-// 🎨 DOM MANIPULATION
-// ════════════════════════════════════════════════════════════════
-
-function setSendEnabled(enabled) {
-  const btn = document.getElementById('send-btn');
-  const input = document.getElementById('user-input');
-  if (btn) btn.disabled = !enabled;
-  if (input) input.disabled = !enabled;
-}
-
-function appendMessage(role, text) {
-  const chatMsgs = document.getElementById('chat-messages');
-  if (!chatMsgs) return;
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = `message ${role}-message`;
-
-  const p = document.createElement('p');
-  p.textContent =
-    (text ?? '').toString().trim() ||
-    "Désolé, j'ai pas pu générer une réponse. Peux-tu reformuler ?";
-  msgDiv.appendChild(p);
-
-  chatMsgs.appendChild(msgDiv);
-  msgDiv.scrollIntoView({ behavior: 'smooth' });
-}
-
-function showTypingIndicator(label = 'Nexa écrit…') {
-  const chatMsgs = document.getElementById('chat-messages');
-  if (!chatMsgs) return null;
-
-  const indicator = document.createElement('div');
-  indicator.className = 'typing-indicator';
-  indicator.setAttribute('aria-live', 'polite');
-
-  const span = document.createElement('span');
-  span.textContent = label;
-  indicator.appendChild(span);
-
-  chatMsgs.appendChild(indicator);
-  indicator.scrollIntoView({ behavior: 'smooth' });
-  return indicator;
-}
-
-function removeTypingIndicator(el) {
-  if (el && el.remove) el.remove();
-}
-
-// ════════════════════════════════════════════════════════════════
-// ✍️ TYPEWRITER EFFECT
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Affiche la réponse AI avec effet de "frappe"
- */
-async function typewriterAppendAi(fullText) {
-  const chatMsgs = document.getElementById('chat-messages');
-  if (!chatMsgs) return;
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'message ai-message';
-  const p = document.createElement('p');
-  msgDiv.appendChild(p);
-  chatMsgs.appendChild(msgDiv);
-
-  const text = (fullText ?? '').toString();
-  if (!text.trim()) {
-    p.textContent =
-      'Petit souci technique. Peux-tu recommencer ?';
-    msgDiv.scrollIntoView({ behavior: 'smooth' });
-    return;
+function trimHistory(history) {
+  if (history.length > CHAT_CONFIG.maxHistoryMessages) {
+    return history.slice(-CHAT_CONFIG.maxHistoryMessages);
   }
-
-  // Frappe character-by-character
-  let acc = '';
-  for (const ch of text) {
-    acc += ch;
-    p.textContent = acc;
-    msgDiv.scrollIntoView({ behavior: 'smooth' });
-    await sleep(randomBetween(NEXA_CONFIG.typingCharMinMs, NEXA_CONFIG.typingCharMaxMs));
-  }
+  return history;
 }
 
 // ════════════════════════════════════════════════════════════════
-// 🤖 CALL CLAUDE FUNCTION
+// 🤖 APPEL À CLAUDE
 // ════════════════════════════════════════════════════════════════
 
-/**
- * Appelle la function Claude
- */
-async function callClaude({
-  userText,
-  history,
-  systemPrompt,
-  context,
-}) {
-  const response = await fetch('/.netlify/functions/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: userText,
-      history,
-      system_instructions: systemPrompt,
-      context: context || 'Chat commercial',
-    }),
-  });
-
-  const raw = await response.text();
-  let data = null;
+async function callClaude({ userText, history, salesLink }) {
   try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch {
-    data = null;
-  }
+    const messages = [
+      ...history,
+      {
+        role: "user",
+        content: userText,
+      },
+    ];
 
-  if (!response.ok) {
-    const errMsg = data?.error || data?.message || raw || `HTTP ${response.status}`;
-    throw new Error(errMsg);
-  }
+    const systemPrompt = salesLink
+      ? SYSTEM_PROMPT.replace("[SALES_LINK]", salesLink)
+      : SYSTEM_PROMPT;
 
-  const reply = (data && (data.reply ?? data.text ?? data.output)) ?? '';
-  return reply.toString().trim();
-}
-
-// ════════════════════════════════════════════════════════════════
-// 💬 PROCESS MESSAGE
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Traite un message (avec delay, API call, etc)
- */
-async function processOneUserMessage(userText) {
-  const salesLink = localStorage.getItem('user_sales_link') || '';
-  const systemPrompt = buildSystemPrompt(salesLink);
-
-  // Delay optionnel (simulation "reading time")
-  await sleep(randomBetween(NEXA_CONFIG.preModelDelayMinMs, NEXA_CONFIG.preModelDelayMaxMs));
-
-  const typing = showTypingIndicator('Nexa réfléchit…');
-  setSendEnabled(false);
-
-  try {
-    const historySnapshot = [...state.history];
-
-    const reply = await callClaude({
-      userText,
-      history: historySnapshot,
-      systemPrompt,
-      context: 'Conversation commerciale',
+    const response = await client.messages.create({
+      model: "claude-opus-4-1",
+      max_tokens: 400,
+      temperature: 0.7,
+      system: systemPrompt,
+      messages: messages,
     });
 
-    // Update history
-    state.history.push({ role: 'user', content: userText });
-    state.history.push({
-      role: 'assistant',
-      content: reply || 'Peux-tu clarifier ton besoin ?',
-    });
-    trimHistory();
-
-    removeTypingIndicator(typing);
-
-    // Display
-    await typewriterAppendAi(reply);
-  } catch (e) {
-    console.error('Chat error:', e);
-    removeTypingIndicator(typing);
-
-    appendMessage(
-      'ai',
-      'Désolé, erreur technique. Réessaie dans 10s. Sinon, dis-moi ton objectif (vendre/booker/infos) en une phrase.'
-    );
-  } finally {
-    setSendEnabled(true);
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// 📤 QUEUE MANAGEMENT
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Vide la file d'attente des messages
- */
-async function drainQueue() {
-  if (state.draining) return;
-  state.draining = true;
-
-  try {
-    while (state.queue.length > 0) {
-      const next = state.queue.shift();
-      await processOneUserMessage(next);
-    }
-  } finally {
-    state.draining = false;
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// 🎯 PUBLIC API
-// ════════════════════════════════════════════════════════════════
-
-/**
- * Envoie un message (appelle depuis HTML)
- */
-async function sendChatMsg() {
-  const input = document.getElementById('user-input');
-  const message = (input?.value ?? '').trim();
-  if (!message) return;
-
-  try {
-    validateMessage(message);
+    const reply =
+      response.content[0].type === "text" ? response.content[0].text : "";
+    return reply.toString().trim();
   } catch (err) {
-    appendMessage('error', err.message);
-    return;
+    console.error("❌ Claude API Error:", err);
+    throw new Error("Erreur lors de la génération de la réponse");
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 📊 TRAITEMENT D'UN MESSAGE USER
+// ════════════════════════════════════════════════════════════════
+
+async function processUserMessage({
+  userText,
+  history = [],
+  salesLink = "",
+  quotaAvailable = 40,
+}) {
+  try {
+    // Validation
+    if (!userText || userText.trim().length === 0) {
+      throw new Error("Message vide");
+    }
+
+    if (quotaAvailable <= 0) {
+      throw new Error("Quota dépassé pour aujourd'hui");
+    }
+
+    // Délai "lecture"
+    await sleep(
+      randomBetween(
+        CHAT_CONFIG.preModelDelayMinMs,
+        CHAT_CONFIG.preModelDelayMaxMs
+      )
+    );
+
+    // Appel Claude
+    const aiReply = await callClaude({
+      userText,
+      history,
+      salesLink,
+    });
+
+    if (!aiReply || aiReply.length === 0) {
+      throw new Error("Réponse vide de l'IA");
+    }
+
+    // Mise à jour historique
+    const updatedHistory = [
+      ...history,
+      { role: "user", content: userText },
+      { role: "assistant", content: aiReply },
+    ];
+
+    const trimmedHistory = trimHistory(updatedHistory);
+
+    return {
+      success: true,
+      message: aiReply,
+      history: trimmedHistory,
+      quota_remaining: quotaAvailable - 1,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.error("❌ Process Message Error:", err);
+    return {
+      success: false,
+      error: err.message || "Erreur inconnue",
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 📤 NETLIFY HANDLER
+// ════════════════════════════════════════════════════════════════
+
+exports.handler = async (event) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
   }
 
-  // Affiche user message
-  appendMessage('user', message);
-  input.value = '';
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
+  }
 
-  // Enqueue
-  state.queue.push(message);
-  void drainQueue();
-}
+  try {
+    const body = JSON.parse(event.body || "{}");
 
-// ════════════════════════════════════════════════════════════════
-// 📤 EXPORT
-// ════════════════════════════════════════════════════════════════
+    const {
+      user_text,
+      history = [],
+      sales_link = "",
+      quota_available = 40,
+    } = body;
 
-if (typeof window !== 'undefined') {
-  window.sendChatMsg = sendChatMsg;
-}
+    if (!user_text) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: "user_text required" }),
+      };
+    }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    sendChatMsg,
-    buildSystemPrompt,
-    trimHistory,
-  };
-}
+    const result = await processUserMessage({
+      userText: user_text,
+      history,
+      salesLink: sales_link,
+      quotaAvailable: quota_available,
+    });
+
+    const statusCode = result.success ? 200 : 400;
+
+    return {
+      statusCode,
+      headers,
+      body: JSON.stringify(result),
+    };
+  } catch (err) {
+    console.error("🔥 Chat Handler Error:", err);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        error: "Internal Server Error",
+        details: err.message,
+      }),
+    };
+  }
+};
