@@ -4,11 +4,16 @@
  */
 
 // ===== VARIABLES GLOBALES (déclarées en premier pour éviter les ReferenceError) =====
+// ════════════════════════════════════════════════════════════════
+// 🏷️ SPA FLAG — empêche dashboard.js de s'auto-initialiser
+// ════════════════════════════════════════════════════════════════
+window.__nexaSPA = true;
+
 let currentLang = 'fr';
 let td = {}; // tunnel data (données du tunnel de qualification)
 let dashChatHist = []; // historique du chat dashboard (déclaré globalement pour signOut et loadUserData)
 // State — déclaré ici pour être disponible dans signOut() et toutes les fonctions
-let currentPlan = 'starter';
+let currentPlan = 'free';
 let connected = [];
 let chatOpen = false;
 let chatHist = [];
@@ -27,12 +32,12 @@ let chatHist = [];
     }
 })();
 
-// ===== STRIPE PLANS ANNUELS =====
+// ===== STRIPE PLANS =====
 const STRIPE_PLANS = {
-    "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", prospects: 10 },
-    "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", prospects: 80 },
-    "price_1TT4XwP8svYH1bkOoPQgfYmF": { name: "Business Annuel", prospects: 300 },
-    "price_1TT4XNP8svYH1bkORkrNN1P6": { name: "Elite Annuel", prospects: 750 }
+    "price_1THSyjP8svYH1bkOt686fqqC": { name: "Starter", messages: 40 },
+    "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", messages: 40 },
+    "price_1THSzsP8svYH1bkOndl82cmU": { name: "Pro", messages: 75 },
+    "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", messages: 75 }
 };
 
 // ===== SAVE AND SYNC STRIPE =====
@@ -55,8 +60,8 @@ async function saveAndSyncStripe() {
         const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
         if(sb && user.id) {
             const { error } = await sb.from('users').update({
-                stripe_connect_id: stripeId,
-                commission_rate: 0.80
+                stripe_connect_id: stripeId
+                // commission_rate retiré — défini côté serveur uniquement
             }).eq('id', user.id);
             if(error) throw error;
         }
@@ -116,7 +121,7 @@ async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await
             if(user.email) {
                 await loadDashboard(user);
                 showPage('dashboard-page');
-                setTimeout(() => alert('✅ TikTok connecté ! Bienvenue ' + (tiktokInfo.displayName || '') + ' !'), 500);
+                setTimeout(() => toast('✅ TikTok connecté ! Bienvenue ' + (tiktokInfo.displayName || '') + ' !', 'ok'), 500);
             }
             return true;
         } catch(e) {
@@ -126,7 +131,7 @@ async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await
 
     if(tiktok === 'error') {
         window.history.replaceState({}, document.title, window.location.pathname);
-        setTimeout(() => alert('❌ Connexion TikTok échouée. Réessaie !'), 300);
+        setTimeout(() => toast('❌ Connexion TikTok échouée. Réessaie !', 'err'), 300);
         return true;
     }
     return false;
@@ -135,34 +140,70 @@ async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await
 async function checkStripeReturn() {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
-    // CORRECTION: valider le plan avant utilisation pour éviter toute manipulation d'URL
-    const validPlans = ['starter','pro','business','elite','starter-once','pro-once','business-once','elite-once'];
-    const rawPlan = params.get('plan') || localStorage.getItem('nexaai_pending_plan') || 'starter';
-    const plan = validPlans.includes(rawPlan) ? rawPlan : 'starter';
+    const sessionId = params.get('session_id');
 
     if(payment === 'success') {
-        // Paiement réussi — mettre à jour le plan et afficher succès
         const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-        const planBase = plan.replace('-once', '');
-        user.plan = planBase;
-        localStorage.setItem('nexaai_user', JSON.stringify(user));
-        localStorage.removeItem('nexaai_pending_plan');
 
-        // Mettre à jour dans Supabase — CORRECTION: await pour éviter perte de données si la page recharge
-        if(sb && user.email) {
+        // CORRECTION: vérifier le paiement côté serveur via verify-payment.js
+        // Empêche toute manipulation d'URL (?plan=elite sans avoir payé)
+        if(sessionId && user.email) {
             try {
-                await sb.from('users').update({ plan: planBase }).eq('email', user.email);
-                const { data: userRow } = await sb.from('users').select('id').eq('email', user.email).single();
-                if(userRow) {
-                    const prices = {starter:39,'starter-once':390,pro:94,'pro-once':940,business:194,'business-once':1940,elite:494,'elite-once':4940};
-                    await sb.from('paiements').insert([{
-                        user_id: userRow.id,
-                        plan: planBase,
-                        montant: prices[plan] || 39,
-                        type_paiement: plan.includes('-once') ? 'unique' : 'mensuel'
-                    }]);
+                toast('⏳ Vérification du paiement...', 'ok');
+                const res = await fetch('/.netlify/functions/verify-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, email: user.email })
+                });
+                const data = await res.json();
+
+                if(!res.ok || !data.valid) {
+                    console.error('verify-payment failed:', data.error);
+                    toast('❌ Vérification paiement échouée : ' + (data.error || 'erreur inconnue'), 'err');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showPage('home');
+                    return true;
                 }
-            } catch(e) { console.error('Supabase payment sync error:', e); }
+
+                // Plan vérifié côté serveur — on fait confiance à la réponse
+                const planBase = data.plan || 'starter';
+                user.plan = planBase;
+                user.isPartner = !!data.isPartner;
+                localStorage.setItem('nexaai_user', JSON.stringify(user));
+                localStorage.removeItem('nexaai_pending_plan');
+
+                // Supabase déjà mis à jour par verify-payment.js côté serveur
+                // On enregistre juste le paiement local
+                if(sb && user.email) {
+                    try {
+                        const { data: userRow } = await sb.from('users').select('id').eq('email', user.email).single();
+                        if(userRow) {
+                            const prices = {starter:39,pro:59,partner:497};
+                            await sb.from('paiements').insert([{
+                                user_id: userRow.id,
+                                plan: planBase,
+                                montant: prices[planBase] || 39,
+                                type_paiement: 'mensuel',
+                                stripe_session_id: sessionId
+                            }]);
+                        }
+                    } catch(e) { console.error('Supabase paiements insert error:', e); }
+                }
+
+            } catch(e) {
+                console.error('checkStripeReturn verify error:', e);
+                toast('❌ Erreur réseau lors de la vérification', 'err');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showPage('home');
+                return true;
+            }
+        } else {
+            // Pas de session_id → on ne peut pas vérifier → on refuse
+            console.warn('checkStripeReturn: pas de session_id, paiement non vérifié');
+            toast('❌ Paiement non vérifiable, contacte le support', 'err');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showPage('home');
+            return true;
         }
 
         // Nettoyer l'URL
@@ -175,7 +216,7 @@ async function checkStripeReturn() {
     if(payment === 'cancel') {
         window.history.replaceState({}, document.title, window.location.pathname);
         showPage('home');
-        setTimeout(() => alert('Paiement annulé. Tu peux réessayer quand tu veux !'), 500);
+        setTimeout(() => toast('Paiement annulé. Tu peux réessayer quand tu veux !', 'err'), 500);
         return true;
     }
     return false;
@@ -196,6 +237,7 @@ window.addEventListener('load', async () => {
                 "https://aubjtlxwqndfawdidwfq.supabase.co",
                 "sb_publishable_ac-EaAMzdCCmFRxU6Iny9A_NgMHlUHB"
             );
+            if(await checkEmailVerifyReturn()) return;
             if(await checkTikTokReturn()) return;
             if(await checkStripeReturn()) return;
 
@@ -299,8 +341,7 @@ function showSuccessPage(user) {
     const planNames = {
         starter: 'Starter',
         pro: 'Pro 🎯',
-        business: 'Business 💼',
-        elite: 'Elite 👑'
+        partner: '🤝 Partner',
     };
     const planName = planNames[user.plan] || 'Starter';
 
@@ -385,9 +426,9 @@ function modalNext(step) {
         if(!elMPrenom || !elMEmail) return; // CORRECTION: null-check
         const prenom = elMPrenom.value.trim();
         const email = elMEmail.value.trim();
-        if(!prenom || !email) { alert('Merci de remplir prénom et email !'); return; }
+        if(!prenom || !email) { toast('⚠️ Merci de remplir prénom et email !', 'err'); return; }
         // CORRECTION: validation format email
-        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Merci d\'entrer un email valide !'); return; }
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('⚠️ Merci d'entrer un email valide !', 'err'); return; }
         td.prenom = prenom;
         td.email = email;
         // CORRECTION: null-checks champs onboarding step 1
@@ -400,7 +441,7 @@ function modalNext(step) {
         const elMBusiness = document.getElementById('m-business');
         if(!elMBusiness) return; // CORRECTION: null-check
         const business = elMBusiness.value.trim();
-        if(!business) { alert('Entre le nom de ton business !'); return; }
+        if(!business) { toast('⚠️ Entre le nom de ton business !', 'err'); return; }
         td.business = business;
         // CORRECTION: null-checks champs onboarding step 2
         const elMObj = document.getElementById('m-objectif');
@@ -535,12 +576,11 @@ function startTunnel(plan) {
     td.plan = plan;
     const isOnce = plan.includes('-once');
     const planBase = plan.replace('-once', '');
-    const planNames = {starter:'Starter', pro:'Pro 🎯', business:'Business 💼', elite:'Elite 👑'};
+    const planNames = { starter:'Starter ✨', pro:'Pro 🚀', affiliation:'Ambassadeur 🤝' };
     const planPrices = {
-        'starter':'€39', 'starter-once':'€390 (paiement unique)',
-        'pro':'€94', 'pro-once':'€940 (paiement unique)',
-        'business':'€194', 'business-once':'€1940 (paiement unique)',
-        'elite':'€494', 'elite-once':'€4940 (paiement unique)'
+        'starter':'€39', 'starter-once':'€340 (paiement unique)',
+        'pro':'€59',     'pro-once':'€590 (paiement unique)',
+        'affiliation':'Gratuit'
     };
     const payPlanName = document.getElementById('pay-plan-name');
     const payPlanPrice = document.getElementById('pay-plan-price');
@@ -586,7 +626,7 @@ async function handlePlanSelection(plan) {
             if(email) td.email = email; // CORRECTION: synchroniser td.email pour éviter perte de contexte
         }
         if(!email) {
-            alert('Email requis ! Connecte-toi ou passe par le tunnel avec ton email.');
+            toast('⚠️ Email requis ! Connecte-toi ou passe par le tunnel avec ton email.', 'err');
             resetStripePayButtons();
             return;
         }
@@ -633,7 +673,7 @@ async function handlePlanSelection(plan) {
         throw new Error(data.error || 'Pas d\'URL de paiement renvoyée');
     } catch(err) {
         resetStripePayButtons();
-        alert('Erreur : ' + (err && err.message ? err.message : String(err)));
+        toast('❌ Erreur : ' + (err && err.message ? err.message : String(err)), 'err');
     }
 }
 
@@ -647,9 +687,9 @@ function goStep2() {
     if(!elTPrenom || !elTEmail) return; // CORRECTION: null-check
     const p = elTPrenom.value.trim();
     const e = elTEmail.value.trim();
-    if(!p || !e) { alert('Merci de remplir ton prénom et ton email !'); return; }
+    if(!p || !e) { toast('⚠️ Merci de remplir ton prénom et ton email !', 'err'); return; }
     // CORRECTION: validation format email
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('Merci d\'entrer un email valide !'); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast('⚠️ Merci d'entrer un email valide !', 'err'); return; }
     td.prenom = p; td.email = e;
     // CORRECTION: null-checks champs tunnel step 1
     const elTPhone = document.getElementById('t-phone');
@@ -663,7 +703,7 @@ function goStep3() {
     const elTBusiness = document.getElementById('t-business');
     if(!elTBusiness) return; // CORRECTION: null-check
     const b = elTBusiness.value.trim();
-    if(!b) { alert('Merci d\'indiquer le nom de ton business !'); return; }
+    if(!b) { toast('⚠️ Merci d'indiquer le nom de ton business !', 'err'); return; }
     td.business = b;
     // CORRECTION: null-checks champs tunnel step 2
     const elTDms = document.getElementById('t-dms');
@@ -725,7 +765,7 @@ async function loadDashboard(user) {
     }
     // Calcul du revenu estimé depuis les prospects closés
     const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
-    const planRevenue = { starter: 39, pro: 94, business: 194, elite: 494, free: 0 };
+    const planRevenue = { starter: 39, pro: 59, free: 0 };
     // CORRECTION: utiliser le prix du produit client si renseigné, sinon le tarif du plan
     const revenueEstimate = closedCount * (parseFloat(user.prix_produit) || planRevenue[user.plan] || 0);
     // CORRECTION: null-check sur st-revenue
@@ -782,12 +822,11 @@ async function loadDashboard(user) {
         elAffLink.style.display = 'block';
         elAffLink.textContent = '🔗 Ton lien : ' + window.location.origin + '?ref=' + user.stripe_connect_id;
     }
-    const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
+    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
     const planPrices = {
-        starter:'€39/mois', 'starter-once':'€390 (unique)',
-        pro:'€94/mois',     'pro-once':'€940 (unique)',
-        business:'€194/mois','business-once':'€1940 (unique)',
-        elite:'€494/mois',  'elite-once':'€4940 (unique)',
+        starter:'€39/mois', 'starter-once':'€340 (unique)',
+        pro:'€59/mois',     'pro-once':'€590 (unique)',
+        affiliation:'€0/mois',
         free:'—'
     };
     const elPlan = document.getElementById('s-plan'); if(elPlan) elPlan.textContent = planNames[user.plan] || 'Starter';
@@ -909,8 +948,8 @@ async function saveAffiliationSettings() {
             affiliation_mode: mode,
             stripe_connect_id: stripeId,
             store_url: storeUrl || user.store_url || '',
-            plan: user.plan,
-            commission_rate: 0.80
+            plan: user.plan
+            // commission_rate retiré — défini côté serveur uniquement
         });
 
         localStorage.setItem('nexaai_user', JSON.stringify(user));
@@ -944,61 +983,261 @@ function onAffModeChange() {
 }
 
 // ===== AUTH =====
-async function register() {
-    const elRegEmail = document.getElementById('regEmail');
-    const elRegPwd = document.getElementById('regPwd');
-    const elRegPwd2 = document.getElementById('regPwd2');
-    if(!elRegEmail || !elRegPwd || !elRegPwd2) return; // CORRECTION: null-check
-    const email = elRegEmail.value.trim();
-    const pwd = elRegPwd.value.trim();
-    const pwd2 = elRegPwd2.value.trim();
+// ════════════════════════════════════════════════════════════════
+// 🔐 UTILITAIRES VÉRIFICATION EMAIL
+// ════════════════════════════════════════════════════════════════
 
-    if(!email || !pwd) { alert('Merci de remplir tous les champs !'); return; }
-    if(pwd !== pwd2) { alert('Les mots de passe ne correspondent pas !'); return; }
-    if(pwd.length < 6) { alert('Le mot de passe doit faire au moins 6 caractères !'); return; }
+// ════════════════════════════════════════════════════════════════
+// 🔐 UTILITAIRES SÉCURITÉ & VÉRIFICATION EMAIL
+// ════════════════════════════════════════════════════════════════
+
+const sanitize = (val, maxLen = 255) =>
+  escHtml((val || '').toString().trim()).slice(0, maxLen);
+
+const genToken = () => crypto.getRandomValues(new Uint8Array(32)).join('');
+
+let _rateLimits = {};
+const checkRate = (key, limit, ms) => {
+  const now = Date.now();
+  _rateLimits[key] = (_rateLimits[key] || []).filter(t => now - t < ms);
+  if (_rateLimits[key].length >= limit) throw new Error('Trop de tentatives');
+  _rateLimits[key].push(now);
+};
+
+// LS est défini dans utils.js — chargé avant nexa.js
+
+const isOnline = () => {
+  if (!navigator.onLine) throw new Error('❌ Pas de connexion internet');
+  return true;
+};
+
+const withTimeout = (promise, ms = 8000) => Promise.race([
+  promise,
+  new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms))
+]);
+
+const MSG = {
+  offline: '❌ Pas de connexion internet',
+  fillAll: '⚠️ Remplir tous les champs',
+  pwdTooShort: '⚠️ Min 8 caractères',
+  emailInvalid: '⚠️ Email invalide',
+  confirmChecking: '⏳ Vérification...',
+  emailConfirmed: '✅ Email confirmé !',
+  emailNotYet: '❌ Email non confirmé',
+  resendOk: '✅ Email renvoyé',
+  finishSaving: '⏳ Enregistrement...'
+};
+
+const _state = {
+  btype: null,
+  finishing: false,
+  csrf: genToken(),
+  sessionStart: Date.now(),
+  _authUnsub: null,
+  _resendTimer: null
+};
+
+let _emailVerifyPageBuilt = false;
+
+// ════════════════════════════════════════════════════════════════
+// 1️⃣ REGISTER AVEC VÉRIFICATION EMAIL
+// ════════════════════════════════════════════════════════════════
+
+async function register() {
+  try {
+    isOnline();
+    checkRate('register', 5, 900000);
+
+    const email = sanitize(document.getElementById('regEmail')?.value);
+    const pwd = document.getElementById('regPwd')?.value || '';
+    const pwd2 = document.getElementById('regPwd2')?.value || '';
+
+    if (!email || !pwd) throw new Error(MSG.fillAll);
+    if (pwd !== pwd2) throw new Error('Mots de passe différents');
+    if (pwd.length < 8) throw new Error(MSG.pwdTooShort);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new Error(MSG.emailInvalid);
 
     const btn = document.getElementById('regBtn');
-    if(!btn) return; // CORRECTION: null-check
-    btn.textContent = '⏳ Création...'; btn.disabled = true;
+    if (btn) { btn.textContent = '⏳ Création...'; btn.disabled = true; }
 
-    if(!sb) { alert('Erreur de connexion, rechargez la page'); btn.textContent = 'Créer mon compte'; btn.disabled = false; return; }
-
-    // Créer le compte Supabase Auth
-    const { data, error } = await sb.auth.signUp({ email, password: pwd });
-    if(error) {
-        alert('Erreur : ' + error.message);
-        btn.textContent = 'Créer mon compte'; btn.disabled = false;
-        return;
-    }
-
-    // Créer le profil dans la table users
-    const newUser = {
+    const client = getSb();
+    const { data, error } = await withTimeout(
+      client.auth.signUp({
         email,
-        prenom: email.split('@')[0],
-        plan: 'free',
-        platforms: [],
-        status: 'actif'
+        password: pwd,
+        options: { emailRedirectTo: window.location.origin + window.location.pathname + '?verified=1' }
+      })
+    );
+
+    if (error) throw error;
+
+    const prenom = email.split('@')[0].replace(/[0-9._\-+]/g, ' ').trim().split(/\s+/)[0];
+    const newUser = {
+      id: data.user?.id || genToken(),
+      email,
+      prenom: prenom.charAt(0).toUpperCase() + prenom.slice(1),
+      plan: 'free',
+      platforms: [],
+      status: 'pending_verify',
+      emailVerified: false,
+      createdAt: new Date().toISOString(),
+      prospects: []
     };
-    try {
-        await saveUserToDB(newUser);
-    } catch(dbErr) {
-        console.error('saveUserToDB error:', dbErr);
-        // Ne pas bloquer l'inscription si Supabase échoue
-    }
 
-    btn.textContent = 'Créer mon compte'; btn.disabled = false; // CORRECTION: réactiver le bouton après saveUserToDB
+    LS.setUser(newUser);
+    try { await client.from('users').insert([newUser]); } catch(e) { console.error('DB insert:', e); }
 
-    // Garder aussi en localStorage pour l'admin
-    // CORRECTION: utiliser l'ID Supabase Auth pour éviter la divergence avec les requêtes BDD
-    const localUser = { ...newUser, id: (data.user?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2))), createdAt: new Date().toISOString(), prospects: [] };
-    const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
-    if(!users.find(u => u.email === email)) { users.push(localUser); localStorage.setItem('nexaai_users', JSON.stringify(users)); }
-    localStorage.setItem('nexaai_user', JSON.stringify(localUser));
-    td.email = email;
+    showEmailVerifyPage(email);
+    toast('✅ Email de confirmation envoyé', 'ok');
 
-    showPage('bot-qualify');
-    setTimeout(() => botQualifyStart(email), 300);
+  } catch (err) {
+    toast('❌ ' + err.message, 'err');
+  } finally {
+    const btn = document.getElementById('regBtn');
+    if (btn) { btn.textContent = 'Créer mon compte'; btn.disabled = false; }
+  }
 }
+
+// ════════════════════════════════════════════════════════════════
+// 2️⃣ PAGE VÉRIFICATION EMAIL
+// ════════════════════════════════════════════════════════════════
+
+function showEmailVerifyPage(email) {
+  if (_emailVerifyPageBuilt) {
+    const el = document.getElementById('verify-email-display');
+    if (el) el.textContent = email;
+    const st = document.getElementById('verify-status');
+    if (st) st.textContent = '';
+    showPage('email-verify');
+    return;
+  }
+  _emailVerifyPageBuilt = true;
+
+  let page = document.getElementById('email-verify');
+  if (!page) {
+    page = document.createElement('div');
+    page.id = 'email-verify';
+    page.className = 'page';
+    document.body.appendChild(page);
+  }
+
+  page.innerHTML = `
+    <div class="tunnel-wrap">
+      <div class="tunnel-card" style="max-width:520px;margin:0 auto;padding:40px;text-align:center;">
+        <div style="font-size:3.5rem;margin-bottom:20px;">📧</div>
+        <h2 style="color:var(--accent);font-size:1.8rem;margin-bottom:12px;">Confirme ton email</h2>
+        <p style="color:var(--text-light);margin-bottom:8px;">Lien envoyé à :</p>
+        <p id="verify-email-display" style="color:var(--accent);font-weight:700;word-break:break-all;margin-bottom:24px;">${escHtml(email)}</p>
+        <div style="background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.2);border-radius:10px;padding:16px;margin-bottom:24px;text-align:left;font-size:0.88rem;color:var(--text-light);">
+          <p style="color:var(--accent);font-weight:700;margin-bottom:10px;">📋 Étapes :</p>
+          <p>1. Ouvre ta boîte mail</p>
+          <p>2. Clique sur le lien de confirmation</p>
+          <p>3. Reviens ici et clique sur le bouton</p>
+          <p style="opacity:0.7;">💡 Vérifie aussi tes spams</p>
+        </div>
+        <button onclick="checkEmailVerified()" class="btn btn-primary btn-full" style="margin-bottom:10px;">✅ J'ai confirmé mon email</button>
+        <button onclick="resendVerifyEmail()" class="btn btn-secondary btn-full" style="margin-bottom:10px;">🔁 Renvoyer l'email</button>
+        <button onclick="showPage('home')" class="btn btn-ghost btn-full">← Retour</button>
+        <p id="verify-status" role="status" style="margin-top:12px;font-size:0.85rem;min-height:18px;color:var(--text-light);"></p>
+      </div>
+    </div>`;
+
+  showPage('email-verify');
+}
+
+// ════════════════════════════════════════════════════════════════
+// 3️⃣ VÉRIFIER EMAIL CONFIRMÉ
+// ════════════════════════════════════════════════════════════════
+
+async function checkEmailVerified() {
+  try {
+    isOnline();
+    checkRate('emailCheck', 10, 60000);
+
+    const statusEl = document.getElementById('verify-status');
+    if (statusEl) statusEl.textContent = MSG.confirmChecking;
+
+    const client = getSb();
+    const { data: { user }, error } = await withTimeout(client.auth.getUser());
+    if (error) throw error;
+
+    if (user?.email_confirmed_at) {
+      if (statusEl) statusEl.textContent = MSG.emailConfirmed;
+      toast(MSG.emailConfirmed, 'ok');
+
+      const stored = LS.user();
+      stored.emailVerified = true;
+      stored.status = 'actif';
+      LS.setUser(stored);
+
+      try {
+        await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email);
+      } catch(e) { console.error('DB update:', e); }
+
+      setTimeout(() => {
+        showPage('bot-qualify');
+        if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
+      }, 1000);
+    } else {
+      if (statusEl) statusEl.textContent = MSG.emailNotYet;
+      toast(MSG.emailNotYet, 'err');
+    }
+  } catch(err) {
+    toast('❌ ' + err.message, 'err');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 4️⃣ RENVOYER EMAIL DE VÉRIFICATION
+// ════════════════════════════════════════════════════════════════
+
+async function resendVerifyEmail() {
+  try {
+    if (_state._resendTimer) { toast('⏳ Attends 60s avant de renvoyer', 'err'); return; }
+    checkRate('resend', 3, 900000);
+
+    const email = document.getElementById('verify-email-display')?.textContent?.trim();
+    if (!email) throw new Error('Email introuvable');
+
+    const client = getSb();
+    const { error } = await withTimeout(client.auth.resend({ type: 'signup', email }));
+    if (error) throw error;
+
+    toast(MSG.resendOk, 'ok');
+    _state._resendTimer = setTimeout(() => { _state._resendTimer = null; }, 60000);
+
+  } catch(err) {
+    toast('❌ ' + err.message, 'err');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 5️⃣ GÉRER RETOUR APRÈS CLIC SUR LIEN EMAIL
+// ════════════════════════════════════════════════════════════════
+
+async function checkEmailVerifyReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('verified') && !params.has('access_token') && !window.location.hash.includes('access_token')) {
+    return false;
+  }
+  try {
+    const client = getSb();
+    const { data: { user } } = await client.auth.getUser();
+    if (user?.email_confirmed_at) {
+      const stored = LS.user();
+      stored.emailVerified = true;
+      stored.status = 'actif';
+      LS.setUser(stored);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      toast('✅ Email confirmé, bienvenue !', 'ok');
+      showPage('bot-qualify');
+      if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
+      return true;
+    }
+  } catch(e) { console.error('checkEmailVerifyReturn:', e); }
+  return false;
+}
+
 
 async function login() {
     const elLoginEmail = document.getElementById('loginEmail');
@@ -1006,21 +1245,21 @@ async function login() {
     if(!elLoginEmail || !elLoginPwd) return; // CORRECTION: null-check
     const email = elLoginEmail.value.trim();
     const pwd = elLoginPwd.value.trim();
-    if(!email || !pwd) { alert('Merci de remplir tous les champs !'); return; }
+    if(!email || !pwd) { toast('⚠️ Merci de remplir tous les champs !', 'err'); return; }
 
     const btn = document.querySelector('#login .btn-primary');
     if(btn) { btn.textContent = '⏳ Connexion...'; btn.disabled = true; }
 
     if(!sb) {
-        alert('Erreur de connexion, rechargez la page');
-        if(btn) { btn.textContent = 'Se connecter'; btn.disabled = false; } // CORRECTION: réactiver le bouton
+        toast('❌ Erreur de connexion, rechargez la page', 'err');
+        if(btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
         return;
     }
 
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
 
     if(error) {
-        alert('Email ou mot de passe incorrect.');
+        toast('❌ Email ou mot de passe incorrect.', 'err');
         if(btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
         return;
     }
@@ -1098,7 +1337,7 @@ async function checkAdminLogin() {
                 aspErr.value = '';
             }
         }
-    } catch(e) { alert('Erreur de connexion'); }
+    } catch(e) { toast('❌ Erreur de connexion', 'err'); }
 }
 function closeAdminPanel() {
     const ap = document.getElementById('adminPanel');
@@ -1117,7 +1356,7 @@ function viewUserDetail(email) {
     const modal = document.getElementById('userDetailModal');
     const content = document.getElementById('userDetailContent');
     if(!modal || !content) return; // CORRECTION: null-check
-    const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
+    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
     const date = new Date(user.created_at || user.createdAt || Date.now()).toLocaleDateString('fr-FR');
 
     var rows = [
@@ -1154,9 +1393,37 @@ function closeUserDetail() {
     if(udm) udm.style.display = 'none';
 }
 
+// ════════════════════════════════════════════════════════════════
+// 🪟 CONFIRM ADMIN — remplace window.confirm() (non stylisable)
+// ════════════════════════════════════════════════════════════════
+function adminConfirm(message) {
+    return new Promise(resolve => {
+        let modal = document.getElementById('_adminConfirmModal');
+        if(!modal) {
+            modal = document.createElement('div');
+            modal.id = '_adminConfirmModal';
+            modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+              <div style="background:#111;border:1px solid #333;border-radius:14px;padding:28px 32px;max-width:380px;width:90%;text-align:center;">
+                <p id="_adminConfirmMsg" style="color:var(--text);font-size:0.97rem;margin-bottom:24px;line-height:1.5;"></p>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                  <button id="_adminConfirmNo"  style="padding:10px 24px;border-radius:8px;border:1px solid #555;background:transparent;color:#ccc;cursor:pointer;">Annuler</button>
+                  <button id="_adminConfirmYes" style="padding:10px 24px;border-radius:8px;border:none;background:#ff4444;color:#fff;font-weight:700;cursor:pointer;">Confirmer</button>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+        }
+        document.getElementById('_adminConfirmMsg').textContent = message;
+        modal.style.display = 'flex';
+        const close = ok => { modal.style.display = 'none'; resolve(ok); };
+        document.getElementById('_adminConfirmYes').onclick = () => close(true);
+        document.getElementById('_adminConfirmNo').onclick  = () => close(false);
+    });
+}
+
 async function toggleSuspend(email, isSuspended) {
     const newStatus = isSuspended ? 'actif' : 'suspended';
-    if(!isSuspended && !confirm('Suspendre le compte de ' + email + ' ?')) return;
+    if(!isSuspended && !(await adminConfirm('Suspendre le compte de ' + email + ' ?'))) return;
 
     if(sb) await sb.from('users').update({ status: newStatus }).eq('email', email);
 
@@ -1177,7 +1444,7 @@ async function sendAdminMessage() {
     if(!elMsgEmail2 || !elMsgContent2) return; // CORRECTION: null-check
     const email = elMsgEmail2.value.trim();
     const rawMsg = elMsgContent2.value.trim();
-    if(!rawMsg) { alert('Écris un message !'); return; }
+    if(!rawMsg) { toast('⚠️ Écris un message !', 'err'); return; }
     // Sanitisation : limiter la longueur et supprimer les balises HTML
     const msg = rawMsg.replace(/<[^>]*>/g, '').slice(0, 2000);
 
@@ -1201,12 +1468,12 @@ async function sendAdminMessage() {
     // Vider les champs (utilise les variables déjà déclarées en haut)
     elMsgContent2.value = '';
     elMsgEmail2.value = '';
-    alert('✅ Message envoyé' + (email ? ' à ' + email : ' à tous les clients') + ' !');
+    toast('✅ Message envoyé' + (email ? ' à ' + email : ' à tous les clients') + ' !', 'ok');
 }
 
 function exportCSV() {
     const headers = ['Prénom','Email','Business','Type','TikTok','Forfait','Inscrit','Prospects','Statut'];
-    const planNames = {starter:'Starter',pro:'Pro',business:'Business',elite:'Elite',free:'Gratuit'};
+    const planNames = {starter:'Starter',pro:'Pro',affiliation:'Ambassadeur',free:'Gratuit'};
     const rows = allUsers.map(u => [
         u.prenom || '',
         u.email || '',
@@ -1271,7 +1538,7 @@ function renderAdminStats(users) {
     const suspended = users.filter(u => u.status === 'suspended').length;
 
     // MRR
-    const planPrices = {starter:39, pro:94, business:194, elite:494};
+    const planPrices = {starter:39, pro:59};
     const mrr = users.filter(u => u.plan && u.plan !== 'free')
         .reduce((sum, u) => sum + (planPrices[u.plan] || 0), 0);
 
@@ -1302,7 +1569,7 @@ function renderRevenueChart(users) {
     const labels = document.getElementById('revenue-chart-labels');
     if(!chart || !labels) return;
 
-    const planPrices = {starter:39, pro:94, business:194, elite:494};
+    const planPrices = {starter:39, pro:59};
     const months = {};
     const now = new Date();
 
@@ -1352,8 +1619,8 @@ function renderAdminUsers(users) {
         return;
     }
 
-    const planColors = {starter:'var(--accent)',pro:'#60c8ff',business:'#a78bfa',elite:'gold',free:'#555'};
-    const planNames = {starter:'Starter',pro:'Pro 🎯',business:'Business 💼',elite:'Elite 👑',free:'Gratuit'};
+    const planColors = {starter:'var(--accent)',pro:'#60c8ff',affiliation:'#f59e0b',free:'#555'};
+    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
 
     tbody.innerHTML = '';
     users.forEach(u => {
@@ -1378,8 +1645,7 @@ function renderAdminUsers(users) {
                 '<option value="free"' + (plan==='free'?' selected':'') + '>Gratuit</option>' +
                 '<option value="starter"' + (plan==='starter'?' selected':'') + '>Starter</option>' +
                 '<option value="pro"' + (plan==='pro'?' selected':'') + '>Pro</option>' +
-                '<option value="business"' + (plan==='business'?' selected':'') + '>Business</option>' +
-                '<option value="elite"' + (plan==='elite'?' selected':'') + '>Elite</option>' +
+                '<option value="affiliation"' + (plan==='affiliation'?' selected':'') + '>Ambassadeur</option>' +
             '</select></td>',
             '<td style="color:var(--text-light);font-size:0.82rem;">' + dateStr + '</td>',
             '<td style="text-align:center;color:var(--accent);font-weight:700;">' + prospects + '</td>',
@@ -1408,7 +1674,7 @@ function filterAdminUsers(search) {
     if(filter === 'paying') filtered = filtered.filter(u => u.plan && u.plan !== 'free');
     else if(filter === 'free') filtered = filtered.filter(u => !u.plan || u.plan === 'free');
     else if(filter === 'suspended') filtered = filtered.filter(u => u.status === 'suspended');
-    else if(['starter','pro','business','elite'].includes(filter)) filtered = filtered.filter(u => u.plan === filter);
+    else if(['starter','pro','affiliation'].includes(filter)) filtered = filtered.filter(u => u.plan === filter);
     renderAdminUsers(filtered);
 }
 
@@ -1432,8 +1698,8 @@ async function adminChangePlan(sel, email) {
     setTimeout(() => sel.style.borderColor = '#333', 1500);
 }
 
-function excludeUser(email) {
-    if(!confirm(`⚠️ Exclure ${email} du site ? Cette action est irréversible.`)) return;
+async function excludeUser(email) {
+    if(!(await adminConfirm('⚠️ Exclure ' + email + ' du site ? Cette action est irréversible.'))) return;
     // CORRECTION: supprimer aussi dans Supabase
     if(sb) sb.from('users').delete().eq('email', email).catch(e => console.error('Supabase delete error:', e));
     let users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
@@ -1450,9 +1716,9 @@ function giveAccess(event) {
     if(!elGiftEmail || !elGiftPlan) return; // CORRECTION: null-check
     const email = elGiftEmail.value.trim();
     const plan = elGiftPlan.value;
-    if(!email) { alert('Entre un email !'); return; }
+    if(!email) { toast('⚠️ Entre un email !', 'err'); return; }
     // CORRECTION: valider le format email avant insertion
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Email invalide !'); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('❌ Email invalide !', 'err'); return; }
     const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     const i = users.findIndex(u => u.email === email);
     if(i !== -1) { users[i].plan = plan; }
@@ -1480,11 +1746,10 @@ function giveAccess(event) {
 // ===== CLAUDE SYSTEM PROMPT =====
 const SYS = `Tu t'appelles Nexa. Tu es une IA closer commerciale de haut niveau pour NexaAI. Tu ne mentionnes jamais Claude ni Anthropic — tu es Nexa, point.
 
-NOS FORFAITS (à respecter strictement selon le volume de DMs) :
-- Starter : €39/mois (ou €390 paiement unique = 2 mois offerts) — 10 prospects contactés/jour, messages automatisés, dashboard, support email
-- Pro : €94/mois (ou €940 paiement unique = 2 mois offerts) — 80 prospects/jour, messages ultra-personnalisés, dashboard avancé, support 24/7, API
-- Business : €194/mois (ou €1940 paiement unique = 2 mois offerts) — 300 prospects/jour, 200 messages bot/jour, support prioritaire 24/7
-- Elite : €494/mois (ou €4940 paiement unique = 2 mois offerts) — 750 prospects/jour, messages bot illimités, account manager dédié
+NOS FORFAITS (à respecter strictement selon le volume de messages) :
+- Starter : €39/mois (ou €340 paiement unique = 2 mois offerts) — 40 messages/jour, messages automatisés, dashboard, support email
+- Pro : €59/mois (ou €590 paiement unique = 2 mois offerts) — 75 messages/jour, messages ultra-personnalisés, dashboard avancé, support 24/7, API
+- Gratuit (Ambassadeur) : €0 — 50 messages/jour via lien d'affiliation
 
 TUNNEL DE VENTE EN 5 ÉTAPES — tu suis ce fil sans jamais le perdre :
 
@@ -1514,11 +1779,10 @@ Montre que tu comprends sa situation TikTok.
 Utilise tout ce que tu sais sur son business et son TikTok. Calcule avec lui ce qu'il perd chaque jour : X DMs/jour × son prix de vente = X€ perdus par semaine. Crée l'urgence naturellement, sans mentir. Traite les objections calmement avec des réponses courtes et percutantes.
 
 ÉTAPE 5 — RECOMMANDER LE BON FORFAIT ET CLOSER :
-Recommande le forfait adapté à son volume de DMs :
-- 0-10 DMs/jour → Starter (10 prospects/jour, €39/mois)
-- 11-80 DMs/jour → Pro (80 prospects/jour, €94/mois)
-- 81-300 DMs/jour → Business (300 prospects/jour, €194/mois)
-- 300+ DMs/jour → Elite (750 prospects/jour, €494/mois)
+Recommande le forfait adapté à son volume de messages :
+- 0-40 messages/jour → Starter (40 messages/jour, €39/mois)
+- 41-75 messages/jour → Pro (75 messages/jour, €59/mois)
+- Affiliation / pas de budget → Gratuit (50 messages/jour, €0)
 Explique POURQUOI ce forfait précisément, en lien direct avec son business et son TikTok. Puis ajoute "REDIRECT" à la fin.
 
 TON COMPORTEMENT :
@@ -1537,7 +1801,12 @@ RÈGLES ABSOLUES :
 - Toujours en français
 - Jamais mentionner Claude ou Anthropic — tu es Nexa, une IA NexaAI
 - Tu ne parles QUE de NexaAI et du business du prospect
-- Si la conversation dérive, tu la ramènes naturellement vers son projet`;
+- Si la conversation dérive, tu la ramènes naturellement vers son projet
+
+RÈGLES TECHNIQUES DE PROSPECTION :
+- LIMITE DE MESSAGES : tu envoies maximum 6 à 7 messages par prospect. Si le prospect ne montre aucun intérêt après 6-7 messages, tu arrêtes — inutile d'insister sur quelqu'un de froid.
+- EXCEPTION CHAUD : si le prospect pose beaucoup de questions ou montre un intérêt réel, tu continues au-delà de la limite sans restriction.
+- DÉTECTION PRODUIT AUTOMATIQUE : avant chaque conversation avec un prospect, tu analyses automatiquement le profil du client (business, produit, prix, cible) pour déterminer quel produit lui proposer en priorité. Tu adaptes ton approche et tes arguments en fonction de ce profil pour maximiser les chances de conversion.`;
 
 
 
@@ -1676,9 +1945,7 @@ async function sendChatMsg(text) {
             }
             let opts = [];
             const lower = reply.toLowerCase();
-            if(lower.includes('elite')) opts = ['👑 Je prends l\'Elite','💼 C\'est quoi le Business ?','❓ Question'];
-            else if(lower.includes('business')) opts = ['💼 Je prends le Business','🚀 C\'est quoi le Pro ?','❓ Question'];
-            else if(lower.includes('starter') && lower.includes('pro')) opts = ['🚀 Starter — €39/mois','💎 Pro — €94/mois','❓ Question'];
+            if(lower.includes('starter') && lower.includes('pro')) opts = ['🚀 Starter — €39/mois','💎 Pro — €59/mois','❓ Question'];
             else if(lower.includes('starter')) opts = ['✅ Je prends le Starter','💎 C\'est quoi le Pro ?'];
             else if(lower.includes('pro')) opts = ['🔥 Je prends le Pro !','🔰 Le Starter suffit ?'];
             addMsg('ai', reply, opts);
@@ -1786,11 +2053,9 @@ const BQ_PROMPT = `Tu t'appelles Nexa. Tu es l'IA personnelle de NexaAI. Tu ne m
 Tu viens de rencontrer un nouvel utilisateur. Tu vas le qualifier en 5 étapes.
 
 FORFAITS :
-- Starter : €39/mois — 10 prospects/jour
-- Pro : €94/mois — 80 prospects/jour
-- Business : €194/mois — 300 prospects/jour
-- Elite : €494/mois — 750 prospects/jour
-- Ambassadeur : €0 (Affiliation 20/80 — tu reçois 20% sur chaque vente via ton lien)
+- Starter : €39/mois — 40 messages/jour
+- Pro : €59/mois — 75 messages/jour
+- Ambassadeur : €0 (Affiliation 20/80 — tu reçois 20% sur chaque vente via ton lien) — 50 messages/jour
 
 ÉTAPE 1 : Prénom.
 ÉTAPE 2 : Business (Nom, Produit, Prix, Cible).
@@ -2001,9 +2266,7 @@ async function bqSendToAI(userText) {
     // 2. Détection Forfaits Payants
     const planMap = [
         { keys: ['starter', '39'], plan: 'starter', name: 'Starter', price: '€39' },
-        { keys: ['pro', '94'], plan: 'pro', name: 'Pro 🎯', price: '€94' },
-        { keys: ['business', '194'], plan: 'business', name: 'Business 💼', price: '€194' },
-        { keys: ['elite', '494'], plan: 'elite', name: 'Elite 👑', price: '€494' }
+        { keys: ['pro', '59'], plan: 'pro', name: 'Pro 🎯', price: '€59' }
     ];
 
     for(const p of planMap) {
@@ -2054,9 +2317,7 @@ async function bqSendToAI(userText) {
                 bqAIMsg(reply, [
                     '🤝 Plan Ambassadeur — €0',
                     '⚡ Starter — €39/mois',
-                    '🚀 Pro — €94/mois',
-                    '💼 Business — €194/mois',
-                    '👑 Elite — €494/mois'
+                    '🚀 Pro — €59/mois'
                 ]);
             } else {
                 bqStep++;
