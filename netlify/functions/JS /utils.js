@@ -113,9 +113,9 @@ const LS = {
   /**
    * Shortcuts pour token
    */
-  token: () => LS.get('nexaai_token', null),
-  setToken: (t) => LS.set('nexaai_token', t),
-  clearToken: () => LS.del('nexaai_token'),
+  token: () => null,    // JWT non stocké en localStorage (sécurité XSS)
+  setToken: () => {},   // no-op intentionnel
+  clearToken: () => {}, // no-op intentionnel
 };
 
 // ════════════════════════════════════════════════════════════════
