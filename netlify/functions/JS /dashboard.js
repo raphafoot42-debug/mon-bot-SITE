@@ -16,7 +16,8 @@ async function loadUserData() {
     const user = await getAuthUser();
 
     if (!user) {
-      window.location.href = '/?auth=required';
+      if (typeof showPage === 'function') showPage('login');
+      else window.location.href = '/?auth=required';
       return;
     }
 
@@ -64,14 +65,13 @@ async function loadUserData() {
  */
 async function renderDashboard() {
   try {
-    // Vérifie auth
     const user = await getAuthUser();
     if (!user) {
-      window.location.href = '/?auth=required';
+      if (typeof showPage === 'function') showPage('login');
+      else window.location.href = '/?auth=required';
       return;
     }
 
-    // Charge data
     const userData = await loadUserData();
     if (!userData) {
       toast('❌ Erreur chargement données', 'err');
@@ -82,47 +82,36 @@ async function renderDashboard() {
     // 🎨 UPDATE DOM
     // ════════════════════════════════════════════════════════════════
 
-    // Affiche bienvenue
     const welcomeEl = document.getElementById('dash-welcome');
     if (welcomeEl) {
-      welcomeEl.textContent = `Bienvenue, ${userData.name || userData.email.split('@')[0]} 👋`;
+      welcomeEl.textContent = `Bienvenue, ${userData.name || userData.email?.split('@')[0] || ''} 👋`;
     }
 
-    // Plan actuel
+    // Plans réels du projet
     const planEl = document.getElementById('current-plan');
     if (planEl) {
       const plans = {
-        starter: '✨ Starter',
-        pro: '🚀 Pro',
-        business: '💼 Business',
-        elite: '👑 Elite',
-        partner: '🤝 Partner',
+        free:        '🆓 Gratuit',
+        starter:     '✨ Starter',
+        pro:         '🚀 Pro',
+        affiliation: '🤝 Ambassadeur',
       };
-      planEl.textContent = plans[userData.plan] || userData.plan;
+      planEl.textContent = plans[userData.plan] || userData.plan || '—';
     }
 
-    // Email
     const emailEl = document.getElementById('user-email');
-    if (emailEl) {
-      emailEl.textContent = userData.email;
-    }
-
-    // ════════════════════════════════════════════════════════════════
-    // 📊 RENDER STATS
-    // ════════════════════════════════════════════════════════════════
+    if (emailEl) emailEl.textContent = userData.email || '';
 
     await renderStats(userData);
 
-    // ════════════════════════════════════════════════════════════════
-    // ✅ SHOW DASHBOARD
-    // ════════════════════════════════════════════════════════════════
-
     const dashPage = document.getElementById('dashboard-page');
-    if (dashPage) {
-      dashPage.style.display = 'block';
-    }
+    if (dashPage) dashPage.style.display = 'block';
 
-    toast('✅ Bienvenue sur ton dashboard !', 'ok');
+    // Toast bienvenue uniquement à la première visite de la session
+    if (!sessionStorage.getItem('_dashWelcomed')) {
+      toast('✅ Bienvenue sur ton dashboard !', 'ok');
+      sessionStorage.setItem('_dashWelcomed', '1');
+    }
   } catch (err) {
     console.error('renderDashboard error:', err);
     toast(`❌ ${err.message}`, 'err');
@@ -221,15 +210,18 @@ async function saveSettings() {
     }
 
     // Récupère les inputs
-    const name = (document.getElementById('s-prenom')?.value || '').trim();
-    const business = (
-      document.getElementById('s-business')?.value || ''
-    ).trim();
-    const businessType = document.getElementById('s-type')?.value;
+    const name         = (document.getElementById('s-prenom')?.value   || '').trim().slice(0, 100);
+    const business     = (document.getElementById('s-business')?.value || '').trim().slice(0, 150);
+    const businessType = (document.getElementById('s-type')?.value     || '').trim().slice(0, 50);
 
-    // ✅ Validation
     if (!name) {
       toast('⚠️ Remplir au moins le prénom', 'err');
+      return;
+    }
+
+    // Validation longueur minimale
+    if (name.length < 2) {
+      toast('⚠️ Prénom trop court (min 2 caractères)', 'err');
       return;
     }
 
@@ -277,7 +269,13 @@ async function saveSettings() {
 /**
  * Initialise le dashboard au load
  */
-if (typeof document !== 'undefined') {
+// ════════════════════════════════════════════════════════════════
+// 🌐 INIT ON LOAD
+// Note : en SPA (index.html), loadDashboard() de nexa.js est déjà
+// appelé au login. Ce DOMContentLoaded n'intervient que si
+// dashboard.js est chargé dans une page dédiée (hors SPA).
+// ════════════════════════════════════════════════════════════════
+if (typeof document !== 'undefined' && !window.__nexaSPA) {
   document.addEventListener('DOMContentLoaded', () => {
     renderDashboard();
   });
