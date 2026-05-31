@@ -86,28 +86,15 @@ function initSupabase() {
     return null;
   }
 
-  // URL et clé (normalement depuis env vars Netlify)
-  const supabaseUrl = process.env.SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co';
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'YOUR_ANON_KEY_HERE';
-
-  // Valide que les vars sont configurées
-  if (
-    !supabaseUrl ||
-    supabaseUrl.includes('YOUR_PROJECT') ||
-    !supabaseAnonKey ||
-    supabaseAnonKey.includes('YOUR_')
-  ) {
-    console.error('⚠️ Supabase not properly configured. Set env vars in Netlify.');
-    return null;
-  }
+  // ⚠️ SÉCURITÉ : la clé "publishable" est visible dans le code client — c'est normal.
+  // Elle est conçue pour ça. MAIS les RLS (Row Level Security) Supabase
+  // doivent être ACTIVÉES sur toutes les tables pour empêcher tout accès non autorisé.
+  const supabaseUrl     = 'https://aubjtlxwqndfawdidwfq.supabase.co';
+  const supabaseAnonKey = 'sb_publishable_ac-EaAMzdCCmFRxU6Iny9A_NgMHlUHB';
 
   try {
-    // Crée le client Supabase
     const sb = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-
-    // Stocke en global
     window.sb = sb;
-
     console.log('✅ Supabase initialized');
     return sb;
   } catch (err) {
@@ -116,9 +103,9 @@ function initSupabase() {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// 🚀 AUTO-INIT AU LOAD
-// ════════════════════════════════════════════════════════════════
+if (typeof window !== 'undefined') {
+  window.initSupabase = initSupabase;
+}
 
 if (document.readyState === 'loading') {
   // DOM pas encore chargé
@@ -139,5 +126,6 @@ if (typeof module !== 'undefined' && module.exports) {
     NEXA_TIMEOUTS,
     NEXA_RATE_LIMITS,
     initSupabase,
+    getSb,
   };
 }
