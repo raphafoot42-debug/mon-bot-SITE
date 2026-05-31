@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexa AI - Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/Netlify/CSS/nexa.css">
 </head>
 <body style="background:#050505; color:#fff; font-family:Arial, sans-serif;">
 
@@ -125,8 +125,8 @@
     }
 
     function loadDashboardData() {
-        // TODO: lire token/session stocké puis fetch Supabase (RLS) ou une function Netlify sécurisée
-        document.getElementById('user-info').innerText = 'Utilisateur connecté';
+        // Rediriger vers index.html qui contient le vrai dashboard (prospects, stats, etc.)
+        window.location.href = '/index.html';
     }
 
     window.addEventListener('load', handleTikTokCallback);
