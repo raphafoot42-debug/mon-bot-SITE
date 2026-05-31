@@ -3,18 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login TikTok - Nexa</title>
+  <meta name="description" content="Connexion TikTok — NEXA AI">
+  <title>Connexion TikTok — NEXA AI</title>
+  <link rel="stylesheet" href="/netlify/css/nexa.css">
+  <style>
+    body { background:#000; color:#fff; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:'Inter',Arial,sans-serif; margin:0; }
+    .login-box { background:#111; border:1px solid #222; border-radius:16px; padding:48px 40px; max-width:420px; width:100%; text-align:center; }
+    .logo { color:#39ff14; font-size:1.8rem; font-weight:900; letter-spacing:2px; margin-bottom:8px; }
+    .subtitle { color:#666; font-size:0.9rem; margin-bottom:32px; }
+    .btn-tiktok { background:#fe2c55; color:#fff; border:none; border-radius:10px; padding:16px 32px; font-size:1rem; font-weight:700; cursor:pointer; width:100%; transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-tiktok:hover { opacity:0.85; }
+    .btn-tiktok:disabled { opacity:0.5; cursor:not-allowed; }
+    .status { margin-top:16px; font-size:0.85rem; min-height:20px; color:#aaa; }
+    .status.error { color:#ff6b6b; }
+    .back-link { display:block; margin-top:24px; color:#555; font-size:0.8rem; text-decoration:none; }
+    .back-link:hover { color:#39ff14; }
+  </style>
 </head>
-<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial">
+<body>
+  <div class="login-box">
+    <div class="logo">NEXA AI</div>
+    <p class="subtitle">Connecte ton compte TikTok pour commencer</p>
 
-<button id="login" style="padding: 15px 30px; cursor: pointer; border-radius: 8px; border: none; background: #fe2c55; color: white; font-weight: bold;">
-  Se connecter avec TikTok
-</button>
+    <button id="login" class="btn-tiktok">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.54V6.78a4.85 4.85 0 01-1.02-.09z"/></svg>
+      Se connecter avec TikTok
+    </button>
+
+    <p id="status" class="status"></p>
+    <a href="/" class="back-link">← Retour au site</a>
+  </div>
 
 <script>
 // NOTE: client_key OAuth TikTok = identifiant public côté navigateur (ce n'est pas un secret).
-// Le secret (client_secret) doit rester UNIQUEMENT côté serveur (Netlify env).
-const TIKTOK_CLIENT_KEY = "sbaw1dltizgdnu9xs8"; // remplace par ta vraie client_key
+const TIKTOK_CLIENT_KEY = "sbaw1dltizgdnu9xs8";
 
 function base64url(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -37,36 +59,43 @@ function generateSecureString(length) {
   return v;
 }
 
+function setStatus(msg, isError = false) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = "status" + (isError ? " error" : "");
+}
+
 document.getElementById("login").onclick = async () => {
-  // PKCE
-  const verifier = generateSecureString(64);
-  sessionStorage.setItem("pkce_verifier", verifier);
-  const challenge = base64url(await sha256Bytes(verifier));
+  const btn = document.getElementById("login");
+  btn.disabled = true;
+  setStatus("⏳ Préparation de la connexion...");
 
-  // CSRF state (même clé que ton dashboard)
-  const state = generateSecureString(16);
-  sessionStorage.setItem("oauth_state", state);
+  try {
+    const verifier = generateSecureString(64);
+    sessionStorage.setItem("pkce_verifier", verifier);
+    const challenge = base64url(await sha256Bytes(verifier));
 
-  const currentOrigin = window.location.origin;
+    const state = generateSecureString(16);
+    sessionStorage.setItem("oauth_state", state);
 
-  // IMPORTANT:
-  // - Ce redirect_uri doit être EXACTEMENT celui enregistré dans TikTok.
-  // - Ce doit être une PAGE (pas la function), sinon le serveur ne peut pas lire pkce_verifier.
-  // Exemple: crée tiktok-bridge.html et enregistre: https://TON_DOMAINE/tiktok-bridge.html
-  const redirectUri = currentOrigin + "/tiktok-bridge.html";
+    const redirectUri = window.location.origin + "/tiktok-bridge.html";
 
-  const params = new URLSearchParams({
-    client_key: TIKTOK_CLIENT_KEY,
-    response_type: "code",
-    // Garde uniquement les scopes autorisés sur ton app TikTok
-    scope: "user.info.basic",
-    redirect_uri: redirectUri,
-    state,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-  });
+    const params = new URLSearchParams({
+      client_key: TIKTOK_CLIENT_KEY,
+      response_type: "code",
+      scope: "user.info.basic",
+      redirect_uri: redirectUri,
+      state,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+    });
 
-  window.location.href = "https://www.tiktok.com/v2/auth/authorize/?" + params.toString();
+    setStatus("✅ Redirection vers TikTok...");
+    window.location.href = "https://www.tiktok.com/v2/auth/authorize/?" + params.toString();
+  } catch (err) {
+    setStatus("❌ Erreur : " + (err.message || "inconnue"), true);
+    btn.disabled = false;
+  }
 };
 </script>
 </body>
