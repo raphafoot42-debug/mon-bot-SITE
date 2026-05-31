@@ -11,53 +11,48 @@
 const NEXA_PLANS = {
   starter: {
     id: 'starter',
+    priceId: 'price_1THSyjP8svYH1bkOt686fqqC',
+    priceIdAnnual: 'price_1TT4VCP8svYH1bkOmrlIYHls',
     name: '✨ Starter',
     price: 39,
-    description: 'Pour débuter',
+    priceAnnual: 340,
+    messagesPerDay: 40,
+    description: 'Pour démarrer',
     features: [
-      '100 messages/mois',
-      'Assistant IA basique',
-      'Suivi prospects',
-      'Support email',
+      '40 messages / jour',
+      'Messages automatisés',
+      'Dashboard de suivi',
+      'Support par email',
     ],
   },
   pro: {
     id: 'pro',
+    priceId: 'price_1THSzsP8svYH1bkOndl82cmU',
+    priceIdAnnual: 'price_1TT4WjP8svYH1bkO9lOHz2CW',
     name: '🚀 Pro',
-    price: 99,
-    description: 'Pour pros',
+    price: 59,
+    priceAnnual: 590,
+    messagesPerDay: 75,
+    description: 'Pour scaler',
     features: [
-      '500 messages/mois',
-      'IA avancée',
-      'Analytics complètes',
-      'Support prioritaire',
-      'Webhooks',
-    ],
-  },
-  business: {
-    id: 'business',
-    name: '💼 Business',
-    price: 299,
-    description: 'Pour entreprises',
-    features: [
-      'Messages illimités',
-      'IA pro + Claude',
-      'API complète',
+      '75 messages / jour',
+      'Messages ultra-personnalisés',
+      'Dashboard avancé',
       'Support 24/7',
-      'Équipe dédiée',
+      'API',
     ],
   },
-  elite: {
-    id: 'elite',
-    name: '👑 Elite',
-    price: 999,
-    description: 'Enterprise',
+  affiliation: {
+    id: 'affiliation',
+    priceId: null, // gratuit — pas de paiement Stripe
+    name: '🤝 Ambassadeur',
+    price: 0,
+    messagesPerDay: 50,
+    description: 'Gratuit — 20% sur chaque vente',
     features: [
-      'Tout du Business',
-      'Serveurs dédiés',
-      'Intégration custom',
-      'Consulting inclus',
-      'SLA 99.9%',
+      '50 messages / jour',
+      'Lien d\'affiliation personnel',
+      '20% sur chaque vente générée',
     ],
   },
 };
@@ -105,11 +100,15 @@ async function startCheckout(planId) {
       return;
     }
 
-    const email = user.email;
-
-    // ✅ Validation
     if (!NEXA_PLANS[planId]) {
       toast('❌ Plan invalide', 'err');
+      return;
+    }
+
+    // Plan Ambassadeur — gratuit, pas de paiement Stripe
+    if (planId === 'affiliation') {
+      showPage('bot-qualify');
+      if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
       return;
     }
 
@@ -119,10 +118,13 @@ async function startCheckout(planId) {
     // 🔗 CALL STRIPE FUNCTION
     // ════════════════════════════════════════════════════════════════
 
+    const email = user.email;
+    const plan = NEXA_PLANS[planId];
+
     const response = await apiCall('/.netlify/functions/stripe-checkout', {
       method: 'POST',
       body: JSON.stringify({
-        plan: planId,
+        plan: planId, // ✅ 'starter' ou 'pro' — clé textuelle attendue par le backend
         email,
         referrer_id: localStorage.getItem('referrer_id') || null,
       }),
@@ -149,7 +151,7 @@ async function startCheckout(planId) {
 
 /**
  * Vérifie le paiement après redirect de Stripe
- * À appeler depuis dashboard.html après paiement
+ * Appelé au load de index.html si ?payment=success est présent
  */
 async function verifyPaymentAfterCheckout() {
   try {
