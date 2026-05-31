@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXA AI — Automatise ta prospection</title>
+    <!--
+      ⚠️ SÉCURITÉ : configurer les headers suivants dans netlify.toml :
+      [[headers]]
+        for = "/*"
+        [headers.values]
+          X-Frame-Options = "DENY"
+          X-Content-Type-Options = "nosniff"
+          Referrer-Policy = "strict-origin-when-cross-origin"
+          Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+          Content-Security-Policy = "default-src 'self'; script-src 'self' https://js.stripe.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.anthropic.com https://*.supabase.co https://api.stripe.com; frame-src https://js.stripe.com; img-src 'self' data: https:;"
+    -->
+    <link rel="canonical" href="https://nexaai.fr">
+    <title>NEXA AI — Automatise ta prospection TikTok & Instagram</title>
+    <meta name="description" content="Nexa automatise ta prospection sur TikTok et Instagram. Répond à tes DMs 24h/24, qualifie tes prospects et close tes ventes automatiquement.">
     <meta property="og:title" content="NEXA AI — Automatise ta prospection">
     <meta property="og:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
     <meta property="og:type" content="website">
@@ -17,11 +30,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/nexa.css">
+    <link rel="stylesheet" href="/netlify/css/nexa.css">
     <style>
         /* FAQ — indicateur +/- */
         details summary .faq-icon::before { content: '+'; }
         details[open] summary .faq-icon::before { content: '−'; }
+        /* Hover témoignages — remplace les onmouseover/onmouseout inline */
+        .temoignage-card:hover { border-color: var(--accent) !important; }
+        /* Hover FAQ details */
+        details:hover { border-color: rgba(57,255,20,0.35) !important; }
     </style>
 </head>
 <body>
@@ -50,8 +67,8 @@
         <div class="tunnel-card">
             <h2 id="loginTitle">Connexion</h2>
             <p class="step-info">Content de te revoir.</p>
-            <div class="form-group"><label id="loginEmailL">Email</label><input type="email" id="loginEmail" placeholder="toi@example.com"></div>
-            <div class="form-group"><label id="loginPwdL">Mot de passe</label><input type="password" id="loginPassword" placeholder="••••••" onkeydown="if(event.key==='Enter')login()"></div>
+            <div class="form-group"><label id="loginEmailL" for="loginEmail">Email</label><input type="email" id="loginEmail" name="email" autocomplete="email" placeholder="toi@example.com"></div>
+            <div class="form-group"><label id="loginPwdL" for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter')login()"></div>
             <button class="btn btn-primary btn-full" id="loginSubmit" onclick="login()" style="margin-bottom:12px;">Se connecter</button>
             <button class="btn btn-secondary btn-full" id="loginBack" onclick="showPage('home')">Retour</button>
         </div>
@@ -64,9 +81,9 @@
         <div class="tunnel-card">
             <h2>Créer un compte</h2>
             <p class="step-info">Rejoins Nexa.</p>
-            <div class="form-group"><label>Email *</label><input type="email" id="regEmail" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')register()"></div>
-            <div class="form-group"><label>Mot de passe *</label><input type="password" id="regPwd" placeholder="Minimum 6 caractères" onkeydown="if(event.key==='Enter')register()"></div>
-            <div class="form-group"><label>Confirme le mot de passe *</label><input type="password" id="regPwd2" placeholder="Répète ton mot de passe" onkeydown="if(event.key==='Enter')register()"></div>
+            <div class="form-group"><label for="regEmail">Email *</label><input type="email" id="regEmail" name="email" autocomplete="email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')register()"></div>
+            <div class="form-group"><label for="regPwd">Mot de passe *</label><input type="password" id="regPwd" name="new-password" autocomplete="new-password" placeholder="Minimum 8 caractères" onkeydown="if(event.key==='Enter')register()"></div>
+            <div class="form-group"><label for="regPwd2">Confirme le mot de passe *</label><input type="password" id="regPwd2" name="confirm-password" autocomplete="new-password" placeholder="Répète ton mot de passe" onkeydown="if(event.key==='Enter')register()"></div>
             <button class="btn btn-primary btn-full" onclick="register()" id="regBtn" style="margin-bottom:12px;">Créer mon compte</button>
             <div style="text-align:center;color:var(--text-light);font-size:0.85rem;">
                 Déjà un compte ? <button onclick="showPage('login')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;font-family:inherit;">Se connecter</button>
@@ -152,7 +169,7 @@
                         <div class="dash-msg-ai" id="dash-welcome-msg">Chargement de ton profil...</div>
                     </div>
                     <div class="dash-chat-input-row">
-                        <input type="text" id="dash-input" placeholder="Pose ta question..." onkeydown="if(event.key==='Enter')sendDashMsg()">
+                        <input type="text" id="dash-input" aria-label="Pose ta question à Nexa" placeholder="Pose ta question..." onkeydown="if(event.key==='Enter')sendDashMsg()">
                         <button class="dash-send" onclick="sendDashMsg()">➤</button>
                     </div>
                 </div>
@@ -185,6 +202,10 @@
                 </div>
             </div>
         </div>
+    </div>
+    <!-- Contact support -->
+    <div style="text-align:center;padding:20px 0 10px;border-top:1px solid #222;margin-top:20px;">
+        <p style="color:#666;font-size:0.8rem;">📞 Support : <a href="tel:+330780112707" style="color:var(--accent);text-decoration:none;">07 80 11 27 07</a></p>
     </div>
 </div>
 
@@ -265,7 +286,7 @@
                     <option value="10000">🔥 10 000€+ / mois</option>
                 </select>
             </div>
-            <div class="form-group"><label>DMs reçus par jour ?</label><input type="number" id="m-dms" placeholder="Ex: 15" min="0"></div>
+            <div class="form-group"><label>DMs reçus par jour ?</label><input type="number" id="m-dms" placeholder="Ex: 15" min="0" inputmode="numeric"></div>
             <div style="display:flex;gap:10px;">
                 <button class="btn btn-secondary" onclick="modalPrev(2)" style="flex:1;">← Retour</button>
                 <button class="btn btn-primary" onclick="modalNext(2)" style="flex:2;">Continuer →</button>
@@ -297,23 +318,18 @@
                 <div class="plan-select-card" onclick="selectModalPlan(this,'starter')" data-plan="starter">
                     <div class="plan-name">Starter</div>
                     <div class="plan-price">€39<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
-                    <div class="plan-desc">10 prospects/jour<br>Dashboard de suivi</div>
+                    <div class="plan-desc">40 messages/jour<br>Dashboard de suivi</div>
                 </div>
                 <div class="plan-select-card selected" onclick="selectModalPlan(this,'pro')" data-plan="pro">
                     <div style="font-size:0.7rem;color:var(--accent);font-weight:900;margin-bottom:4px;">🔥 POPULAIRE</div>
                     <div class="plan-name">Pro</div>
-                    <div class="plan-price">€94<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
-                    <div class="plan-desc">80 prospects/jour<br>Support 24/7 + API</div>
+                    <div class="plan-price">€59<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
+                    <div class="plan-desc">75 messages/jour<br>Support 24/7 + API</div>
                 </div>
-                <div class="plan-select-card" onclick="selectModalPlan(this,'business')" data-plan="business">
-                    <div class="plan-name">Business 💼</div>
-                    <div class="plan-price">€194<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
-                    <div class="plan-desc">300 prospects/jour<br>200 messages bot/jour</div>
-                </div>
-                <div class="plan-select-card" onclick="selectModalPlan(this,'elite')" data-plan="elite">
-                    <div class="plan-name">Elite 👑</div>
-                    <div class="plan-price">€494<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
-                    <div class="plan-desc">750 prospects/jour<br>Messages illimités</div>
+                <div class="plan-select-card" onclick="selectModalPlan(this,'affiliation')" data-plan="affiliation">
+                    <div class="plan-name">Ambassadeur 🤝</div>
+                    <div class="plan-price">€0<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
+                    <div class="plan-desc">50 messages/jour<br>20% sur chaque vente</div>
                 </div>
             </div>
             <div id="modal-pay-error" style="display:none;color:#ff6b6b;font-size:0.8rem;text-align:center;margin-bottom:10px;">⚠️ Sélectionne un plan avant de continuer</div>
@@ -336,7 +352,7 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;">
 
                 <!-- Témoignage 1 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:border-color 0.3s;" class="temoignage-card">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€12 400</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 3 semaines</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."</p>
@@ -347,7 +363,7 @@
                 </div>
 
                 <!-- Témoignage 2 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" class="temoignage-card">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€8 900</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">premier mois</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"J'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c'est tout."</p>
@@ -358,13 +374,13 @@
                 </div>
 
                 <!-- Témoignage 3 -->
-                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" class="temoignage-card">
                     <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€31 000</div>
                     <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 2 mois</div>
                     <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."</p>
                     <div style="display:flex;align-items:center;gap:12px;">
                         <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">A</div>
-                        <div><div style="font-weight:700;font-size:0.9rem;">Antoine R.</div><div style="color:var(--text-light);font-size:0.75rem;">Formation trading • Business</div></div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Antoine R.</div><div style="color:var(--text-light);font-size:0.75rem;">Formation trading • Pro</div></div>
                     </div>
                 </div>
 
@@ -408,95 +424,82 @@
             <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement annuel (10 mois payés = 12 mois d'accès).</p>
             <div class="pricing-grid">
 
-                <!-- STARTER -->
+                <!-- STARTER MENSUEL -->
                 <div class="pricing-card">
                     <h3>Starter</h3>
                     <div class="pricing-current">€39</div>
                     <div class="pricing-period">/mois</div>
                     <ul class="pricing-features">
-                        <li>10 prospects / jour</li>
-                        <li>10 messages automatisés / jour</li>
+                        <li><strong>40 messages / jour</strong></li>
+                        <li>Messages automatisés</li>
                         <li>Dashboard de suivi</li>
                         <li>Support par email</li>
                     </ul>
-                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_STARTER_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Starter mensuel -->
-                    <button class="pricing-btn" onclick="startTunnel('price_1THSyjP8svYH1bkOt686fqqC')">
-                        3 JOURS GRATUITS →
-                    </button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(var(--accent-rgb),0.05);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€390 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €78</div>
-                        <button onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">
-                            Paiement unique →
-                        </button>
-                    </div>
+                    <button class="pricing-btn" onclick="startTunnel('price_1THSyjP8svYH1bkOt686fqqC')">3 JOURS GRATUITS →</button>
                 </div>
 
-                <!-- PRO -->
+                <!-- STARTER ANNUEL -->
+                <div class="pricing-card">
+                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                    <h3>Starter Annuel</h3>
+                    <div class="pricing-current">€340</div>
+                    <div class="pricing-period">/an</div>
+                    <ul class="pricing-features">
+                        <li><strong>40 messages / jour</strong></li>
+                        <li>Messages automatisés</li>
+                        <li>Dashboard de suivi</li>
+                        <li>Support par email</li>
+                        <li style="color:var(--accent);">Économie de €128</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')">Choisir Starter Annuel →</button>
+                </div>
+
+                <!-- PRO MENSUEL -->
                 <div class="pricing-card featured">
                     <h3>Pro 🎯</h3>
-                    <div class="pricing-current">€94</div>
+                    <div class="pricing-current">€59</div>
                     <div class="pricing-period">/mois</div>
                     <ul class="pricing-features">
-                        <li><strong>80 prospects / jour</strong></li>
-                        <li>30 messages / jour</li>
-                        <li>Dashboard + Analytics</li>
+                        <li><strong>75 messages / jour</strong></li>
+                        <li>Messages ultra-personnalisés</li>
+                        <li>Dashboard avancé</li>
                         <li>Support 24/7</li>
+                        <li>API</li>
                     </ul>
-                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_PRO_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Pro mensuel -->
                     <button class="pricing-btn" onclick="startTunnel('price_1THSzsP8svYH1bkOndl82cmU')">Choisir Pro →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(var(--accent-rgb),0.05);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:var(--accent);font-size:1.5rem;font-weight:900;line-height:1;">€940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:var(--accent);font-size:0.8rem;margin:6px 0 10px;">Économie de €188</div>
-                        <button onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')" style="width:100%;padding:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">Paiement unique →</button>
-                    </div>
                 </div>
 
-                <!-- BUSINESS -->
-                <div class="pricing-card" style="position:relative; border-color:rgba(var(--blue-rgb),0.4);">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">MEILLEURE VALEUR</div>
-                    <h3 style="margin-top:10px;">Business 💼</h3>
-                    <div class="pricing-current" style="font-size:3.5rem;">€194</div>
-                    <div class="pricing-period">/mois</div>
+                <!-- PRO ANNUEL -->
+                <div class="pricing-card featured">
+                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                    <h3>Pro Annuel 🎯</h3>
+                    <div class="pricing-current">€590</div>
+                    <div class="pricing-period">/an</div>
                     <ul class="pricing-features">
-                        <li><strong>300 prospects / jour</strong></li>
-                        <li><strong>200 messages / jour</strong></li>
-                        <li>Support prioritaire</li>
+                        <li><strong>75 messages / jour</strong></li>
+                        <li>Messages ultra-personnalisés</li>
+                        <li>Dashboard avancé</li>
+                        <li>Support 24/7</li>
+                        <li style="color:var(--accent);">Économie de €118</li>
                     </ul>
-                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_BUSINESS_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Business mensuel -->
-                    <button class="pricing-btn" onclick="startTunnel('price_1TP3ihP8svYH1bkOOITtQVaA')" style="background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;">Choisir Business →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(var(--blue-rgb),0.06);border:1px solid rgba(var(--blue-rgb),0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,var(--blue),var(--blue-light));color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:var(--blue-light);font-size:1.5rem;font-weight:900;">€1940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:var(--blue-light);font-size:0.8rem;margin:6px 0 10px;">Économie de €388</div>
-                        <button onclick="startTunnel('price_1TT4XwP8svYH1bkOoPQgfYmF')" style="width:100%;padding:10px;background:transparent;color:var(--blue);border:1px solid var(--blue);border-radius:8px;font-weight:700;">Paiement unique →</button>
-                    </div>
-                </div>
-
-                <!-- ELITE -->
-                <div class="pricing-card" style="position:relative; border-color:rgba(var(--gold-rgb),0.4);">
-                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--gold),#fff);color:#000;padding:8px 24px;border-radius:25px;font-size:0.75rem;font-weight:900;">TOP PERFORMANCE</div>
-                    <h3 style="margin-top:10px;">Elite 👑</h3>
-                    <div class="pricing-current" style="font-size:3.5rem;">€494</div>
-                    <div class="pricing-period">/mois</div>
-                    <ul class="pricing-features">
-                        <li><strong>750 prospects / jour</strong></li>
-                        <li><strong>Messages illimités</strong></li>
-                        <li>Account manager dédié</li>
-                    </ul>
-                    <!-- TODO: remplacer 'REMPLACER_PAR_PRICE_ID_STRIPE_ELITE_MENSUEL' par le vrai Price ID (format price_xxxx) depuis ton dashboard Stripe > Produits > Elite mensuel -->
-                    <button class="pricing-btn" onclick="startTunnel('price_1TJ8XPP8svYH1bkOWwjjcZ87')" style="background:linear-gradient(90deg,var(--gold),#fff);color:#000;">Choisir Elite →</button>
-                    <div style="margin-top:16px;padding:16px;background:rgba(var(--gold-rgb),0.05);border:1px solid rgba(var(--gold-rgb),0.25);border-radius:10px;text-align:center;">
-                        <div style="display:inline-block;background:linear-gradient(90deg,var(--gold),#fff);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">🎁 2 MOIS OFFERTS</div>
-                        <div style="color:var(--gold);font-size:1.5rem;font-weight:900;">€4940 <span style="font-size:0.75rem;font-weight:600;color:var(--text-light);">paiement unique</span></div>
-                        <div style="color:var(--gold);font-size:0.8rem;margin:6px 0 10px;">Économie de €988</div>
-                        <button onclick="startTunnel('price_1TT4XNP8svYH1bkORkrNN1P6')" style="width:100%;padding:10px;background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:8px;font-weight:700;">Paiement unique →</button>
-                    </div>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')">Choisir Pro Annuel →</button>
                 </div>
 
             </div><!-- fin .pricing-grid -->
+
+            <!-- AMBASSADEUR SÉPARÉ -->
+            <div style="margin-top:40px;padding:30px;background:rgba(var(--accent-rgb),0.04);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:16px;text-align:center;max-width:500px;margin-left:auto;margin-right:auto;">
+                <div style="font-size:1.5rem;margin-bottom:8px;">🤝</div>
+                <h3 style="font-size:1.2rem;font-weight:900;margin-bottom:6px;">Ambassadeur</h3>
+                <div style="font-size:2rem;font-weight:900;color:var(--accent);">€0</div>
+                <div style="color:var(--text-light);font-size:0.85rem;margin-bottom:16px;">/mois</div>
+                <ul style="list-style:none;padding:0;margin:0 0 20px;color:var(--text-light);font-size:0.9rem;line-height:2;">
+                    <li><strong style="color:var(--text);">50 messages / jour</strong></li>
+                    <li>Lien d'affiliation personnel</li>
+                    <li>20% sur chaque vente générée</li>
+                </ul>
+                <button class="pricing-btn" onclick="startTunnel('affiliation')" style="max-width:280px;margin:0 auto;">Devenir Ambassadeur →</button>
+            </div>
         </div><!-- fin .container -->
     </section><!-- fin #pricing -->
 
@@ -536,7 +539,21 @@
     </script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/nexa.js"></script>
+    <!-- Ordre de chargement obligatoire :
+         1. config.js   — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
+         2. utils.js    — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
+         3. auth.js     — register, login, logout
+         4. payment.js  — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
+         5. dashboard.js — renderDashboard, saveSettings, showDashSection
+         6. nexa.js     — logique principale SPA (charge en dernier, dépend de tout le reste)
+    -->
+    <script src="/netlify/fonction/js/config.js"></script>
+    <script src="/netlify/fonction/js/utils.js"></script>
+    <script src="/netlify/fonction/js/auth.js"></script>
+    <script src="/netlify/fonction/js/payment.js"></script>
+    <script src="/netlify/fonction/js/dashboard.js"></script>
+    <script src="/netlify/fonction/js/nexa_verify_onboarding.js"></script>
+    <script src="/netlify/fonction/js/nexa.js"></script>
 
 </body>
 </html>
