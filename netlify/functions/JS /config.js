@@ -126,6 +126,5 @@ if (typeof module !== 'undefined' && module.exports) {
     NEXA_TIMEOUTS,
     NEXA_RATE_LIMITS,
     initSupabase,
-    getSb,
   };
 }
