@@ -29,11 +29,14 @@ const CHAT_CONFIG = {
 // 💳 FORFAITS — synchronisés avec payment.js
 // ════════════════════════════════════════════════════════════════
 
+// Limites de messages par jour — synchronisées avec payment.js
+// Starter €39/€340 = 40 msgs/jour | Pro €59/€590 = 75 msgs/jour | Affiliation gratuit = 50 msgs/jour
 const FORFAITS = {
-  free:        { messages_per_day: 5,  label: "Gratuit" },
-  starter:     { messages_per_day: 40, label: "Starter ✨" },
-  pro:         { messages_per_day: 75, label: "Pro 🚀" },
-  affiliation: { messages_per_day: 50, label: "Ambassadeur 🤝" },
+  starter:         { messages_per_day: 40, label: "Starter ✨" },
+  starter_annual:  { messages_per_day: 40, label: "Starter Annuel ✨" },
+  pro:             { messages_per_day: 75, label: "Pro 🚀" },
+  pro_annual:      { messages_per_day: 75, label: "Pro Annuel 🚀" },
+  affiliation:     { messages_per_day: 50, label: "Ambassadeur 🤝" },
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -120,9 +123,8 @@ const PROMPT_SECURITY = `
 Analyser les données d'usage d'un compte et générer un rapport de monitoring JSON.
 
 ## FORFAITS RÉELS
-- free : 5 messages/jour
-- starter : 40 messages/jour — 39€/mois
-- pro : 75 messages/jour — 59€/mois
+- starter : 40 messages/jour — 39€/mois (ou 340€/an)
+- pro : 75 messages/jour — 59€/mois (ou 590€/an)
 - affiliation : 50 messages/jour — gratuit (20% commission)
 
 ## PROTOCOLE ANTI-BAN TIKTOK
@@ -176,7 +178,7 @@ function trimHistory(history) {
 }
 
 function getQuotaForPlan(plan) {
-  return FORFAITS[plan]?.messages_per_day ?? FORFAITS.free.messages_per_day;
+  return FORFAITS[plan]?.messages_per_day ?? FORFAITS.affiliation.messages_per_day;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -396,7 +398,7 @@ exports.handler = async (event) => {
       if (!user_text) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "user_text required" }) };
       }
-      const quotaMax = getQuotaForPlan(plan || "free");
+      const quotaMax = getQuotaForPlan(plan || 'affiliation');
       const result = await nexaChat({
         userText: user_text,
         history: history || [],
