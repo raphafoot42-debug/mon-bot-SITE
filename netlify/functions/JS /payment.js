@@ -11,8 +11,8 @@
 const NEXA_PLANS = {
   starter: {
     id: 'starter',
-    priceId: 'price_1THSyjP8svYH1bkOt686fqqC',
-    priceIdAnnual: 'price_1TT4VCP8svYH1bkOmrlIYHls',
+    priceId: 'price_1TgQAiP6KQQPJW2bIPBL567L',
+    priceIdAnnual: 'price_1TgQAjP6KQQPJW2buOxVpaY3',
     name: '✨ Starter',
     price: 39,
     priceAnnual: 340,
@@ -27,8 +27,8 @@ const NEXA_PLANS = {
   },
   pro: {
     id: 'pro',
-    priceId: 'price_1THSzsP8svYH1bkOndl82cmU',
-    priceIdAnnual: 'price_1TT4WjP8svYH1bkO9lOHz2CW',
+    priceId: 'price_1TgQAjP6KQQPJW2bHjVUSD4j',
+    priceIdAnnual: 'price_1TgQAlP6KQQPJW2bRq9GGOnU',
     name: '🚀 Pro',
     price: 59,
     priceAnnual: 590,
@@ -44,9 +44,11 @@ const NEXA_PLANS = {
   },
   affiliation: {
     id: 'affiliation',
-    priceId: null, // gratuit — pas de paiement Stripe
+    priceId: null,
+    priceIdAnnual: null,
     name: '🤝 Ambassadeur',
     price: 0,
+    priceAnnual: 0,
     messagesPerDay: 50,
     description: 'Gratuit — 20% sur chaque vente',
     features: [
@@ -56,6 +58,32 @@ const NEXA_PLANS = {
     ],
   },
 };
+
+// ════════════════════════════════════════════════════════════════
+// 🔄 BILLING TOGGLE
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * Retourne le billing actif ('monthly' | 'annual')
+ */
+function getBilling() {
+  return localStorage.getItem('selected_billing') || 'monthly';
+}
+
+/**
+ * Bascule entre mensuel et annuel
+ */
+function setBilling(billing) {
+  if (billing !== 'monthly' && billing !== 'annual') return;
+  localStorage.setItem('selected_billing', billing);
+
+  // Met à jour le toggle UI si présent
+  const toggle = document.getElementById('billing-toggle');
+  if (toggle) toggle.value = billing;
+
+  // Rafraîchit l'affichage des prix
+  renderPricingPlans();
+}
 
 // ════════════════════════════════════════════════════════════════
 // 🛒 SELECT PLAN
@@ -119,12 +147,13 @@ async function startCheckout(planId) {
     // ════════════════════════════════════════════════════════════════
 
     const email = user.email;
-    const plan = NEXA_PLANS[planId];
+    const billing = getBilling(); // 'monthly' | 'annual'
 
     const response = await apiCall('/.netlify/functions/stripe-checkout', {
       method: 'POST',
       body: JSON.stringify({
-        plan: planId, // ✅ 'starter' ou 'pro' — clé textuelle attendue par le backend
+        plan: planId,
+        billing,
         email,
         referrer_id: localStorage.getItem('referrer_id') || null,
       }),
@@ -229,6 +258,9 @@ function renderPricingPlans() {
     const container = document.getElementById('pricing-plans');
     if (!container) return;
 
+    const billing = getBilling();
+    const isAnnual = billing === 'annual';
+
     container.innerHTML = '';
 
     Object.values(NEXA_PLANS).forEach((plan) => {
@@ -236,12 +268,21 @@ function renderPricingPlans() {
       card.className = 'pricing-card';
       card.setAttribute('data-plan', plan.id);
 
+      const displayPrice = isAnnual && plan.priceAnnual > 0
+        ? plan.priceAnnual
+        : plan.price;
+      const priceLabel = plan.price === 0
+        ? 'Gratuit'
+        : isAnnual
+          ? `€${displayPrice}<span>/an</span>`
+          : `€${displayPrice}<span>/mois</span>`;
+
       const features = plan.features.map((f) => `<li>✓ ${f}</li>`).join('');
 
       card.innerHTML = `
         <div class="pricing-header">
           <h3>${plan.name}</h3>
-          <div class="pricing-price">€${plan.price}<span>/mois</span></div>
+          <div class="pricing-price">${priceLabel}</div>
           <p>${plan.description}</p>
         </div>
         <ul class="pricing-features">
@@ -279,6 +320,8 @@ if (typeof window !== 'undefined') {
   window.startCheckout = startCheckout;
   window.verifyPaymentAfterCheckout = verifyPaymentAfterCheckout;
   window.renderPricingPlans = renderPricingPlans;
+  window.getBilling = getBilling;
+  window.setBilling = setBilling;
   window.NEXA_PLANS = NEXA_PLANS;
 }
 
@@ -288,6 +331,8 @@ if (typeof module !== 'undefined' && module.exports) {
     startCheckout,
     verifyPaymentAfterCheckout,
     renderPricingPlans,
+    getBilling,
+    setBilling,
     NEXA_PLANS,
   };
 }
