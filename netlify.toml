@@ -1,6 +1,6 @@
 [build]
   command = "npm install"
-  functions = "netlify/fonctions"
+  functions = "netlify/functions"
   publish = "."
 
 # ════════════════════════════════════════════════════════
@@ -13,7 +13,7 @@
     Content-Type = "text/css"
 
 [[headers]]
-  for = "/netlify/fonction/js/*"
+  for = "/netlify/functions/js/*"
   [headers.values]
     Content-Type = "application/javascript"
 
@@ -42,8 +42,8 @@
   status = 200
 
 [[redirects]]
-  from = "/netlify/fonction/js/*"
-  to = "/netlify/fonction/js/:splat"
+  from = "/netlify/functions/js/*"
+  to = "/netlify/functions/js/:splat"
   status = 200
 
 # Page de vente dynamique clients affiliation
