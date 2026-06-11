@@ -194,7 +194,7 @@
                     </div>
                     <h3 style="color:var(--accent);margin:25px 0 20px;">Abonnement</h3>
                     <div style="background:rgba(var(--accent-rgb),0.05);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:20px;display:flex;justify-content:space-between;">
-                        <div><span style="font-weight:700;" id="s-plan">Starter</span><div style="color:var(--text-light);font-size:0.8rem;">Abonnement mensuel</div></div>
+                        <div><span style="font-weight:700;" id="s-plan">Starter</span><div style="color:var(--text-light);font-size:0.8rem;" id="s-billing">Abonnement mensuel</div></div>
                         <div style="color:var(--accent);font-weight:900;" id="s-price">€39/mois</div>
                     </div>
                     <button class="btn btn-primary btn-full" id="sSaveBtn" onclick="saveSettings()" style="margin-bottom:10px;">Sauvegarder</button>
@@ -435,7 +435,7 @@
                         <li>Dashboard de suivi</li>
                         <li>Support par email</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('price_1THSyjP8svYH1bkOt686fqqC')">3 JOURS GRATUITS →</button>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TgQAiP6KQQPJW2bIPBL567L')">3 JOURS GRATUITS →</button>
                 </div>
 
                 <!-- STARTER ANNUEL -->
@@ -451,7 +451,7 @@
                         <li>Support par email</li>
                         <li style="color:var(--accent);">Économie de €128</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('price_1TT4VCP8svYH1bkOmrlIYHls')">Choisir Starter Annuel →</button>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TgQAjP6KQQPJW2buOxVpaY3')">Choisir Starter Annuel →</button>
                 </div>
 
                 <!-- PRO MENSUEL -->
@@ -466,7 +466,7 @@
                         <li>Support 24/7</li>
                         <li>API</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('price_1THSzsP8svYH1bkOndl82cmU')">Choisir Pro →</button>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TgQAjP6KQQPJW2bHjVUSD4j')">Choisir Pro →</button>
                 </div>
 
                 <!-- PRO ANNUEL -->
@@ -482,7 +482,7 @@
                         <li>Support 24/7</li>
                         <li style="color:var(--accent);">Économie de €118</li>
                     </ul>
-                    <button class="pricing-btn" onclick="startTunnel('price_1TT4WjP8svYH1bkO9lOHz2CW')">Choisir Pro Annuel →</button>
+                    <button class="pricing-btn" onclick="startTunnel('price_1TgQAlP6KQQPJW2bRq9GGOnU')">Choisir Pro Annuel →</button>
                 </div>
 
             </div><!-- fin .pricing-grid -->
@@ -540,12 +540,13 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Ordre de chargement obligatoire :
-         1. config.js   — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
-         2. utils.js    — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
-         3. auth.js     — register, login, logout
-         4. payment.js  — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
-         5. dashboard.js — renderDashboard, saveSettings, showDashSection
-         6. nexa.js     — logique principale SPA (charge en dernier, dépend de tout le reste)
+         1. config.js                — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
+         2. utils.js                 — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
+         3. auth.js                  — register, login, logout
+         4. payment.js               — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
+         5. dashboard.js             — renderDashboard, saveSettings, showDashSection
+         6. nexa_verify_onboarding.js — showEmailVerifyPage, checkEmailVerified, onboarding 3 étapes
+         7. nexa.js                  — logique principale SPA (charge en dernier, dépend de tout le reste)
     -->
     <script src="/netlify/fonction/js/config.js"></script>
     <script src="/netlify/fonction/js/utils.js"></script>
