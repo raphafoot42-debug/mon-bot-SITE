@@ -167,7 +167,7 @@ async function renderStats(userData) {
 /**
  * Affiche une section du dashboard
  */
-function showDashSection(section) {
+function showDash(section) {
   try {
     // Hide all sections
     const sections = document.querySelectorAll('[id^="d-"]');
@@ -190,7 +190,7 @@ function showDashSection(section) {
       }
     });
   } catch (err) {
-    console.error('showDashSection error:', err);
+    console.error('showDash error:', err);
   }
 }
 
@@ -287,7 +287,7 @@ if (typeof document !== 'undefined' && !window.__nexaSPA) {
 
 if (typeof window !== 'undefined') {
   window.renderDashboard = renderDashboard;
-  window.showDashSection = showDashSection;
+  window.showDash = showDash;
   window.saveSettings = saveSettings;
   window.loadUserData = loadUserData;
 }
@@ -295,7 +295,7 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     renderDashboard,
-    showDashSection,
+    showDash,
     saveSettings,
     loadUserData,
   };
