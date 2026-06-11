@@ -98,7 +98,7 @@ exports.handler = async function (event) {
   if (
     !process.env.STRIPE_SECRET_KEY ||
     !process.env.SUPABASE_URL ||
-    !process.env.SUPABASE_SERVICE_KEY
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
     return {
       statusCode: 500,
@@ -212,8 +212,8 @@ exports.handler = async function (event) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-          apikey: process.env.SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
           Prefer: 'return=representation',
         },
         body: JSON.stringify(updateData),
@@ -251,8 +251,8 @@ exports.handler = async function (event) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-            apikey: process.env.SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
             Prefer: 'resolution=merge-duplicates',
           },
           body: JSON.stringify({
@@ -270,6 +270,32 @@ exports.handler = async function (event) {
         const t = await commissionRes.text();
         console.warn('Commission record failed (non-blocking):', t);
       }
+    }
+
+    // ── Email confirmation paiement Nexa (non-bloquant) ─────────
+    const userRow = updatedRows[0] || {};
+    if (userRow.email) {
+      // Email au client
+      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'nexa_purchase',
+          to: userRow.email,
+          data: { prenom: userRow.prenom || '', plan: normalizedPlan, amount: (session.amount_total / 100).toFixed(2) }
+        })
+      }).catch(e => console.warn('send-email client:', e.message));
+
+      // Email à toi (owner)
+      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'owner_nexa_sale',
+          to: process.env.OWNER_EMAIL || 'contact@nexaai.fr',
+          data: { buyerEmail: userRow.email, plan: normalizedPlan, amount: (session.amount_total / 100).toFixed(2) }
+        })
+      }).catch(e => console.warn('send-email owner:', e.message));
     }
 
     return {
