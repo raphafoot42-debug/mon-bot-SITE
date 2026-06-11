@@ -46,6 +46,12 @@
   to = "/netlify/fonction/js/:splat"
   status = 200
 
+# Page de vente dynamique clients affiliation
+[[redirects]]
+  from = "/shop/*"
+  to = "/shop.html"
+  status = 200
+
 # Page de callback TikTok OAuth (page de transition vers la SPA)
 [[redirects]]
   from = "/dashboard.html"
@@ -79,14 +85,15 @@
 [context.production.environment]
   SUPABASE_URL          = "https://aubjtlxwqndfawdidwfq.supabase.co"
   # SUPABASE_ANON_KEY   → dans Netlify UI uniquement
-  # SUPABASE_SERVICE_KEY → dans Netlify UI uniquement (bypass RLS)
+  # SUPABASE_SERVICE_ROLE_KEY → dans Netlify UI uniquement (bypass RLS)
 
   # STRIPE_SECRET_KEY   → dans Netlify UI uniquement
-  STRIPE_PRICE_STARTER  = "price_1THSyjP8svYH1bkOt686fqqC"
-  STRIPE_PRICE_PRO      = "price_1THSzsP8svYH1bkOndl82cmU"
-  # Plans business/elite/partner supprimés — ne correspondent plus aux forfaits réels
+  STRIPE_PRICE_STARTER        = "price_1TgQAiP6KQQPJW2bIPBL567L"
+  STRIPE_PRICE_PRO            = "price_1TgQAjP6KQQPJW2bHjVUSD4j"
+  STRIPE_PRICE_STARTER_ANNUAL = "price_1TgQAjP6KQQPJW2buOxVpaY3"
+  STRIPE_PRICE_PRO_ANNUAL     = "price_1TgQAlP6KQQPJW2bRq9GGOnU"
 
-  # CLAUDE_API_KEY      → dans Netlify UI uniquement
+  # ANTHROPIC_API_KEY      → dans Netlify UI uniquement
   CLAUDE_MODEL          = "claude-sonnet-4-20250514"
   # CLAUDE_SYSTEM_PROMPT → dans Netlify UI uniquement
 
