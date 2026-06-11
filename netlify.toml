@@ -4,6 +4,18 @@
   publish = "."
 
 # ════════════════════════════════════════════════════════
+# SECRETS SCANNING
+# Ces clés sont des identifiants PUBLICS (côté navigateur) :
+# URL Supabase + clé publishable, client key TikTok, URLs publiques,
+# Price IDs Stripe, nom du modèle Claude. Elles sont conçues pour être
+# visibles dans le code client, donc on les exclut du scan.
+# ⚠️ Les VRAIS secrets (clés API, service role, secret keys, mots de
+# passe) NE sont PAS listés ici et restent protégés par le scanner.
+# ════════════════════════════════════════════════════════
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY,TIKTOK_CLIENT_KEY,TIKTOK_REDIRECT_URI,SITE_URL,DASHBOARD_PATH,CLAUDE_MODEL,STRIPE_PRICE_STARTER,STRIPE_PRICE_PRO,STRIPE_PRICE_STARTER_ANNUAL,STRIPE_PRICE_PRO_ANNUAL"
+
+# ════════════════════════════════════════════════════════
 # HEADERS — Content-Type pour CSS et JS
 # ════════════════════════════════════════════════════════
 
