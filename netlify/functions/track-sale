@@ -34,18 +34,12 @@ async function verifyPartner(stripeConnectId) {
 
   try {
     const res = await fetchWithTimeout(
-      `${url}/rest/v1/users?stripe_connect_id=eq.${encodeURIComponent(stripeConnectId)}&select=id,plan,affiliation_mode`,
-      {
-        headers: {
-          Authorization: `Bearer ${key}`,
-          apikey: key,
-        },
-      },
+      `${url}/rest/v1/users?stripe_connect_id=eq.${encodeURIComponent(stripeConnectId)}&select=id,email,prenom,plan`,
+      { headers: { Authorization: `Bearer ${key}`, apikey: key } },
       8000
     );
     if (!res.ok) return false;
     const rows = await res.json();
-    // Doit être un vrai user avec plan affiliation
     return rows?.[0]?.plan === 'affiliation' ? rows[0] : false;
   } catch (e) {
     console.error('verifyPartner error:', e.message);
@@ -97,9 +91,9 @@ async function recordSale({ partnerId, stripeConnectId, amount, currency, prospe
 // ════════════════════════════════════════════════════════════════
 
 exports.handler = async function (event) {
-  const allowedOrigin = process.env.SITE_URL || '';
+  // ⚠️ CORS '*' intentionnel — ce pixel est appelé depuis les sites externes des clients
   const headers = {
-    'Access-Control-Allow-Origin': '*', // ⚠️ pixel — doit accepter les sites externes des clients
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
@@ -155,13 +149,46 @@ exports.handler = async function (event) {
       prospectRef:     prospect_ref || null,
     });
 
+    // ── Notifier le partenaire par email (non-bloquant) ─────────
+    const partnerEmail = partner.email;
+    const commission   = (Number(amount) * 0.20).toFixed(2);
+    if (partnerEmail) {
+      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'sale_notify',
+          to: partnerEmail,
+          data: {
+            partnerPrenom: partner.prenom || '',
+            buyerEmail:    prospect_ref || 'client',
+            productName:   partner.product_name || 'ton produit',
+            amount:        Number(amount).toFixed(2),
+            commission,
+          }
+        })
+      }).catch(e => console.warn('send-email partenaire:', e.message));
+    }
+
+    // ── Notifier le owner (toi) par email (non-bloquant) ────────
+    fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'owner_affiliation_sale',
+        to: process.env.OWNER_EMAIL || 'contact@nexaai.fr',
+        data: {
+          clientEmail: partnerEmail || 'inconnu',
+          productName: partner.product_name || 'produit affiliation',
+          amount: Number(amount).toFixed(2),
+        }
+      })
+    }).catch(e => console.warn('send-email owner:', e.message));
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        success: true,
-        message: 'Vente enregistrée',
-      }),
+      body: JSON.stringify({ success: true, message: 'Vente enregistrée' }),
     };
   } catch (err) {
     console.error('track-sale error:', err.message);
