@@ -77,31 +77,6 @@
 
 # ════════════════════════════════════════════════════════
 # VARIABLES D'ENVIRONNEMENT
-# ⚠️ Mettre les VRAIES valeurs dans Netlify UI :
+# ⚠️ Toutes les variables sont dans Netlify UI uniquement :
 #    Settings > Build & deploy > Environment variables
-# Ne jamais committer de vraies clés dans ce fichier.
 # ════════════════════════════════════════════════════════
-
-[context.production.environment]
-  SUPABASE_URL          = "https://aubjtlxwqndfawdidwfq.supabase.co"
-  # SUPABASE_ANON_KEY   → dans Netlify UI uniquement
-  # SUPABASE_SERVICE_ROLE_KEY → dans Netlify UI uniquement (bypass RLS)
-
-  # STRIPE_SECRET_KEY   → dans Netlify UI uniquement
-  STRIPE_PRICE_STARTER        = "price_1TgQAiP6KQQPJW2bIPBL567L"
-  STRIPE_PRICE_PRO            = "price_1TgQAjP6KQQPJW2bHjVUSD4j"
-  STRIPE_PRICE_STARTER_ANNUAL = "price_1TgQAjP6KQQPJW2buOxVpaY3"
-  STRIPE_PRICE_PRO_ANNUAL     = "price_1TgQAlP6KQQPJW2bRq9GGOnU"
-
-  # ANTHROPIC_API_KEY      → dans Netlify UI uniquement
-  CLAUDE_MODEL          = "claude-sonnet-4-20250514"
-  # CLAUDE_SYSTEM_PROMPT → dans Netlify UI uniquement
-
-  TIKTOK_CLIENT_KEY     = "sbaw1dltizgdnu9xs8"
-  # TIKTOK_CLIENT_SECRET → dans Netlify UI uniquement
-  TIKTOK_REDIRECT_URI   = "https://nexaai.fr/tiktok-bridge.html"
-
-  SITE_URL              = "https://nexaai.fr"
-  DASHBOARD_PATH        = "/"
-  # ADMIN_PASSWORD       → dans Netlify UI uniquement
-  # NEXA_FUNCTION_SECRET → dans Netlify UI uniquement
