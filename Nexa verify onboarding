@@ -1,51 +1,15 @@
 /* ================================================================
-   NEXA v6 COMPACT — Email + Onboarding + Security (Minifiée & Lisible)
+   NEXA — Email Verify + Onboarding
+   Dépendances (chargées avant) : config.js, utils.js, nexa.js
    ================================================================ */
 
 // ════════════════════════════════════════════════════════════════
-// 🔐 UTILITAIRES SÉCURITÉ
+// 📦 STATE
 // ════════════════════════════════════════════════════════════════
-
-const escHtml = str => String(str || '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-const sanitize = (val, maxLen = 255) => 
-  escHtml((val || '').toString().trim()).slice(0, maxLen);
-
-const genToken = () => crypto.getRandomValues(new Uint8Array(32)).join('');
-
-let rateLimits = {};
-const checkRate = (key, limit, ms) => {
-  const now = Date.now();
-  rateLimits[key] = (rateLimits[key] || []).filter(t => now - t < ms);
-  if (rateLimits[key].length >= limit) throw new Error('Trop de tentatives');
-  rateLimits[key].push(now);
-};
-
-// ════════════════════════════════════════════════════════════════
-// 📦 STATE + CONFIG
-// ════════════════════════════════════════════════════════════════
-
-const MSG = {
-  offline: '❌ Pas de connexion internet',
-  sbMissing: '❌ Erreur serveur, reload',
-  fillAll: '⚠️ Remplir tous les champs',
-  pwdTooShort: '⚠️ Min 8 caractères',
-  emailInvalid: '⚠️ Email invalide',
-  confirmChecking: '⏳ Vérification...',
-  emailConfirmed: '✅ Email confirmé !',
-  emailNotYet: '❌ Email non confirmé',
-  resendOk: '✅ Email renvoyé',
-  finishSaving: '⏳ Enregistrement...',
-  verifyLoading: '✉️ Vérification...'
-};
 
 const _state = {
   btype: null,
   finishing: false,
-  csrf: genToken(),
-  sessionStart: Date.now(),
   _authUnsub: null,
   _authOwner: null,
   _resendTimer: null
@@ -54,123 +18,30 @@ const _state = {
 let _emailVerifyPageBuilt = false;
 let _successPageBuilt = false;
 
-// ════════════════════════════════════════════════════════════════
-// 💾 LOCALSTORAGE (SÉCURISÉ)
-// ════════════════════════════════════════════════════════════════
-
-const LS = {
-  get: (k, dflt = null) => {
-    try { return JSON.parse(localStorage.getItem(k) || 'null') ?? dflt; } 
-    catch { return dflt; }
-  },
-  set: (k, v) => {
-    try { localStorage.setItem(k, JSON.stringify(v)); } 
-    catch (e) { console.error('LS write:', e); }
-  },
-  del: k => localStorage.removeItem(k),
-  user: () => LS.get('nexaai_user', {}),
-  setUser: u => LS.set('nexaai_user', u)
+// Alias local vers NEXA_MESSAGES (défini dans config.js)
+const MSG = {
+  offline:        NEXA_MESSAGES.offline,
+  sbMissing:      NEXA_MESSAGES.serverError,
+  fillAll:        NEXA_MESSAGES.fillAll,
+  pwdTooShort:    NEXA_MESSAGES.pwdTooShort,
+  emailInvalid:   NEXA_MESSAGES.emailInvalid,
+  confirmChecking:NEXA_MESSAGES.confirmChecking,
+  emailConfirmed: NEXA_MESSAGES.emailConfirmed,
+  emailNotYet:    NEXA_MESSAGES.emailNotYet,
+  resendOk:       NEXA_MESSAGES.resendOk,
+  finishSaving:   '⏳ Enregistrement...',
+  verifyLoading:  '✉️ Vérification...'
 };
 
 // ════════════════════════════════════════════════════════════════
-// 🔗 SUPABASE + UTILITIES
+// ⚡ RATE LIMITING LOCAL (wrapper sur rateLimiter de utils.js)
 // ════════════════════════════════════════════════════════════════
-
-const getSb = () => {
-  if (typeof sb === 'undefined' || !sb) throw new Error('Supabase missing');
-  return sb;
-};
-
-const isOnline = () => {
-  if (!navigator.onLine) throw new Error(MSG.offline);
-  return true;
-};
-
-const toast = (msg, type = 'info') => {
-  const colors = { ok: '#39ff14', err: '#ff6b6b', info: '#888' };
-  let el = document.getElementById('_toast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = '_toast';
-    el.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-      padding:12px 20px;border-radius:8px;font-size:0.9rem;background:#222;border:1px solid #444;
-      z-index:9999;max-width:90vw;text-align:center;opacity:0;transition:opacity .3s;`;
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.style.color = colors[type] || colors.info;
-  el.style.opacity = '1';
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.style.opacity = '0', 3000);
-};
-
-const withTimeout = (promise, ms = 8000) => Promise.race([
-  promise,
-  new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms))
-]);
+const checkRate = (key, limit, ms) => rateLimiter.check(key, limit, ms);
 
 // ════════════════════════════════════════════════════════════════
-// 1️⃣ REGISTER
+// 1️⃣ REGISTER — défini dans auth.js
+// showEmailVerifyPage() est appelée depuis auth.js après inscription
 // ════════════════════════════════════════════════════════════════
-
-async function register() {
-  try {
-    isOnline();
-    checkRate('register', 5, 900000); // Max 5/15min
-    
-    const email = sanitize(document.getElementById('regEmail')?.value);
-    const pwd = document.getElementById('regPwd')?.value || '';
-    const pwd2 = document.getElementById('regPwd2')?.value || '';
-
-    if (!email || !pwd) throw new Error(MSG.fillAll);
-    if (pwd !== pwd2) throw new Error('Mots de passe ≠');
-    if (pwd.length < 8) throw new Error(MSG.pwdTooShort);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new Error(MSG.emailInvalid);
-
-    const btn = document.getElementById('regBtn');
-    btn.textContent = '⏳ Création...';
-    btn.disabled = true;
-
-    const client = getSb();
-    const { data, error } = await withTimeout(
-      client.auth.signUp({
-        email,
-        password: pwd,
-        options: { emailRedirectTo: window.location.origin + window.location.pathname + '?verified=1' }
-      })
-    );
-
-    if (error) throw error;
-
-    const prenom = email.split('@')[0].replace(/[0-9._\-+]/g, ' ').trim().split(/\s+/)[0];
-    
-    const newUser = {
-      id: data.user?.id || genToken(),
-      email,
-      prenom: prenom.charAt(0).toUpperCase() + prenom.slice(1),
-      plan: 'free',
-      platforms: [],
-      status: 'pending_verify',
-      emailVerified: false,
-      createdAt: new Date().toISOString()
-    };
-
-    LS.setUser(newUser);
-    
-    try {
-      await client.from('users').insert([newUser]);
-    } catch (e) { console.error('DB insert:', e); }
-
-    showEmailVerifyPage(email);
-    toast('✅ Email envoyé', 'ok');
-
-  } catch (err) {
-    toast(`❌ ${err.message}`, 'err');
-  } finally {
-    const btn = document.getElementById('regBtn');
-    if (btn) { btn.textContent = 'Créer'; btn.disabled = false; }
-  }
-}
 
 // ════════════════════════════════════════════════════════════════
 // 2️⃣ PAGE VÉRIFICATION EMAIL
@@ -208,9 +79,9 @@ function showEmailVerifyPage(email) {
           <p style="opacity:0.7;">💡 Vérifie aussi les spams</p>
         </div>
 
-        <button onclick="Nexa.checkEmailVerified()" class="btn btn-primary btn-full" style="margin-bottom:10px;">✅ J'ai confirmé</button>
-        <button onclick="Nexa.resendVerifyEmail()" class="btn btn-secondary btn-full" style="margin-bottom:10px;">🔁 Renvoyer</button>
-        <button onclick="Nexa.showPage('home')" class="btn btn-ghost btn-full">← Retour</button>
+        <button onclick="checkEmailVerified()" class="btn btn-primary btn-full" style="margin-bottom:10px;">✅ J'ai confirmé</button>
+        <button onclick="resendVerifyEmail()" class="btn btn-secondary btn-full" style="margin-bottom:10px;">🔁 Renvoyer</button>
+        <button onclick="showPage('home')" class="btn btn-ghost btn-full">← Retour</button>
         
         <p id="verify-status" role="status" style="margin-top:12px;font-size:0.85rem;min-height:18px;color:var(--text-light);"></p>
       </div>
@@ -247,6 +118,19 @@ async function checkEmailVerified() {
 
       if (statusEl) statusEl.textContent = MSG.emailConfirmed;
       if (statusEl) statusEl.style.color = 'var(--accent)';
+
+      // Email de bienvenue (non-bloquant)
+      if (user.email) {
+        fetch('/.netlify/functions/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'welcome',
+            to: user.email,
+            data: { prenom: user.prenom || '' }
+          })
+        }).catch(e => console.warn('send-email welcome:', e.message));
+      }
 
       setTimeout(() => {
         showPage('bot-qualify');
@@ -286,7 +170,7 @@ async function resendVerifyEmail() {
       client.auth.resend({
         type: 'signup',
         email: user.email,
-        options: { emailRedirectTo: window.location.origin + window.location.pathname + '?verified=1' }
+        options: { emailRedirectTo: window.location.origin + '/?auth=confirmed' }
       }), 10000
     );
 
@@ -320,7 +204,8 @@ async function resendVerifyEmail() {
 
 async function checkEmailVerifyReturn() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('verified') !== '1') return false;
+  // ✅ aligné sur auth.js : emailRedirectTo pointe vers ?auth=confirmed
+  if (params.get('auth') !== 'confirmed') return false;
 
   window.history.replaceState({}, document.title, window.location.pathname);
 
@@ -419,7 +304,12 @@ function showSuccessPage(user) {
     document.body.appendChild(page);
   }
 
-  const planName = { starter: 'Starter', pro: 'Pro 🎯', business: 'Business 💼', elite: 'Elite 👑' }[user.plan] || 'Starter';
+  const planName = {
+    free:        '🆓 Gratuit',
+    starter:     '✨ Starter',
+    pro:         '🚀 Pro',
+    affiliation: '🤝 Ambassadeur'
+  }[user.plan] || 'Gratuit';
 
   page.innerHTML = `
     <div class="tunnel-wrap" style="padding:30px 20px;">
@@ -458,15 +348,15 @@ function showSuccessPage(user) {
           <div style="margin-bottom:16px;">
             <label style="display:block;margin-bottom:8px;color:var(--text-light);font-size:0.85rem;">Type *</label>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="opt-card" data-btype="coaching" onclick="Nexa.pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">🎯 Coaching</div>
-              <div class="opt-card" data-btype="ecommerce" onclick="Nexa.pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">📦 E-com</div>
-              <div class="opt-card" data-btype="service" onclick="Nexa.pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">💼 Service</div>
-              <div class="opt-card" data-btype="saas" onclick="Nexa.pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">💻 SaaS</div>
+              <div class="opt-card" data-btype="coaching" onclick="pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">🎯 Coaching</div>
+              <div class="opt-card" data-btype="ecommerce" onclick="pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">📦 E-com</div>
+              <div class="opt-card" data-btype="service" onclick="pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">💼 Service</div>
+              <div class="opt-card" data-btype="saas" onclick="pickBtype(this)" role="button" tabindex="0" style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center;cursor:pointer;">💻 SaaS</div>
             </div>
             <p id="btype-err" role="alert" style="color:#ff6b6b;font-size:0.8rem;margin-top:6px;display:none;">Sélectionne un type</p>
           </div>
 
-          <button onclick="Nexa.nextStep(1)" class="btn btn-primary btn-full">Continuer →</button>
+          <button onclick="nextStep(1)" class="btn btn-primary btn-full">Continuer →</button>
         </div>
 
         <!-- STEP 2: Socials -->
@@ -481,8 +371,8 @@ function showSuccessPage(user) {
           </div>
 
           <div style="display:flex;gap:8px;">
-            <button onclick="Nexa.prevStep(2)" class="btn btn-secondary" style="flex:1;">← Retour</button>
-            <button onclick="Nexa.nextStep(2)" class="btn btn-primary" style="flex:2;">Continuer →</button>
+            <button onclick="prevStep(2)" class="btn btn-secondary" style="flex:1;">← Retour</button>
+            <button onclick="nextStep(2)" class="btn btn-primary" style="flex:2;">Continuer →</button>
           </div>
         </div>
 
@@ -501,8 +391,8 @@ function showSuccessPage(user) {
 
           <div id="recap" style="background:var(--bg-light);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px;text-align:left;font-size:0.8rem;color:var(--text-light);"></div>
 
-          <button id="finish-btn" onclick="Nexa.finish()" class="btn btn-primary btn-full">🎯 Accéder au dashboard →</button>
-          <button onclick="Nexa.prevStep(3)" class="btn btn-secondary btn-full" style="margin-top:8px;">← Modifier</button>
+          <button id="finish-btn" onclick="finish()" class="btn btn-primary btn-full">🎯 Accéder au dashboard →</button>
+          <button onclick="prevStep(3)" class="btn btn-secondary btn-full" style="margin-top:8px;">← Modifier</button>
         </div>
 
       </div>
@@ -635,18 +525,8 @@ async function finish() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// 8️⃣ PAGE NAVIGATION + RESET
+// 8️⃣ RESET SESSION
 // ════════════════════════════════════════════════════════════════
-
-function showPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const page = document.getElementById(pageId);
-  if (page) {
-    page.classList.add('active');
-    window.scrollTo(0, 0);
-  }
-}
-
 function resetSession() {
   _emailVerifyPageBuilt = false;
   _successPageBuilt = false;
@@ -665,43 +545,50 @@ function resetSession() {
 // ════════════════════════════════════════════════════════════════
 
 window.Nexa = {
-  // Auth
-  register,
+  // Email verify
   checkEmailVerified,
   resendVerifyEmail,
   checkEmailVerifyReturn,
+  showEmailVerifyPage,
   // Onboarding
+  showSuccessPage,
   pickBtype,
   nextStep,
   prevStep,
   finish,
-  // Utils
-  showPage,
   resetSession,
-  showSuccessPage,
-  // Helpers
-  toast,
-  sanitize,
-  escHtml,
-  LS
 };
+
+// Exposer les fonctions directement sur window pour les onclick inline
+window.checkEmailVerified  = checkEmailVerified;
+window.resendVerifyEmail   = resendVerifyEmail;
+window.showEmailVerifyPage = showEmailVerifyPage;
+window.showSuccessPage     = showSuccessPage;
+window.pickBtype           = pickBtype;
+window.nextStep            = nextStep;
+window.prevStep            = prevStep;
+window.finish              = finish;
 
 // ════════════════════════════════════════════════════════════════
 // 🔟 INIT ON LOAD
+// En SPA (index.html), nexa.js gère l'init principale.
+// Ce listener gère uniquement le retour de confirmation email.
 // ════════════════════════════════════════════════════════════════
 
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    if (await checkEmailVerifyReturn()) return; // Email confirmation return
-    
-    const user = LS.user();
-    if (user?.email && user?.emailVerified) {
-      showSuccessPage(user);
-    }
-  } catch (err) {
-    console.error('Init:', err);
-  }
-});
+if (!window.__nexaSPA) {
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      if (await checkEmailVerifyReturn()) return;
+      const user = LS.user();
+      if (user?.email && user?.emailVerified) showSuccessPage(user);
+    } catch (err) { console.error('Init:', err); }
+  });
+} else {
+  // En SPA : juste vérifier le retour email au load
+  document.addEventListener('DOMContentLoaded', async () => {
+    await checkEmailVerifyReturn();
+  });
+}
 
 // Auto cleanup on unload
 window.addEventListener('beforeunload', () => {
