@@ -13,7 +13,7 @@ let currentLang = 'fr';
 let td = {}; // tunnel data (données du tunnel de qualification)
 let dashChatHist = []; // historique du chat dashboard (déclaré globalement pour signOut et loadUserData)
 // State — déclaré ici pour être disponible dans signOut() et toutes les fonctions
-let currentPlan = 'free';
+let currentPlan = 'pending'; // 'pending' avant qualification, puis starter/pro/affiliation
 let connected = [];
 let chatOpen = false;
 let chatHist = [];
@@ -34,10 +34,10 @@ let chatHist = [];
 
 // ===== STRIPE PLANS =====
 const STRIPE_PLANS = {
-    "price_1THSyjP8svYH1bkOt686fqqC": { name: "Starter", messages: 40 },
-    "price_1TT4VCP8svYH1bkOmrlIYHls": { name: "Starter Annuel", messages: 40 },
-    "price_1THSzsP8svYH1bkOndl82cmU": { name: "Pro", messages: 75 },
-    "price_1TT4WjP8svYH1bkO9lOHz2CW": { name: "Pro Annuel", messages: 75 }
+    "price_1TgQAiP6KQQPJW2bIPBL567L": { name: "Starter", messages: 40 },
+    "price_1TgQAjP6KQQPJW2buOxVpaY3": { name: "Starter Annuel", messages: 40 },
+    "price_1TgQAjP6KQQPJW2bHjVUSD4j": { name: "Pro", messages: 75 },
+    "price_1TgQAlP6KQQPJW2bRq9GGOnU": { name: "Pro Annuel", messages: 75 }
 };
 
 // ===== SAVE AND SYNC STRIPE =====
@@ -82,7 +82,7 @@ async function saveAndSyncStripe() {
 }
 
 // ===== CONFIG =====
-const STRIPE_PK = 'pk_test_51TH5S2P8svYH1bkONQyzCOzUff4OrRBFLAu0REAMGK1043xGSQZlW8Ohw3aXYxdfNbgQhvHQsVx6LXeIQbUxpdzu00iEbgUt7K';
+const STRIPE_PK = 'pk_live_51TH5RcP6KQQPJW2bnHPJyEcMNn4b6Sv2VjHtliuO85GJ95mTzCf3dG6EGHKyJhvVFiVOSg2z37BOl6DZzb52YjtU00JuOJk8d1'; // mode LIVE
 // ✅ Netlify Functions — clés cachées côté serveur
 const PROXY_URL = '/.netlify/functions/claude';
 const STRIPE_URL = '/.netlify/functions/stripe-checkout';
@@ -146,7 +146,7 @@ async function checkStripeReturn() {
         const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
 
         // CORRECTION: vérifier le paiement côté serveur via verify-payment.js
-        // Empêche toute manipulation d'URL (?plan=elite sans avoir payé)
+        // Empêche toute manipulation d'URL (?plan=starter_annual sans avoir payé)
         if(sessionId && user.email) {
             try {
                 toast('⏳ Vérification du paiement...', 'ok');
@@ -178,12 +178,12 @@ async function checkStripeReturn() {
                     try {
                         const { data: userRow } = await sb.from('users').select('id').eq('email', user.email).single();
                         if(userRow) {
-                            const prices = {starter:39,pro:59,partner:497};
+                        const prices = { starter:39, starter_annual:340, pro:59, pro_annual:590 };
                             await sb.from('paiements').insert([{
                                 user_id: userRow.id,
                                 plan: planBase,
-                                montant: prices[planBase] || 39,
-                                type_paiement: 'mensuel',
+                                montant: prices[data.plan] || prices[planBase] || 39,
+                                type_paiement: (data.plan || '').endsWith('_annual') ? 'annuel' : 'mensuel',
                                 stripe_session_id: sessionId
                             }]);
                         }
@@ -294,7 +294,7 @@ async function loadUserData() {
         localStorage.setItem('nexaai_user', JSON.stringify(user));
 
         // Vérification — si profil déjà complet (plan défini ou stripe configuré) → dashboard direct, pas de requalification
-        const profileComplete = user.plan && user.plan !== 'free' || user.stripe_connect_id;
+        const profileComplete = user.plan && user.plan !== 'pending' || user.stripe_connect_id;
         if(profileComplete) {
             await loadDashboard(user);
             showPage('dashboard-page');
@@ -339,9 +339,11 @@ function showSuccessPage(user) {
     if (!user) return;
 
     const planNames = {
-        starter: 'Starter',
-        pro: 'Pro 🎯',
-        partner: '🤝 Partner',
+        starter: 'Starter ✨',
+        starter_annual: 'Starter Annuel ✨',
+        pro: 'Pro 🚀',
+        pro_annual: 'Pro Annuel 🚀',
+        affiliation: 'Ambassadeur 🤝',
     };
     const planName = planNames[user.plan] || 'Starter';
 
@@ -563,42 +565,41 @@ function changeLang(lang) {
 
 // ===== TUNNEL =====
 function startTunnel(plan) {
-    // CORRECTION : résoudre les price IDs Stripe annuels vers leur plan de base
+    // Résout les price IDs Stripe vers leur clé plan (pour compatibilité boutons HTML existants)
     const priceIdMap = {
-        'price_1TT4VCP8svYH1bkOmrlIYHls': 'starter-once',
-        'price_1TT4WjP8svYH1bkO9lOHz2CW': 'pro-once',
-        'price_1TT4XwP8svYH1bkOoPQgfYmF': 'business-once',
-        'price_1TT4XNP8svYH1bkORkrNN1P6': 'elite-once'
+        'price_1TgQAiP6KQQPJW2bIPBL567L': 'starter',
+        'price_1TgQAjP6KQQPJW2bHjVUSD4j': 'pro',
+        'price_1TgQAjP6KQQPJW2buOxVpaY3': 'starter_annual',
+        'price_1TgQAlP6KQQPJW2bRq9GGOnU': 'pro_annual',
     };
     if(priceIdMap[plan]) plan = priceIdMap[plan];
 
     currentPlan = plan;
     td.plan = plan;
-    const isOnce = plan.includes('-once');
-    const planBase = plan.replace('-once', '');
+    const isAnnual = plan.endsWith('_annual');
+    const planBase = plan.replace('_annual', '');
     const planNames = { starter:'Starter ✨', pro:'Pro 🚀', affiliation:'Ambassadeur 🤝' };
     const planPrices = {
-        'starter':'€39', 'starter-once':'€340 (paiement unique)',
-        'pro':'€59',     'pro-once':'€590 (paiement unique)',
+        'starter':'€39/mois', 'starter_annual':'€340/an',
+        'pro':'€59/mois',     'pro_annual':'€590/an',
         'affiliation':'Gratuit'
     };
     const payPlanName = document.getElementById('pay-plan-name');
     const payPlanPrice = document.getElementById('pay-plan-price');
-    if(payPlanName) payPlanName.textContent = (planNames[planBase] || 'Starter') + (isOnce ? ' — Paiement unique' : '');
-    if(payPlanPrice) payPlanPrice.textContent = planPrices[plan] || '€39';
+    if(payPlanName) payPlanName.textContent = (planNames[planBase] || 'Starter') + (isAnnual ? ' — Annuel' : '');
+    if(payPlanPrice) payPlanPrice.textContent = planPrices[plan] || '€39/mois';
 
-    // Afficher les features du plan dans la page paiement
+    // Afficher les features du plan
     const features = {
-        starter: '&#8226; 10 prospects / jour&#8226; Messages automatisés&#8226; Dashboard&#8226; Support par email',
-        pro: '&#8226; 80 prospects / jour&#8226; Messages ultra-personnalisés&#8226; Dashboard + Analytics&#8226; Support 24/7&#8226; API integration',
-        business: '&#8226; 300 prospects / jour&#8226; 200 messages bot / jour&#8226; Dashboard Business&#8226; Support 24/7&#8226; API integration',
-        elite: '&#8226; 750 prospects / jour&#8226; Messages bot illimités&#8226; Dashboard Elite&#8226; Account manager dédié&#8226; API + Webhooks&#8226; Onboarding dédié'
+        starter: '&#8226; 40 messages / jour&#8226; Messages automatisés&#8226; Dashboard de suivi&#8226; Support par email',
+        pro: '&#8226; 75 messages / jour&#8226; Messages ultra-personnalisés&#8226; Dashboard avancé&#8226; Support 24/7&#8226; API',
+        affiliation: '&#8226; 50 messages / jour&#8226; Lien d\'affiliation personnel&#8226; 20% sur chaque vente générée'
     };
     const featEl = document.getElementById('pay-features');
     if(featEl) featEl.innerHTML = features[planBase] || features.starter;
 
     const typeEl = document.getElementById('pay-plan-type');
-    if(typeEl) typeEl.textContent = isOnce ? 'Paiement unique — accès 12 mois' : 'Abonnement mensuel — sans engagement';
+    if(typeEl) typeEl.textContent = isAnnual ? 'Paiement annuel — 2 mois offerts' : 'Abonnement mensuel — sans engagement';
 
     handlePlanSelection(plan);
 }
@@ -632,14 +633,14 @@ async function handlePlanSelection(plan) {
         }
 
         const rawPartner = localStorage.getItem('nexa_partner_id');
-        const clientStripeConnectId = (rawPartner && rawPartner.startsWith('acct_')) ? rawPartner : null;
+        const referrerId = (rawPartner && rawPartner.startsWith('acct_')) ? rawPartner : null;
 
         if(sb && email) {
             await saveUserToDB({
                 email,
                 prenom: td.prenom || email.split('@')[0],
                 business: td.business || '',
-                plan: plan.replace('-once',''),
+                plan: plan.replace('_annual',''),
                 tiktok_pseudo: td.tiktok || '',
                 store_url: CLIENT_STORE_URL || ''
             });
@@ -649,9 +650,10 @@ async function handlePlanSelection(plan) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                plan,
+                plan: plan.replace('_annual', ''),
+                billing: plan.endsWith('_annual') ? 'annual' : 'monthly',
                 email,
-                clientStripeConnectId,
+                referrer_id: referrerId,
                 success_url: window.location.origin + window.location.pathname + '?payment=success&plan=' + encodeURIComponent(plan),
                 cancel_url: window.location.origin + window.location.pathname + '?payment=cancel'
             })
@@ -765,7 +767,7 @@ async function loadDashboard(user) {
     }
     // Calcul du revenu estimé depuis les prospects closés
     const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
-    const planRevenue = { starter: 39, pro: 59, free: 0 };
+    const planRevenue = { starter: 39, pro: 59, affiliation: 0 };
     // CORRECTION: utiliser le prix du produit client si renseigné, sinon le tarif du plan
     const revenueEstimate = closedCount * (parseFloat(user.prix_produit) || planRevenue[user.plan] || 0);
     // CORRECTION: null-check sur st-revenue
@@ -822,14 +824,18 @@ async function loadDashboard(user) {
         elAffLink.style.display = 'block';
         elAffLink.textContent = '🔗 Ton lien : ' + window.location.origin + '?ref=' + user.stripe_connect_id;
     }
-    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
+    const planNames = {
+        starter:'Starter ✨', starter_annual:'Starter Annuel ✨',
+        pro:'Pro 🚀',         pro_annual:'Pro Annuel 🚀',
+        affiliation:'Ambassadeur 🤝', free:'Gratuit'
+    };
     const planPrices = {
-        starter:'€39/mois', 'starter-once':'€340 (unique)',
-        pro:'€59/mois',     'pro-once':'€590 (unique)',
-        affiliation:'€0/mois',
-        free:'—'
+        starter:'€39/mois',   starter_annual:'€340/an',
+        pro:'€59/mois',       pro_annual:'€590/an',
+        affiliation:'€0/mois', free:'—'
     };
     const elPlan = document.getElementById('s-plan'); if(elPlan) elPlan.textContent = planNames[user.plan] || 'Starter';
+    const elBilling = document.getElementById('s-billing'); if(elBilling) elBilling.textContent = (user.plan || '').endsWith('_annual') ? 'Abonnement annuel' : 'Abonnement mensuel';
     const elPrice = document.getElementById('s-price'); if(elPrice) elPrice.textContent = planPrices[user.plan] || '€39/mois';
     // Prospects
     loadProspects(user.prospects || []);
@@ -897,7 +903,7 @@ async function saveSettings() {
         prenom: user.prenom,
         business: user.business,
         type_business: user.type_business,
-        plan: user.plan || 'free',
+        plan: user.plan || 'pending',
         platforms: user.platforms || []
     });
 
@@ -941,7 +947,7 @@ async function saveAffiliationSettings() {
         user.affiliation_mode = mode;
         user.stripe_connect_id = stripeId;
         if(storeUrl) user.store_url = storeUrl;
-        if(!user.plan || user.plan === 'free') user.plan = 'affiliation';
+        if(!user.plan || user.plan === 'pending') user.plan = 'affiliation';
 
         await saveUserToDB({
             email: user.email,
@@ -1076,7 +1082,7 @@ async function register() {
       id: data.user?.id || genToken(),
       email,
       prenom: prenom.charAt(0).toUpperCase() + prenom.slice(1),
-      plan: 'free',
+      plan: 'pending',
       platforms: [],
       status: 'pending_verify',
       emailVerified: false,
@@ -1356,7 +1362,7 @@ function viewUserDetail(email) {
     const modal = document.getElementById('userDetailModal');
     const content = document.getElementById('userDetailContent');
     if(!modal || !content) return; // CORRECTION: null-check
-    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
+    const planNames = {starter:'Starter ✨',starter_annual:'Starter Annuel ✨',pro:'Pro 🚀',pro_annual:'Pro Annuel 🚀',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
     const date = new Date(user.created_at || user.createdAt || Date.now()).toLocaleDateString('fr-FR');
 
     var rows = [
@@ -1473,7 +1479,7 @@ async function sendAdminMessage() {
 
 function exportCSV() {
     const headers = ['Prénom','Email','Business','Type','TikTok','Forfait','Inscrit','Prospects','Statut'];
-    const planNames = {starter:'Starter',pro:'Pro',affiliation:'Ambassadeur',free:'Gratuit'};
+    const planNames = {starter:'Starter',starter_annual:'Starter Annuel',pro:'Pro',pro_annual:'Pro Annuel',affiliation:'Ambassadeur',free:'Gratuit'};
     const rows = allUsers.map(u => [
         u.prenom || '',
         u.email || '',
@@ -1533,13 +1539,13 @@ let _adminLoading = false;
 
 function renderAdminStats(users) {
     const total = users.length;
-    const paying = users.filter(u => u.plan && u.plan !== 'free').length;
-    const free = users.filter(u => !u.plan || u.plan === 'free').length;
+    const paying = users.filter(u => u.plan && u.plan !== 'pending').length;
+    const free = users.filter(u => !u.plan || u.plan === 'pending').length;
     const suspended = users.filter(u => u.status === 'suspended').length;
 
     // MRR
     const planPrices = {starter:39, pro:59};
-    const mrr = users.filter(u => u.plan && u.plan !== 'free')
+    const mrr = users.filter(u => u.plan && u.plan !== 'pending')
         .reduce((sum, u) => sum + (planPrices[u.plan] || 0), 0);
 
     // Inscrits aujourd'hui
@@ -1582,7 +1588,7 @@ function renderRevenueChart(users) {
 
     // Calculer les revenus par mois
     users.forEach(u => {
-        if(!u.plan || u.plan === 'free') return;
+        if(!u.plan || u.plan === 'pending') return;
         const d = new Date(u.created_at || u.createdAt || now);
         const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
         if(months[key] !== undefined) months[key] += planPrices[u.plan] || 0;
@@ -1619,18 +1625,18 @@ function renderAdminUsers(users) {
         return;
     }
 
-    const planColors = {starter:'var(--accent)',pro:'#60c8ff',affiliation:'#f59e0b',free:'#555'};
-    const planNames = {starter:'Starter',pro:'Pro 🎯',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
+    const planColors = {starter:'var(--accent)',starter_annual:'var(--accent)',pro:'#60c8ff',pro_annual:'#60c8ff',affiliation:'#f59e0b',free:'#555'};
+    const planNames = {starter:'Starter ✨',starter_annual:'Starter Annuel ✨',pro:'Pro 🚀',pro_annual:'Pro Annuel 🚀',affiliation:'Ambassadeur 🤝',free:'Gratuit'};
 
     tbody.innerHTML = '';
     users.forEach(u => {
-        const plan = u.plan || 'free';
+        const plan = u.plan || 'pending';
         const date = new Date(u.created_at || u.createdAt || Date.now());
         const dateStr = date.toLocaleDateString('fr-FR');
         const prospects = (u.prospects || []).length;
         const isSuspended = u.status === 'suspended';
-        const statusColor = isSuspended ? '#ff4444' : (plan !== 'free' ? 'var(--accent)' : '#888');
-        const statusLabel = isSuspended ? '🚫 Suspendu' : (plan !== 'free' ? '✅ Actif' : '⭕ Gratuit');
+        const statusColor = isSuspended ? '#ff4444' : (plan !== 'pending' ? 'var(--accent)' : '#888');
+        const statusLabel = isSuspended ? '🚫 Suspendu' : (plan !== 'pending' ? '✅ Actif' : '⭕ Non qualifié');
 
         // CORRECTION: utiliser escHtml() plutôt que des remplacements manuels dupliqués
         var em = escHtml(u.email || '');
@@ -1642,7 +1648,7 @@ function renderAdminUsers(users) {
             '<td style="color:var(--text-light);font-size:0.82rem;">' + escHtml(u.business||'-') + '</td>',
             '<td><span style="background:' + planColors[plan] + '22;color:' + planColors[plan] + ';padding:4px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;">' + planNames[plan] + '</span></td>',
             '<td><select data-email="' + em + '" onchange="adminChangePlan(this,this.dataset.email)" style="padding:5px 8px;background:#000;border:1px solid var(--border);border-radius:6px;color:var(--text-light);font-size:0.8rem;cursor:pointer;">' +
-                '<option value="free"' + (plan==='free'?' selected':'') + '>Gratuit</option>' +
+                '<option value="pending"' + (plan==='pending'?' selected':'') + '>Gratuit</option>' +
                 '<option value="starter"' + (plan==='starter'?' selected':'') + '>Starter</option>' +
                 '<option value="pro"' + (plan==='pro'?' selected':'') + '>Pro</option>' +
                 '<option value="affiliation"' + (plan==='affiliation'?' selected':'') + '>Ambassadeur</option>' +
@@ -1671,8 +1677,8 @@ function filterAdminUsers(search) {
         (u.prenom || '').toLowerCase().includes(q) ||
         (u.business || '').toLowerCase().includes(q)
     );
-    if(filter === 'paying') filtered = filtered.filter(u => u.plan && u.plan !== 'free');
-    else if(filter === 'free') filtered = filtered.filter(u => !u.plan || u.plan === 'free');
+    if(filter === 'paying') filtered = filtered.filter(u => u.plan && u.plan !== 'pending');
+    else if(filter === 'pending') filtered = filtered.filter(u => !u.plan || u.plan === 'pending');
     else if(filter === 'suspended') filtered = filtered.filter(u => u.status === 'suspended');
     else if(['starter','pro','affiliation'].includes(filter)) filtered = filtered.filter(u => u.plan === filter);
     renderAdminUsers(filtered);
@@ -1996,7 +2002,7 @@ async function sendDashMsg() {
             + ' | Followers: ' + (user.followers_tiktok||nr)
             + ' | DMs/jour: ' + (user.dms_par_jour||nr)
             + ' | Objectif: ' + (user.objectif||nr)
-            + ' | Plan: ' + (user.plan||'free')
+            + ' | Plan: ' + (user.plan||'pending')
             + ' | Pays: ' + (user.pays||nr)
             + ' | En tant que Nexa agent IA personnel, utilise ces infos pour conseiller ultra-personnalise, aider a rediger des messages de closing, calculer le potentiel de revenus et motiver avec des donnees concretes.';
         const fullSystem = SYS + '\n\nContexte client: ' + ctx;
@@ -2066,7 +2072,7 @@ function botQualifyStart(email) {
     // Vérification — si l'utilisateur a déjà tout configuré, ne pas repasser par le bot
     const existingUser = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
     if(existingUser.email === email) {
-        const alreadyDone = (existingUser.plan && existingUser.plan !== 'free') || existingUser.stripe_connect_id;
+        const alreadyDone = (existingUser.plan && existingUser.plan !== 'pending') || existingUser.stripe_connect_id;
         if(alreadyDone) {
             loadDashboard(existingUser).then(() => showPage('dashboard-page'));
             return;
@@ -2153,18 +2159,17 @@ async function bqSendToAI(userText) {
     if (lower.includes('ambassadeur') || lower.includes('affiliation') || lower.includes('gratuit')) {
         bqData.plan = 'affiliation';
         bqHist.pop();
-        // Étape A — choisir le mode d'affiliation
         bqData._affStep = 'choose_mode';
         bqAIMsg(
             "Super ! 🤝 Plan Ambassadeur — voici comment ça marche :\n\n" +
-            "🔹 Mode 1 — L'IA close pour toi : Nexa gère tes DMs et close tes ventes. Nexa prend 80%, tu reçois 20% de chaque vente.\n\n" +
+            "🔹 Mode 1 — L'IA close pour toi : Nexa analyse les profils TikTok, gère tes DMs et close tes ventes. Nexa prend 80%, tu reçois 20% de chaque vente.\n\n" +
             "🔹 Mode 2 — Tu partages ton lien : Tu mets ton lien en bio TikTok. À chaque abonnement Nexa via ton lien, tu reçois 20%, Nexa garde 80%.\n\nLequel tu choisis ?",
             ['🤖 Mode 1 — L\'IA close pour moi', '🔗 Mode 2 — Je partage mon lien']
         );
         return;
     }
 
-    // 1b. Suite du flow ambassadeur — choix du mode
+    // 1b. Choix du mode
     if (bqData._affStep === 'choose_mode') {
         bqHist.pop();
         if (lower.includes('mode 1') || lower.includes('ia close') || lower.includes('close pour moi')) {
@@ -2185,7 +2190,7 @@ async function bqSendToAI(userText) {
         return;
     }
 
-    // 1c. Suite du flow ambassadeur — réception ID Stripe
+    // 1c. Réception ID Stripe
     if (bqData._affStep === 'ask_stripe') {
         bqHist.pop();
         const stripeIdMatch = userText.trim().match(/acct_[a-zA-Z0-9]+/);
@@ -2194,29 +2199,268 @@ async function bqSendToAI(userText) {
             return;
         }
         bqData.stripe_connect_id = stripeIdMatch[0];
-        bqData._affStep = 'ask_product_url';
+
         if (bqData._affMode === 'ia_close') {
-            bqAIMsg("✅ ID Stripe enregistré !\n\nMaintenant envoie-moi l'URL de ton tunnel de vente (le lien vers ton produit) :");
+            // Mode IA close → on crée la page produit → demander le nom du produit
+            bqData._affStep = 'ask_product_name';
+            bqAIMsg(
+                "✅ ID Stripe enregistré !\n\n" +
+                "Maintenant je vais créer ta page de vente sur Nexa. C'est toi qui vends, moi je prospecte et je close.\n\n" +
+                "C'est quoi le nom de ton produit ou service ?"
+            );
         } else {
+            // Mode lien → finaliser directement
             bqData._affStep = 'done';
-            // Finaliser directement pour le mode lien
             await _finalizeAmbassadeur();
         }
         return;
     }
 
-    // 1d. Suite du flow ambassadeur — URL produit (mode IA close uniquement)
-    if (bqData._affStep === 'ask_product_url') {
+    // 1d. Mode IA close — Nom du produit
+    if (bqData._affStep === 'ask_product_name') {
         bqHist.pop();
-        const urlMatch = userText.trim().match(/https?:\/\/[^\s]+/);
-        if (!urlMatch) {
-            bqAIMsg("❌ Je n'ai pas reconnu d'URL valide. Elle doit commencer par https://\n\nRéessaie :");
+        const nom = userText.trim().slice(0, 100);
+        if (!nom || nom.length < 2) {
+            bqAIMsg("❌ Donne-moi un vrai nom de produit !\n\nExemple : \"Formation TikTok\", \"Coaching business\" ...");
             return;
         }
-        bqData.store_url = urlMatch[0];
-        bqData._affStep = 'done';
-        await _finalizeAmbassadeur();
+        bqData._productName = nom;
+        bqData._affStep = 'ask_product_price';
+        bqAIMsg(`Super — "${nom}" 👍\n\nC'est vendu à quel prix ? (juste le chiffre en €)`);
         return;
+    }
+
+    // 1e. Mode IA close — Prix
+    if (bqData._affStep === 'ask_product_price') {
+        bqHist.pop();
+        const priceMatch = userText.trim().match(/\d+([.,]\d{1,2})?/);
+        if (!priceMatch) {
+            bqAIMsg("❌ Je n'ai pas reconnu de prix. Envoie juste un chiffre, ex : 97");
+            return;
+        }
+        const price = parseFloat(priceMatch[0].replace(',', '.'));
+        if (price < 1 || price > 50000) {
+            bqAIMsg("❌ Le prix doit être entre 1€ et 50 000€. Réessaie :");
+            return;
+        }
+        bqData._productPrice = price;
+        bqData._affStep = 'ask_product_description';
+        bqAIMsg(`${price}€ 💰\n\nDécris ton produit en 2-3 phrases. Qu'est-ce que ça apporte concrètement à l'acheteur ?`);
+        return;
+    }
+
+    // 1f. Mode IA close — Description
+    if (bqData._affStep === 'ask_product_description') {
+        bqHist.pop();
+        const desc = userText.trim().slice(0, 300);
+        if (!desc || desc.length < 10) {
+            bqAIMsg("❌ Donne-moi une vraie description — au moins une phrase complète.");
+            return;
+        }
+        bqData._productDesc = desc;
+        bqData._affStep = 'ask_product_design';
+        bqAIMsg(
+            "Parfait 👌\n\nMaintenant choisis le design de ta page de vente :\n\n" +
+            "🖤 Design 1 — Minimaliste : fond noir, texte blanc, accent vert. Simple, moderne, crédible. Idéal pour coaching et formation.\n\n" +
+            "✨ Design 2 — Premium : dégradé sombre, touches dorées, typographie élégante. Parfait pour produits haut de gamme.\n\n" +
+            "⚡ Design 3 — Énergie : fond blanc, couleurs vives, bold. Parfait pour sport, bien-être, e-commerce.\n\nLequel tu choisis ?",
+            ['🖤 Minimaliste', '✨ Premium', '⚡ Énergie']
+        );
+        return;
+    }
+
+    // Design
+    if (bqData._affStep === 'ask_product_design') {
+        bqHist.pop();
+        if (lower.includes('minimal') || lower.includes('1') || lower.includes('noir')) {
+            bqData._productDesign = 'minimal';
+        } else if (lower.includes('premium') || lower.includes('2') || lower.includes('dor')) {
+            bqData._productDesign = 'premium';
+        } else {
+            bqData._productDesign = 'energy';
+        }
+        bqData._affStep = 'ask_product_guarantee';
+        bqAIMsg(
+            "Super choix ! 🎨\n\nTu offres une garantie ? Ex : \"Satisfait ou remboursé 30 jours\", \"Résultats garantis ou remboursé\"\n\nSi non, réponds non.",
+            ['✅ Satisfait ou remboursé 30 jours', '✅ Résultats garantis', '❌ Pas de garantie']
+        );
+        return;
+    }
+
+    // Garantie
+    if (bqData._affStep === 'ask_product_guarantee') {
+        bqHist.pop();
+        if (lower.includes('non') || lower.includes('pas')) {
+            bqData._productGuarantee = '';
+        } else {
+            bqData._productGuarantee = userText.trim().slice(0, 150);
+        }
+        bqData._affStep = 'ask_product_spots';
+        bqAIMsg(
+            "👍\n\nTu veux limiter les places disponibles ? C'est un outil marketing puissant.\n\nEx : \"Plus que 10 places disponibles\"\n\nSi non, réponds non.",
+            ['✅ Oui — 5 places', '✅ Oui — 10 places', '✅ Oui — 20 places', '❌ Non']
+        );
+        return;
+    }
+
+    // Places limitées
+    if (bqData._affStep === 'ask_product_spots') {
+        bqHist.pop();
+        if (lower.includes('non') || lower.includes('pas')) {
+            bqData._productSpots = null;
+        } else {
+            const spotsMatch = userText.match(/\d+/);
+            bqData._productSpots = spotsMatch ? parseInt(spotsMatch[0]) : null;
+        }
+        bqData._affStep = 'ask_product_testimonials';
+        bqAIMsg(
+            "Presque fini ! 🙌\n\nTu as des témoignages clients à mettre sur ta page ?\n\nEnvoie-les dans ce format :\n" +
+            "Prénom : Marie\nAvis : \"Cette formation a changé ma vie, j'ai fait 2000€ en 3 semaines !\"\n\n" +
+            "Tu peux en mettre jusqu'à 3. Si tu n'en as pas, réponds non."
+        );
+        return;
+    }
+
+    // Témoignages
+    if (bqData._affStep === 'ask_product_testimonials') {
+        bqHist.pop();
+        if (lower.includes('non') || lower.includes('pas')) {
+            bqData._productTestimonials = [];
+        } else {
+            // Parser les témoignages du texte libre
+            const lines = userText.split('\n').filter(l => l.trim());
+            const testimonials = [];
+            let current = {};
+            for (const line of lines) {
+                if (line.toLowerCase().includes('prénom') || line.toLowerCase().includes('prenom')) {
+                    if (current.name && current.text) testimonials.push(current);
+                    current = { name: line.split(':').slice(1).join(':').trim() };
+                } else if (line.toLowerCase().includes('avis')) {
+                    current.text = line.split(':').slice(1).join(':').trim().replace(/['"]/g, '');
+                }
+            }
+            if (current.name && current.text) testimonials.push(current);
+            bqData._productTestimonials = testimonials.slice(0, 3);
+        }
+        bqData._affStep = 'ask_product_niche';
+        bqAIMsg(
+            "Super ! Dernière question 💪\n\nQuelle est ta niche ? Dans quel secteur tu vends ?\n\n" +
+            "Ex : coaching business, formation TikTok, e-commerce, dropshipping, bien-être, sport...",
+            ['💼 Coaching / Formation', '🛒 E-commerce', '📱 Réseaux sociaux', '💪 Sport / Bien-être', '🏠 Immobilier', '🎨 Autre']
+        );
+        return;
+    }
+
+    // 1g. Mode IA close — Niche → Analyse IA
+    if (bqData._affStep === 'ask_product_niche') {
+        bqHist.pop();
+        bqData._productNiche = userText.trim().slice(0, 100);
+        bqData._affStep = 'analyzing_niche';
+
+        bqAIMsg("⏳ J'analyse ta niche et ton produit...");
+
+        // Appel à l'IA pour analyser la niche
+        try {
+            const analyzeRes = await fetch('/.netlify/functions/analyze-niche', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    niche: bqData._productNiche,
+                    product_name: bqData._productName,
+                    product_price: bqData._productPrice,
+                    description: bqData._productDesc
+                })
+            });
+            const analyzeData = await analyzeRes.json();
+            const score = analyzeData.score || 0;
+            const verdict = analyzeData.verdict || '';
+            const suggestion = analyzeData.suggestion || '';
+
+            bqData._nicheScore = score;
+            bqData._nicheVerdict = verdict;
+
+            if (score >= 50) {
+                // ✅ Niche acceptable → continuer
+                bqData._affStep = 'niche_accepted';
+                bqAIMsg(
+                    `✅ Bonne nouvelle !\n\n${verdict}\n\n` +
+                    `Score niche : ${score}/100 — tu as de bonnes chances de convertir avec Nexa.\n\n` +
+                    `Je crée ta page de vente maintenant. Une seconde...`
+                );
+                await _createProductAndFinalize();
+            } else {
+                // ❌ Niche faible → honnêteté + proposition
+                bqData._affStep = 'niche_rejected_proposal';
+                bqData._nicheSuggestion = suggestion;
+                bqAIMsg(
+                    `⚠️ Je dois être honnête avec toi.\n\n${verdict}\n\n` +
+                    `Score niche : ${score}/100 — avec cette niche, tu risques de faire très peu de ventes ` +
+                    `et Nexa va travailler pour rien.\n\n` +
+                    `Par contre, voici ce qui pourrait vraiment marcher pour toi :\n\n` +
+                    `💡 ${suggestion}\n\n` +
+                    `Tu veux qu'on parte sur cette direction à la place ?`,
+                    ['✅ Oui, je veux essayer ça !', '❌ Non, je reste sur mon idée']
+                );
+            }
+        } catch(e) {
+            console.error('analyze-niche error:', e);
+            // En cas d'erreur API → on laisse passer avec un warning
+            bqData._affStep = 'niche_accepted';
+            bqAIMsg("⚠️ Analyse indisponible, je crée ta page quand même. Une seconde...");
+            await _createProductAndFinalize();
+        }
+        return;
+    }
+
+    // 1h. Réponse au verdict niche faible
+    if (bqData._affStep === 'niche_rejected_proposal') {
+        bqHist.pop();
+        if (lower.includes('oui') || lower.includes('essayer') || lower.includes('ok') || lower.includes('accord')) {
+            // ✅ Client accepte la suggestion → créer avec la nouvelle niche
+            bqData._productNiche = bqData._nicheSuggestion || bqData._productNiche;
+            bqData._affStep = 'niche_accepted';
+            bqAIMsg("🔥 Excellent choix ! Je crée ta page avec cette direction. Une seconde...");
+            await _createProductAndFinalize();
+        } else {
+            // ❌ Client refuse → on ne bloque pas, on dit juste non
+            bqData._affStep = 'done_refused';
+            bqAIMsg(
+                "Je comprends ton choix. Mais je ne changerai pas d'avis — avec cette niche, " +
+                "Nexa ne pourra pas faire de résultats et je ne veux pas te faire perdre ton temps.\n\n" +
+                "Si un jour tu veux repartir sur une niche qui convertit vraiment, reviens me voir. " +
+                "La porte est ouverte. 💪"
+            );
+        }
+        return;
+    }
+
+    // Helper — créer le produit dans Supabase et finaliser
+    async function _createProductAndFinalize() {
+        try {
+            const productRes = await fetch('/.netlify/functions/create-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email:            bqData.email,
+                    stripe_connect_id:bqData.stripe_connect_id,
+                    name:             bqData._productName,
+                    price:            bqData._productPrice,
+                    description:      bqData._productDesc,
+                    niche:            bqData._productNiche,
+                    niche_score:      bqData._nicheScore  || 50,
+                    design:           bqData._productDesign       || 'minimal',
+                    testimonials:     bqData._productTestimonials || [],
+                    guarantee:        bqData._productGuarantee    || '',
+                    spots_left:       bqData._productSpots        || null
+                })
+            });
+            const productData = await productRes.json();
+            if (!productData.success) throw new Error('Création produit échouée');
+            await _finalizeAmbassadeur();
+        } catch(e) {
+            console.error('_createProductAndFinalize error:', e);
+            bqAIMsg("❌ Une erreur est survenue lors de la création. Réessaie !");
+        }
     }
 
     // Helper interne — finalise l'enregistrement ambassadeur
@@ -2230,28 +2474,31 @@ async function bqSendToAI(userText) {
                 store_url: bqData.store_url || '',
                 affiliation_mode: bqData._affMode || 'lien'
             });
-            // Mettre à jour localStorage
-            const userAff = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+            const userAff = LS.user() || {};
             userAff.stripe_connect_id = bqData.stripe_connect_id || '';
             userAff.store_url = bqData.store_url || '';
             userAff.affiliation_mode = bqData._affMode || 'lien';
             userAff.plan = 'affiliation';
-            localStorage.setItem('nexaai_user', JSON.stringify(userAff));
+            LS.setUser(userAff);
+
+            const shopLink = window.location.origin + '/shop/' + (bqData.stripe_connect_id || '');
+            const affLink  = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
 
             if (bqData._affMode === 'ia_close') {
-                const affLink = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
                 bqAIMsg(
-                    "🎉 Tout est configuré !\n\n" +
-                    "🤖 Nexa va maintenant closer tes DMs et reverser 20% de chaque vente sur ton compte Stripe.\n\n" +
-                    "🔗 Ton lien d'affiliation (partage-le aussi) :\n" + affLink +
-                    "\n\nAccède à ton dashboard pour suivre tes ventes 👇"
+                    "🎉 Tout est prêt !\n\n" +
+                    "🛍️ Ta page de vente :\n" + shopLink + "\n\n" +
+                    "🔗 Ton lien d'affiliation :\n" + affLink + "\n\n" +
+                    "Nexa va prospecter sur TikTok et envoyer tes clients sur ta page. " +
+                    "Tu reçois 20% de chaque vente automatiquement sur ton Stripe.\n\n" +
+                    "Accède à ton dashboard pour suivre tes ventes 👇"
                 );
             } else {
-                const affLink = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
                 bqAIMsg(
                     "🎉 Tout est configuré !\n\n" +
-                    "🔗 Ton lien d'affiliation :\n" + affLink +
-                    "\n\nMets ce lien en bio TikTok. À chaque abonnement Nexa via ce lien, tu reçois 20% automatiquement sur ton Stripe.\n\nAccède à ton dashboard 👇"
+                    "🔗 Ton lien d'affiliation :\n" + affLink + "\n\n" +
+                    "Mets ce lien en bio TikTok. À chaque abonnement Nexa via ce lien, " +
+                    "tu reçois 20% automatiquement sur ton Stripe.\n\nAccède à ton dashboard 👇"
                 );
             }
             if (userAff.email) await loadDashboard(userAff);
@@ -2294,17 +2541,17 @@ async function bqSendToAI(userText) {
         const res = await fetch(PROXY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 500, system: BQ_PROMPT, messages: bqHist })
+            // claude.js attend { message, history } et retourne { reply }
+            body: JSON.stringify({ message: bqHist[bqHist.length-1]?.content || '', history: bqHist.slice(0,-1) })
         });
         const raw = await res.text();
         let data = {};
         try { data = raw ? JSON.parse(raw) : {}; } catch(e) { throw new Error('Réponse serveur invalide (HTTP ' + res.status + ')'); }
-        // CORRECTION: null-check bq-typing hide
         const bqTypH = document.getElementById('bq-typing');
         if(bqTypH) bqTypH.style.display = 'none';
 
-        if(data.content?.[0]) {
-            let reply = data.content[0].text;
+        if(data.reply) {
+            let reply = data.reply;
             bqHist.push({ role: 'assistant', content: reply });
 
             const progressBar = document.getElementById('bq-progress');
