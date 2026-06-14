@@ -39,6 +39,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: "stripe_connect_id invalide" }) };
   }
 
+  const parsedPrice = parseFloat(price);
+  if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "price invalide" }) };
+  }
+
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -54,7 +59,7 @@ exports.handler = async (event) => {
 
     // Créer/mettre à jour le produit
     const productRes = await fetchWithTimeout(
-      `${url}/rest/v1/products`,
+      `${url}/rest/v1/products?on_conflict=partner_id`,
       {
         method: "POST",
         headers: {
@@ -67,7 +72,7 @@ exports.handler = async (event) => {
           partner_id:        partnerId,
           stripe_connect_id: stripe_connect_id,
           name:              String(name).slice(0, 100),
-          price:             parseFloat(price),
+          price:             parsedPrice,
           description:       String(description || "").slice(0, 300),
           niche:             String(niche || "").slice(0, 100),
           niche_score:       parseInt(niche_score) || 50,
