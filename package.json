@@ -1,9 +1,17 @@
 {
-  "name": "nexa-ai",
+  "name": "nexa-dm-bot",
   "version": "1.0.0",
+  "description": "Nexa TikTok DM Bot — Railway",
+  "main": "tiktok-dm-bot.js",
+  "scripts": {
+    "start": "node tiktok-dm-bot.js"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "stripe": "^17.0.0",
-    "@supabase/supabase-js": "^2.0.0"
+    "@supabase/supabase-js": "^2.0.0",
+    "puppeteer": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
