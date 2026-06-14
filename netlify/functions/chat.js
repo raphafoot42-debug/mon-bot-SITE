@@ -46,6 +46,7 @@ RÈGLES DE CONVERSION (IMPORTANT) :
 - Ne présente pas le lien comme "la seule solution au monde". Présente-le comme "l'étape logique" quand ça match.
 - Ne spamme pas le lien : au maximum 1 lien par réponse, et seulement si pertinent.
 - Si le lien de vente est pertinent maintenant, tu peux le donner. Si ce n'est pas encore clair, pose 1 question ciblée.
+- Lien de vente disponible : [SALES_LINK]
 
 SÛRETÉ :
 - Pas d'insultes, pas de harcèlement, pas de contenu sexuel, pas d'incitation dangereuse.
@@ -91,7 +92,7 @@ async function callClaude({ userText, history, salesLink }) {
 
     const systemPrompt = salesLink
       ? SYSTEM_PROMPT.replace("[SALES_LINK]", salesLink)
-      : SYSTEM_PROMPT;
+      : SYSTEM_PROMPT.replace("- Lien de vente disponible : [SALES_LINK]", "- Aucun lien de vente disponible pour le moment.");
 
     const response = await client.messages.create({
       model: "claude-opus-4-1",
