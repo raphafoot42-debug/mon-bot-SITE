@@ -205,7 +205,7 @@ async function saveSettings() {
   try {
     const user = await getAuthUser();
     if (!user) {
-      toast(NEXA_MESSAGES.loginFail, 'err');
+      toast('⚠️ Session expirée, reconnecte-toi', 'err');
       return;
     }
 
