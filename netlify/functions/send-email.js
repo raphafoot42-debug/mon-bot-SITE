@@ -16,6 +16,26 @@ async function fetchWithTimeout(url, options = {}, ms = 10000) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 🛡️ RATE LIMITING (par IP — en mémoire)
+// Empêche l'abus de ce endpoint comme relais d'emails
+// Limite : 10 requêtes / minute par IP
+// ════════════════════════════════════════════════════════════════
+const _ipWindows = {};
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 1000;
+
+function checkIpRate(ip) {
+  const now = Date.now();
+  _ipWindows[ip] = (_ipWindows[ip] || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (_ipWindows[ip].length >= RATE_LIMIT) {
+    const err = new Error('Rate limit dépassé');
+    err.rateLimit = true;
+    throw err;
+  }
+  _ipWindows[ip].push(now);
+}
+
+// ════════════════════════════════════════════════════════════════
 // 📧 TEMPLATES EMAIL
 // ════════════════════════════════════════════════════════════════
 
@@ -277,6 +297,16 @@ exports.handler = async (event) => {
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+
+  const ip = (event.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  try {
+    checkIpRate(ip);
+  } catch (err) {
+    if (err.rateLimit) {
+      return { statusCode: 429, headers, body: JSON.stringify({ error: 'Rate limited. Retry après 60s.' }) };
+    }
+    throw err;
+  }
 
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch {
