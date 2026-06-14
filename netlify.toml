@@ -80,3 +80,16 @@
 # ⚠️ Toutes les variables sont dans Netlify UI uniquement :
 #    Settings > Build & deploy > Environment variables
 # ════════════════════════════════════════════════════════
+
+# ════════════════════════════════════════════════════════
+# SECRETS SCAN — Exclure les fichiers avec clés publiques
+# supabaseUrl, supabaseAnonKey, STRIPE_PK sont des clés
+# publiques conçues pour être dans le code client
+# ════════════════════════════════════════════════════════
+[secrets_scan]
+  SECRETS_SCAN_OMIT_PATHS = [
+    "netlify/functions/js/config.js",
+    "netlify/functions/JS/config.js",
+    "netlify/functions/js/nexa.js",
+    "netlify/functions/JS/nexa.js"
+  ]
