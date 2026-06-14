@@ -165,7 +165,7 @@ function checkAdminAuth(body) {
   if (!body.adminAuth) return false;
   const adminPwd = process.env.ADMIN_PASSWORD;
   if (!adminPwd) return false;
-  return body.password === adminPwd;
+  const a = Buffer.from(body.password || ""); const b = Buffer.from(adminPwd); return a.length === b.length && require("crypto").timingSafeEqual(a, b);
 }
 
 // ════════════════════════════════════════════════════════════════
