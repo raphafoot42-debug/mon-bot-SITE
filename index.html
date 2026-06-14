@@ -507,12 +507,12 @@
     <div id="nexa-commission-setup" style="display:none;margin:40px auto 0; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(var(--accent-rgb),0.3); border-radius:15px; text-align:center; max-width:600px;">
         <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
         <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
-            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras <strong>20%</strong> du montant directement sur ton compte Stripe. Nexa prélève <strong>80%</strong> de frais de service.
+            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras <strong>80%</strong> du montant directement sur ton compte Stripe. Nexa prélève <strong>20%</strong> de frais de service.
         </p>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
             <input type="text" id="clientStripeId" placeholder="acct_1..." pattern="^acct_[a-zA-Z0-9]+" title="L'ID Stripe Connect doit commencer par acct_" style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px; font-family:inherit;">
             <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit;">
-                Enregistrer & Activer le 80/20
+                Enregistrer & Activer le 80/20 (toi/Nexa)
             </button>
         </div>
         <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
