@@ -191,10 +191,10 @@ exports.handler = async function (event) {
       locale: 'fr',
     });
 
-    // Split 20/80 vers le compte Connect du client (Nexa prélève 20% de commission)
+    // Split vers le compte Connect du client (Nexa prélève 80% de frais de service, client garde 20%)
     stripeParams.append('payment_intent_data[transfer_data][destination]', acct);
     stripeParams.append('payment_intent_data[application_fee_amount]',
-      String(Math.round(Number(price) * 100 * 0.20)) // 20% pour Nexa
+      String(Math.round(Number(price) * 100 * 0.80)) // 80% pour Nexa
     );
 
     try {
