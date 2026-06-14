@@ -1,5 +1,6 @@
 {
   "name": "nexa-dm-bot",
+  "version": "1.0.0",
   "scripts": {
     "start": "node tiktok-dm-bot.js"
   },
@@ -7,5 +8,8 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@supabase/supabase-js": "^2.0.0",
     "puppeteer": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
