@@ -37,20 +37,22 @@ exports.handler = async (event) => {
     let blocked = 0;
 
     for (const client of clients) {
-      // Vérifier si le client a des ventes
+      // Récupérer la vente la plus récente du client
       const salesRes = await fetchWithTimeout(
-        `${url}/rest/v1/client_sales?partner_id=eq.${client.id}&select=id&limit=1`,
+        `${url}/rest/v1/client_sales?partner_id=eq.${client.id}&select=created_at&order=created_at.desc&limit=1`,
         { headers: { Authorization: `Bearer ${key}`, apikey: key } }, 8000
       );
       const sales = await salesRes.json();
-      const hasSales = sales && sales.length > 0;
+      const lastSaleAt = sales && sales.length > 0 ? new Date(sales[0].created_at) : null;
 
-      if (hasSales) continue; // a des ventes → on ne touche pas
+      // Référence : dernière vente, sinon date de création du compte
+      const referenceDate = lastSaleAt || new Date(client.created_at);
 
-      const createdAt = new Date(client.created_at);
+      // Récente vente (moins de 20 jours) → on ne touche pas
+      if (referenceDate >= new Date(day20)) continue;
 
       // J+30 → blocage
-      if (createdAt < new Date(day30)) {
+      if (referenceDate < new Date(day30)) {
         await fetchWithTimeout(
           `${url}/rest/v1/users?id=eq.${client.id}`,
           {
@@ -77,8 +79,8 @@ exports.handler = async (event) => {
         blocked++;
         console.log(`🚫 Compte bloqué: ${client.email}`);
       }
-      // J+20 → avertissement
-      else if (createdAt < new Date(day20)) {
+      // J+20 → avertissement (entre 20 et 30 jours)
+      else {
         await fetchWithTimeout(
           `${process.env.SITE_URL}/.netlify/functions/send-email`,
           {
