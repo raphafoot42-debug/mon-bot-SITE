@@ -188,14 +188,13 @@ exports.handler = async function (event) {
       cancel_url,
       'metadata[plan]': 'affiliation_product',
       'metadata[acct]': acct,
-      'metadata[referrer_id]': acct,
       locale: 'fr',
     });
 
-    // Split 80/20 vers le compte Connect du client
+    // Split 20/80 vers le compte Connect du client (Nexa prélève 20% de commission)
     stripeParams.append('payment_intent_data[transfer_data][destination]', acct);
     stripeParams.append('payment_intent_data[application_fee_amount]',
-      String(Math.round(Number(price) * 100 * 0.80)) // 80% pour Nexa
+      String(Math.round(Number(price) * 100 * 0.20)) // 20% pour Nexa
     );
 
     try {
