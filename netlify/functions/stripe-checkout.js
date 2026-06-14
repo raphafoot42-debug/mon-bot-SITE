@@ -97,7 +97,7 @@ function appendConnectSplit({ stripeParams, mode, connectId }) {
     stripeParams.append('payment_intent_data[transfer_data][destination]', connectId);
   } else if (mode === 'subscription') {
     // CORRECTION: subscription_data supporte bien application_fee_percent
-    stripeParams.append('subscription_data[application_fee_percent]', '20');
+    stripeParams.append('subscription_data[application_fee_percent]', '80');
     stripeParams.append('subscription_data[transfer_data][destination]', connectId);
   }
 }
