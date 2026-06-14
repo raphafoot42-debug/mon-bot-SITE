@@ -5,7 +5,7 @@
  */
 
 // Plans valides — doit rester synchronisé avec payment.js
-const VALID_PLANS = new Set(['starter', 'pro', 'affiliation']);
+const VALID_PLANS = new Set(['starter', 'pro', 'affiliation', 'starter_annual', 'pro_annual']);
 
 // ════════════════════════════════════════════════════════════════
 // 🔧 UTILITIES
@@ -202,6 +202,7 @@ exports.handler = async function (event) {
 
     const updateData = {
       plan: normalizedPlan,
+      status: 'active',
       updated_at: new Date().toISOString(),
       stripe_session_id: session_id,
     };
