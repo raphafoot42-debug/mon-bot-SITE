@@ -37,7 +37,7 @@ exports.handler = async (event) => {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     const res = await fetchWithTimeout(
-      `${url}/rest/v1/products?stripe_connect_id=eq.${encodeURIComponent(acct)}&status=eq.active&select=name,price,description,niche&limit=1`,
+      `${url}/rest/v1/products?stripe_connect_id=eq.${encodeURIComponent(acct)}&status=eq.active&select=name,price,description,niche,design,testimonials,guarantee,spots_left,stripe_connect_id&limit=1`,
       { headers: { Authorization: `Bearer ${key}`, apikey: key } },
       8000
     );
