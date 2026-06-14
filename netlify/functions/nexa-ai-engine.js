@@ -182,6 +182,26 @@ function getQuotaForPlan(plan) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 🛡️ RATE LIMITING (par IP — en mémoire)
+// ⚠️ NOTE : fonctionne sur instance unique (dev/staging).
+// Limite : 30 requêtes / minute par IP
+// ════════════════════════════════════════════════════════════════
+const _ipWindows = {};
+const RATE_LIMIT = 30;
+const RATE_WINDOW_MS = 60 * 1000;
+
+function checkIpRate(ip) {
+  const now = Date.now();
+  _ipWindows[ip] = (_ipWindows[ip] || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (_ipWindows[ip].length >= RATE_LIMIT) {
+    const err = new Error("Rate limit dépassé");
+    err.rateLimit = true;
+    throw err;
+  }
+  _ipWindows[ip].push(now);
+}
+
+// ════════════════════════════════════════════════════════════════
 // 🔍 ACTION 1 : SCOUT
 // ════════════════════════════════════════════════════════════════
 
@@ -351,6 +371,15 @@ exports.handler = async (event) => {
 
   // Rate limiting IP
   const ip = (event.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+
+  try {
+    checkIpRate(ip);
+  } catch (err) {
+    if (err.rateLimit) {
+      return { statusCode: 429, headers, body: JSON.stringify({ error: "Rate limited. Retry après 60s." }) };
+    }
+    throw err;
+  }
 
   let body;
   try {
