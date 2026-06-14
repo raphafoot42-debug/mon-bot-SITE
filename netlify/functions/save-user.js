@@ -45,8 +45,17 @@ exports.handler = async (event) => {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   try {
+    // Vérifier si l'utilisateur existe déjà (pour ne pas renvoyer l'email de bienvenue)
+    const existingRes = await fetchWithTimeout(
+      `${url}/rest/v1/users?id=eq.${encodeURIComponent(String(id).trim())}&select=id`,
+      { headers: { Authorization: `Bearer ${key}`, apikey: key } },
+      8000
+    );
+    const existingRows = existingRes.ok ? await existingRes.json() : [];
+    const alreadyExists = Array.isArray(existingRows) && existingRows.length > 0;
+
     const res = await fetchWithTimeout(
-      `${url}/rest/v1/users`,
+      `${url}/rest/v1/users?on_conflict=id`,
       {
         method: 'POST',
         headers: {
@@ -60,7 +69,7 @@ exports.handler = async (event) => {
           email:      String(email).trim().toLowerCase(),
           plan:       'free',
           status:     'pending_verify',
-          created_at: new Date().toISOString(),
+          ...(alreadyExists ? {} : { created_at: new Date().toISOString() }),
           updated_at: new Date().toISOString(),
         }),
       },
@@ -73,16 +82,18 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'Database error' }) };
     }
 
-    // Email de bienvenue (non-bloquant)
-    fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'welcome',
-        to: email,
-        data: { prenom: email.split('@')[0] }
-      })
-    }).catch(e => console.warn('send-email welcome:', e.message));
+    // Email de bienvenue (non-bloquant) — uniquement pour les nouveaux comptes
+    if (!alreadyExists) {
+      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'welcome',
+          to: email,
+          data: { prenom: email.split('@')[0] }
+        })
+      }).catch(e => console.warn('send-email welcome:', e.message));
+    }
 
     return {
       statusCode: 200,
