@@ -50,11 +50,11 @@ const NEXA_PLANS = {
     price: 0,
     priceAnnual: 0,
     messagesPerDay: 50,
-    description: 'Gratuit — 20% sur chaque vente',
+    description: 'Gratuit — tu reçois 20% sur chaque vente',
     features: [
       '50 messages / jour',
       'Lien d\'affiliation personnel',
-      '20% sur chaque vente générée',
+      '20% sur chaque vente générée (Nexa 80%)',
     ],
   },
 };
