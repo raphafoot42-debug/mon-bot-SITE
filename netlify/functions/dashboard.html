@@ -119,6 +119,8 @@
         } catch (err) {
             console.error('Erreur OAuth:', err);
             alert('Erreur lors de la connexion TikTok : ' + (err && err.message ? err.message : 'inconnue'));
+            clearOAuthQueryFromUrl();
+            loadDashboardData();
         } finally {
             setLoaderVisible(false);
         }
