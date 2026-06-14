@@ -279,19 +279,32 @@ function renderPricingPlans() {
 
       const features = plan.features.map((f) => `<li>✓ ${f}</li>`).join('');
 
-      card.innerHTML = `
-        <div class="pricing-header">
-          <h3>${plan.name}</h3>
-          <div class="pricing-price">${priceLabel}</div>
-          <p>${plan.description}</p>
-        </div>
-        <ul class="pricing-features">
-          ${features}
-        </ul>
-        <button class="btn btn-primary btn-full" onclick="startCheckout('${plan.id}')">
-          Commencer
-        </button>
-      `;
+      // Sécurité XSS : construction DOM sans innerHTML pour les données dynamiques
+      const header = document.createElement('div');
+      header.className = 'pricing-header';
+      const h3 = document.createElement('h3');
+      h3.textContent = plan.name;
+      const priceDiv = document.createElement('div');
+      priceDiv.className = 'pricing-price';
+      priceDiv.innerHTML = priceLabel; // priceLabel est construit localement, pas depuis une API
+      const desc = document.createElement('p');
+      desc.textContent = plan.description;
+      header.appendChild(h3);
+      header.appendChild(priceDiv);
+      header.appendChild(desc);
+
+      const ul = document.createElement('ul');
+      ul.className = 'pricing-features';
+      ul.innerHTML = features; // features construit localement depuis NEXA_PLANS
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-full';
+      btn.textContent = 'Commencer';
+      btn.onclick = () => startCheckout(plan.id);
+
+      card.appendChild(header);
+      card.appendChild(ul);
+      card.appendChild(btn);
 
       container.appendChild(card);
     });
