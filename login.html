@@ -35,7 +35,9 @@
   </div>
 
 <script>
-// NOTE: client_key OAuth TikTok = identifiant public côté navigateur (ce n'est pas un secret).
+// ✅ SÉCURITÉ : TIKTOK_CLIENT_KEY est un identifiant PUBLIC OAuth 2.0.
+// Il est conçu pour être visible dans le code client — ce n'est PAS un secret.
+// Le vrai secret (TIKTOK_CLIENT_SECRET) est uniquement dans les variables d'env Netlify.
 const TIKTOK_CLIENT_KEY = "sbaw1dltizgdnu9xs8";
 
 function base64url(buffer) {
