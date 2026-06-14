@@ -80,6 +80,10 @@ const NEXA_RATE_LIMITS = {
  * Crée window.sb pour utilisation partout
  */
 function initSupabase() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   // Vérifie que Supabase CDN est chargé
   if (typeof window.supabase === 'undefined') {
     console.error('⚠️ Supabase CDN not loaded. Check script tag in index.html');
@@ -107,12 +111,14 @@ if (typeof window !== 'undefined') {
   window.initSupabase = initSupabase;
 }
 
-if (document.readyState === 'loading') {
-  // DOM pas encore chargé
-  document.addEventListener('DOMContentLoaded', initSupabase);
-} else {
-  // DOM déjà chargé
-  initSupabase();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    // DOM pas encore chargé
+    document.addEventListener('DOMContentLoaded', initSupabase);
+  } else {
+    // DOM déjà chargé
+    initSupabase();
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
