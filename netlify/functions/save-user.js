@@ -30,7 +30,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const { id, email, plan, status } = body;
+  const { id, email } = body;
 
   if (!id || !email) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'id et email requis' }) };
@@ -58,8 +58,8 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           id:         String(id).trim(),
           email:      String(email).trim().toLowerCase(),
-          plan:       plan || 'free',
-          status:     status || 'pending_verify',
+          plan:       'free',
+          status:     'pending_verify',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }),
