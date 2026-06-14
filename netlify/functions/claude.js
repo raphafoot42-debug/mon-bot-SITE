@@ -210,16 +210,6 @@ exports.handler = async function (event) {
     };
   }
 
-  // ── Auth admin (vérification mot de passe panel admin) ──────
-  if (body.adminAuth) {
-    const ok = checkAdminAuth(body);
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ ok }),
-    };
-  }
-
   // ── Rate limiting IP ────────────────────────────────────────
   // Récupère l'IP réelle (header Netlify CDN)
   const ip =
@@ -238,6 +228,16 @@ exports.handler = async function (event) {
       };
     }
     throw err;
+  }
+
+  // ── Auth admin (vérification mot de passe panel admin) ──────
+  if (body.adminAuth) {
+    const ok = checkAdminAuth(body);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ ok }),
+    };
   }
 
   // ── Extraction body ─────────────────────────────────────────
