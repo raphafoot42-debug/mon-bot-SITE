@@ -12,6 +12,8 @@
 const puppeteer  = require('puppeteer');
 const Anthropic  = require('@anthropic-ai/sdk');
 const crypto     = require('crypto');
+const fs         = require('fs');
+const path       = require('path');
 
 const aiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -23,11 +25,54 @@ const CONFIG = {
   checkIntervalMs:      5 * 60 * 1000,  // Check every 5 min
   delayBetweenDmsMs:    45 * 1000,      // 45s between DMs (anti-ban)
   delayBetweenSearchMs: 10 * 1000,      // 10s between profile searches
-  maxDmsPerHour:        15,             // Max 15 DMs/hour per account
-  maxDmsPerDay:         80,             // Max 80 DMs/day per account
-  typingDelayMs:        1200,           // Simulate human typing
-  minScoreToContact:    50,             // Minimum score for DM
+  maxDmsPerHour:        15,
+  maxDmsPerDay:         80,
+  typingDelayMs:        1200,
+  minScoreToContact:    50,
+  navigationTimeout:    30000,           // 30s for page loads
+  elementTimeout:       10000,           // 10s for element wait
 };
+
+// ════════════════════════════════════════════════════════════════
+// 💾 SESSION STORAGE (to maintain login)
+// ════════════════════════════════════════════════════════════════
+
+const SESSIONS_DIR = '/tmp/tiktok-sessions';
+
+function ensureSessionDir() {
+  if (!fs.existsSync(SESSIONS_DIR)) {
+    fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+  }
+}
+
+async function saveBrowserSession(clientId, browser) {
+  try {
+    const cookies = await browser.cookies();
+    const sessionPath = path.join(SESSIONS_DIR, `${clientId}.json`);
+    fs.writeFileSync(sessionPath, JSON.stringify({ cookies, timestamp: Date.now() }));
+    console.log(`✅ Session saved for client ${clientId}`);
+  } catch (err) {
+    console.error(`Warning: Could not save session: ${err.message}`);
+  }
+}
+
+async function loadBrowserSession(page, clientId) {
+  try {
+    const sessionPath = path.join(SESSIONS_DIR, `${clientId}.json`);
+    if (fs.existsSync(sessionPath)) {
+      const session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+      // Only load if less than 24 hours old
+      if (Date.now() - session.timestamp < 86400000) {
+        await page.setCookie(...session.cookies);
+        console.log(`✅ Session loaded for client ${clientId}`);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error(`Warning: Could not load session: ${err.message}`);
+  }
+  return false;
+}
 
 // ════════════════════════════════════════════════════════════════
 // 🔐 PASSWORD DECRYPTION
@@ -254,6 +299,64 @@ async function getClientProduct(stripeConnectId) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 🔍 WAIT FOR ELEMENT WITH FALLBACK
+// ════════════════════════════════════════════════════════════════
+
+async function waitForElementWithFallback(page, selectors, timeout = CONFIG.elementTimeout) {
+  if (!Array.isArray(selectors)) selectors = [selectors];
+  
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeout) {
+    for (const selector of selectors) {
+      const element = await page.$(selector);
+      if (element) return element;
+    }
+    await page.waitForTimeout(300);
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════════
+// 💬 TYPE MESSAGE INTO INPUT
+// ════════════════════════════════════════════════════════════════
+
+async function typeMessage(page, message, delay = 40) {
+  // Try different input selectors
+  const inputSelectors = [
+    'textarea[placeholder*="essage"]',
+    'input[placeholder*="essage"]',
+    '[contenteditable="true"]',
+    'textarea',
+    'input[type="text"]',
+  ];
+
+  const input = await waitForElementWithFallback(page, inputSelectors);
+  if (!input) {
+    console.error('❌ Could not find message input');
+    return false;
+  }
+
+  await input.click();
+  await page.waitForTimeout(500);
+
+  // Use evaluate to set value directly (more reliable)
+  await page.evaluate((text) => {
+    const activeElement = document.activeElement;
+    if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
+      activeElement.value = text;
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      activeElement.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (activeElement.contentEditable === 'true') {
+      activeElement.innerText = text;
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, message);
+
+  await page.waitForTimeout(300 + Math.random() * 400);
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════
 // 🤖 MAIN PUPPETEER BOT
 // ════════════════════════════════════════════════════════════════
 
@@ -270,13 +373,15 @@ async function runBotForClient(clientData, product) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
-        '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+        '--disable-gpu',
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       ],
+      userDataDir: path.join(SESSIONS_DIR, `profile-${clientData.id}`),
     });
 
     const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(30000);
-    page.setDefaultTimeout(15000);
+    page.setDefaultNavigationTimeout(CONFIG.navigationTimeout);
+    page.setDefaultTimeout(CONFIG.elementTimeout);
 
     // Hide Puppeteer
     await page.evaluateOnNewDocument(() => {
@@ -284,30 +389,62 @@ async function runBotForClient(clientData, product) {
       window.chrome = { runtime: {} };
     });
 
+    // Try to load session
+    const sessionLoaded = await loadBrowserSession(page, clientData.id);
+
     // ── 1. TIKTOK LOGIN ─────────────────────────────────────
     console.log(`🔑 TikTok login for ${clientData.prenom}...`);
     try {
-      await page.goto('https://www.tiktok.com/login/phone-or-email/email', { waitUntil: 'networkidle2' });
-      await page.waitForTimeout(2000 + Math.random() * 1000);
+      await page.goto('https://www.tiktok.com/', { waitUntil: 'networkidle2' });
+      
+      // Check if already logged in
+      const loggedIn = await page.$('[data-testid="user-avatar"]') || 
+                       await page.$('a[href="/upload"]');
+      
+      if (!loggedIn && !sessionLoaded) {
+        // Need to login
+        await page.goto('https://www.tiktok.com/login', { waitUntil: 'networkidle0' });
+        await page.waitForTimeout(3000);
 
-      const emailInput = await page.$('input[type="email"]') || await page.$('input[name="username"]');
-      if (emailInput) {
-        await emailInput.type(clientData.tiktok_username, { delay: 80 + Math.random() * 40 });
-        await page.waitForTimeout(500);
+        // Look for email input
+        const emailInput = await waitForElementWithFallback(page, [
+          'input[type="email"]',
+          'input[name="email"]',
+          'input[name="username"]',
+          'input[autocomplete="email"]'
+        ]);
+
+        if (emailInput) {
+          await emailInput.type(clientData.tiktok_username, { delay: 100 });
+          await page.waitForTimeout(800);
+        }
+
+        // Password input
+        const passwordInput = await waitForElementWithFallback(page, 'input[type="password"]');
+        if (passwordInput) {
+          await passwordInput.type(password, { delay: 100 });
+          await page.waitForTimeout(800);
+        }
+
+        // Submit
+        const submitBtn = await waitForElementWithFallback(page, [
+          'button[type="submit"]',
+          'button:contains("Log in")',
+          '[role="button"]'
+        ]);
+
+        if (submitBtn) {
+          await submitBtn.click();
+          await page.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {});
+          await page.waitForTimeout(5000);
+        }
+
+        // Save session after login
+        await saveBrowserSession(clientData.id, browser);
+      } else {
+        console.log(`✅ Using saved session for ${clientData.prenom}`);
       }
 
-      const passwordInput = await page.$('input[type="password"]');
-      if (passwordInput) {
-        await passwordInput.type(password, { delay: 80 + Math.random() * 40 });
-        await page.waitForTimeout(500);
-      }
-
-      const submitBtn = await page.$('button[type="submit"]');
-      if (submitBtn) {
-        await submitBtn.click();
-        await page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {});
-        await page.waitForTimeout(4000);
-      }
     } catch (err) {
       console.error(`⚠️ Login error for ${clientData.prenom}: ${err.message}`);
     }
@@ -318,19 +455,33 @@ async function runBotForClient(clientData, product) {
     console.log(`🔍 Searching profiles for niche: ${product.niche}...`);
     try {
       await page.goto(`https://www.tiktok.com/search/user?q=${encodeURIComponent(product.niche)}`, { 
-        waitUntil: 'networkidle2' 
+        waitUntil: 'networkidle1'
       }).catch(() => {});
-      await page.waitForTimeout(3000);
+      
+      await page.waitForTimeout(2000);
 
       const profiles = await page.evaluate(() => {
-        const items = document.querySelectorAll('[data-testid="user-item"]') || 
-                      document.querySelectorAll('div[class*="UserItem"]') ||
-                      [];
-        return Array.from(items).slice(0, 20).map(el => ({
-          username: el.textContent.match(/@[\w.]+/)?.[0]?.replace('@', '') || '',
-          bio: el.textContent.split('\n')[1] || '',
-          followers: el.textContent.match(/[\d.]+K?\s*(?:followers|Followers)/)?.[0] || '0',
-        })).filter(p => p.username);
+        const profiles = [];
+        const items = document.querySelectorAll('[data-testid="user-item"]');
+        
+        items.forEach((el, idx) => {
+          if (idx >= 20) return;
+          
+          const linkEl = el.querySelector('a[href^="/@"]');
+          if (!linkEl) return;
+          
+          const username = linkEl.getAttribute('href').replace('/@', '').split('?')[0];
+          const bioEl = el.querySelector('[class*="bio"]') || el.querySelector('p');
+          const bio = bioEl ? bioEl.textContent : '';
+          
+          profiles.push({
+            username,
+            bio,
+            followers: el.textContent.match(/[\d.]+M?\s*Followers?/i)?.[0] || '0',
+          });
+        });
+        
+        return profiles;
       });
 
       console.log(`📋 ${profiles.length} profiles found`);
@@ -339,7 +490,7 @@ async function runBotForClient(clientData, product) {
       for (const profile of profiles) {
         if (!profile.username) continue;
         if (!checkDmLimit(clientData.id, clientData.plan)) {
-          console.log(`⚠️ DM limit reached for ${clientData.prenom} (${clientData.plan})`);
+          console.log(`⚠️ DM limit reached for ${clientData.prenom}`);
           break;
         }
 
@@ -368,49 +519,52 @@ async function runBotForClient(clientData, product) {
         // Navigate to profile and send DM
         try {
           await page.goto(`https://www.tiktok.com/@${profile.username}`, { 
-            waitUntil: 'networkidle2' 
+            waitUntil: 'networkidle1'
           }).catch(() => {});
-          await page.waitForTimeout(2000);
+          
+          await page.waitForTimeout(1500);
 
-          const msgBtn = await page.$('button[aria-label*="essage"]') || 
-                        await page.$('[data-testid="message-icon"]');
-          if (!msgBtn) continue;
+          // Find message button
+          const msgBtn = await waitForElementWithFallback(page, [
+            'button[aria-label*="essage"]',
+            'button:contains("Message")',
+            '[data-testid="message-icon"]',
+            'button[data-e2e="message-button"]'
+          ], 5000);
+
+          if (!msgBtn) {
+            console.log(`⚠️ Could not find message button for @${profile.username}`);
+            continue;
+          }
 
           await msgBtn.click();
           await page.waitForTimeout(2000);
 
-          const input = await page.$('textarea[placeholder*="essage"]') || 
-                       await page.$('input[placeholder*="essage"]') ||
-                       await page.$('[contenteditable="true"]');
-          if (!input) continue;
+          // Type and send message
+          const sent = await typeMessage(page, firstDM);
+          if (sent) {
+            await page.keyboard.press('Enter');
+            console.log(`✅ First DM sent to @${profile.username}`);
+            await page.waitForTimeout(CONFIG.delayBetweenDmsMs);
+          }
 
-          await input.click();
-          await page.waitForTimeout(CONFIG.typingDelayMs);
-          await input.type(firstDM, { delay: 40 + Math.random() * 60 });
-          await page.waitForTimeout(500 + Math.random() * 500);
-          await page.keyboard.press('Enter');
-
-          console.log(`✅ First DM sent to @${profile.username}: ${firstDM.slice(0, 50)}...`);
-
-          await page.waitForTimeout(CONFIG.delayBetweenDmsMs);
         } catch (err) {
-          console.error(`Error sending DM to @${profile.username}: ${err.message}`);
+          console.error(`⚠️ Error with @${profile.username}: ${err.message}`);
         }
 
         await page.waitForTimeout(CONFIG.delayBetweenSearchMs);
       }
     } catch (err) {
-      console.error(`Error in profile search: ${err.message}`);
+      console.error(`⚠️ Profile search error: ${err.message}`);
     }
 
     // ── 4. REPLY TO INCOMING DMs ───────────────────────
-    console.log(`💬 Checking incoming DMs for ${clientData.prenom}...`);
+    console.log(`💬 Checking incoming DMs...`);
     try {
-      await page.goto('https://www.tiktok.com/messages', { waitUntil: 'networkidle2' }).catch(() => {});
+      await page.goto('https://www.tiktok.com/messages', { waitUntil: 'networkidle1' }).catch(() => {});
       await page.waitForTimeout(2000);
 
-      const conversations = await page.$$('[data-testid="message-item"]') || 
-                           await page.$$('div[class*="MessageItem"]') || [];
+      const conversations = await page.$$('[data-testid="message-item"]');
 
       for (const conv of conversations.slice(0, 15)) {
         if (!checkDmLimit(clientData.id, clientData.plan)) break;
@@ -420,20 +574,15 @@ async function runBotForClient(clientData, product) {
           await page.waitForTimeout(1500);
 
           const messages = await page.evaluate(() => {
-            const items = document.querySelectorAll('[data-testid="message-bubble"]') ||
-                         document.querySelectorAll('div[class*="MessageBubble"]') || [];
+            const items = document.querySelectorAll('[data-testid="message-bubble"]');
             return Array.from(items).map(el => ({
               text: el.textContent.trim(),
-              isOwn: el.classList.contains('own') || el.textContent.includes('You')
+              isOwn: el.classList.contains('own')
             }));
           }).catch(() => []);
 
           const lastMessage = messages.filter(m => !m.isOwn).pop();
-          if (!lastMessage?.text) continue;
-          if (isMalicious(lastMessage.text)) {
-            console.log(`🚫 Malicious message ignored`);
-            continue;
-          }
+          if (!lastMessage?.text || isMalicious(lastMessage.text)) continue;
 
           const lastOverall = messages[messages.length - 1];
           if (lastOverall?.isOwn) continue;
@@ -451,27 +600,21 @@ async function runBotForClient(clientData, product) {
             shopUrl,
           });
 
-          if (!reply) continue;
+          if (reply) {
+            const sent = await typeMessage(page, reply);
+            if (sent) {
+              await page.keyboard.press('Enter');
+              console.log(`✅ Reply sent`);
+              await page.waitForTimeout(CONFIG.delayBetweenDmsMs);
+            }
+          }
 
-          const input = await page.$('textarea[placeholder*="essage"]') || 
-                       await page.$('input[placeholder*="essage"]') ||
-                       await page.$('[contenteditable="true"]');
-          if (!input) continue;
-
-          await input.click();
-          await page.waitForTimeout(CONFIG.typingDelayMs);
-          await input.type(reply, { delay: 40 + Math.random() * 60 });
-          await page.waitForTimeout(300 + Math.random() * 400);
-          await page.keyboard.press('Enter');
-
-          console.log(`✅ DM reply sent: ${reply.slice(0, 50)}...`);
-          await page.waitForTimeout(CONFIG.delayBetweenDmsMs);
         } catch (err) {
-          console.error(`Error processing conversation: ${err.message}`);
+          console.error(`⚠️ DM error: ${err.message}`);
         }
       }
     } catch (err) {
-      console.error(`Error in DM responses: ${err.message}`);
+      console.error(`⚠️ Messages error: ${err.message}`);
     }
 
   } catch (err) {
@@ -492,6 +635,7 @@ async function runBotForClient(clientData, product) {
 // ════════════════════════════════════════════════════════════════
 
 async function main() {
+  ensureSessionDir();
   console.log('🤖 Nexa DM Bot started — 100% automatic');
 
   while (true) {
@@ -514,7 +658,6 @@ async function main() {
         console.log(`\n🔄 Bot active for ${client.prenom} — ${product.name}`);
         await runBotForClient(client, product);
 
-        // Delay between clients
         await new Promise(r => setTimeout(r, 10000));
       }
 
