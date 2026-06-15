@@ -101,7 +101,7 @@ async function checkEmailVerified() {
     
     const client = getSb();
     const statusEl = document.getElementById('verify-status');
-    const btn = document.getElementById('confirm-btn');
+    const btn = document.querySelector('button[onclick="checkEmailVerified()"]');
     
     if (btn) btn.textContent = MSG.confirmChecking;
     if (statusEl) statusEl.textContent = '⏳...';
@@ -133,8 +133,7 @@ async function checkEmailVerified() {
       }
 
       setTimeout(() => {
-        showPage('bot-qualify');
-        if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
+        showSuccessPage(user);
       }, 800);
 
       toast(MSG.emailConfirmed, 'ok');
@@ -162,7 +161,7 @@ async function resendVerifyEmail() {
     const user = LS.user();
     if (!user.email) throw new Error('Email not found');
 
-    const btn = document.getElementById('resend-btn');
+    const btn = document.querySelector('button[onclick="resendVerifyEmail()"]');
     if (btn) btn.disabled = true;
 
     const client = getSb();
@@ -235,8 +234,7 @@ async function checkEmailVerifyReturn() {
         LS.setUser(u);
 
         hideVerifyLoader();
-        showPage('bot-qualify');
-        if (typeof botQualifyStart === 'function') botQualifyStart(u.email);
+        showSuccessPage(u);
         resolve(true);
       }
     });
@@ -249,7 +247,7 @@ async function checkEmailVerifyReturn() {
         u.emailVerified = true;
         LS.setUser(u);
         hideVerifyLoader();
-        showPage('bot-qualify');
+        showSuccessPage(u);
         resolve(true);
       }
     }).catch(e => console.error('getSession:', e));
@@ -491,7 +489,7 @@ async function finish() {
 
     const client = getSb();
     if (client && user.email) {
-      await withTimeout(
+      const { error } = await withTimeout(
         client.from('users').update({
           prenom: user.prenom,
           business: user.business,
@@ -503,20 +501,27 @@ async function finish() {
         }).eq('email', user.email),
         12000
       );
+
+      if (error) {
+        throw new Error(`Erreur Supabase: ${error.message}`);
+      }
     }
 
     LS.del('nexaai_ob_step');
     LS.del('nexaai_ob_btype');
 
-    if (typeof loadDashboard === 'function') {
-      await loadDashboard(user);
+    toast('✅ Profil sauvegardé !', 'ok');
+
+    setTimeout(() => {
       showPage('dashboard-page');
-    } else {
-      toast('⚠️ Dashboard missing', 'err');
-    }
+      if (typeof loadDashboard === 'function') {
+        loadDashboard(user);
+      }
+    }, 500);
 
   } catch (err) {
     toast(`❌ ${err.message}`, 'err');
+    console.error('finish() error:', err);
   } finally {
     _state.finishing = false;
     const btn = document.getElementById('finish-btn');
@@ -544,7 +549,9 @@ function resetSession() {
 // 9️⃣ EXPORT GLOBAL NAMESPACE
 // ════════════════════════════════════════════════════════════════
 
-window.Nexa = {
+window.Nexa = window.Nexa || {};
+
+Object.assign(window.Nexa, {
   // Email verify
   checkEmailVerified,
   resendVerifyEmail,
@@ -557,7 +564,7 @@ window.Nexa = {
   prevStep,
   finish,
   resetSession,
-};
+});
 
 // Exposer les fonctions directement sur window pour les onclick inline
 window.checkEmailVerified  = checkEmailVerified;
