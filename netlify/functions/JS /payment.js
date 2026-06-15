@@ -155,7 +155,7 @@ async function startCheckout(planId) {
         plan: planId,
         billing,
         email,
-        referrer_id: localStorage.getItem('referrer_id') || null,
+        referrer_id: localStorage.getItem('nexa_partner_id') || null,
       }),
     });
 
