@@ -91,33 +91,6 @@ let stripe = null;
 let sb = null;
 let CLIENT_STORE_URL = '';
 
-// ===== FALLBACKS SÉCURISÉS (au cas où utils.js non chargé) =====
-// getSb() — wrapper pour register/checkEmailVerified/resendVerifyEmail/checkEmailVerifyReturn
-function getSb() {
-    if (!sb) throw new Error('Supabase non initialisé');
-    return sb;
-}
-
-// toast() — fallback si utils.js absent
-if (typeof toast !== 'function') {
-    window.toast = function(msg, type) {
-        const t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.88rem;z-index:99999;pointer-events:none;transition:opacity 0.5s;' +
-            (type === 'err' ? 'background:#ff4444;color:#fff;' : 'background:var(--accent,#39ff14);color:#000;');
-        document.body.appendChild(t);
-        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2800);
-    };
-}
-
-// LS — fallback si utils.js absent
-if (typeof LS === 'undefined') {
-    window.LS = {
-        user: () => { try { return JSON.parse(localStorage.getItem('nexaai_user') || 'null'); } catch(e) { return null; } },
-        setUser: (u) => { try { localStorage.setItem('nexaai_user', JSON.stringify(u)); } catch(e) {} }
-    };
-}
-
 // ===== RETOUR TIKTOK =====
 async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await loadDashboard)
     const params = new URLSearchParams(window.location.search);
