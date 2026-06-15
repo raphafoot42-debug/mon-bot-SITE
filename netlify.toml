@@ -88,6 +88,8 @@
 # ════════════════════════════════════════════════════════
 [secrets_scan]
   SECRETS_SCAN_OMIT_PATHS = [
+    "netlify/functions/js/config.js",
     "netlify/functions/JS/config.js",
+    "netlify/functions/js/nexa.js",
     "netlify/functions/JS/nexa.js"
   ]
