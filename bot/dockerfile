@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Installer les dépendances Puppeteer
+# Install Puppeteer dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Créer un utilisateur non-root pour la sécurité
+# Create non-root user for security
 RUN groupadd -r nexabot && useradd -r -g nexabot nexabot
 
 WORKDIR /app
@@ -31,10 +31,10 @@ COPY package.json ./
 RUN npm install
 COPY . .
 
-# Donner les droits à l'utilisateur non-root
+# Grant permissions to non-root user
 RUN chown -R nexabot:nexabot /app
 
-# Passer à l'utilisateur non-root
+# Switch to non-root user
 USER nexabot
 
 CMD ["node", "tiktok-dm-bot.js"]
