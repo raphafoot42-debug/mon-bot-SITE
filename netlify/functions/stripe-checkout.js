@@ -14,7 +14,6 @@ const PRICE_IDS = {
   // ── Annuel ───────────────────────────────────────────────────
   starter_annual: process.env.STRIPE_PRICE_STARTER_ANNUAL || 'price_1TgQAjP6KQQPJW2buOxVpaY3',
   pro_annual:     process.env.STRIPE_PRICE_PRO_ANNUAL     || 'price_1TgQAlP6KQQPJW2bRq9GGOnU',
-  // ⚠️ plans 'business', 'elite', 'partner_activation' supprimés — ne correspondent plus aux forfaits réels
 };
 
 const SUBSCRIPTION_PLANS = new Set(['starter', 'pro', 'starter_annual', 'pro_annual']);
@@ -55,8 +54,6 @@ function checkoutModeForPlan(plan) {
  * Résout le Connect account ID
  */
 async function resolveConnectAccountId({ referrer_id }) {
-  // CORRECTION: on n'accepte PLUS le connectId envoyé par le client (risque de fraude)
-  // Le Connect ID doit être résolu UNIQUEMENT côté serveur via Supabase
   if (!referrer_id) return '';
 
   const url = process.env.SUPABASE_URL;
@@ -76,7 +73,6 @@ async function resolveConnectAccountId({ referrer_id }) {
     if (!res.ok) return '';
     const rows = await res.json();
     const connectId = rows?.[0]?.stripe_connect_id || '';
-    // Vérifie format Stripe Connect ID
     return typeof connectId === 'string' && connectId.startsWith('acct_') ? connectId : '';
   } catch (e) {
     console.error('resolveConnectAccountId error:', e.message);
@@ -91,12 +87,8 @@ function appendConnectSplit({ stripeParams, mode, connectId }) {
   if (!connectId) return;
 
   if (mode === 'payment') {
-    // CORRECTION: payment_intent_data utilise application_fee_amount (centimes), pas percent
-    // 20% calculé depuis le price ID n'est pas connu ici → on stocke le referrer_id dans metadata
-    // et on calcule la commission dans verify-payment.js après paiement confirmé
     stripeParams.append('payment_intent_data[transfer_data][destination]', connectId);
   } else if (mode === 'subscription') {
-    // CORRECTION: subscription_data supporte bien application_fee_percent
     stripeParams.append('subscription_data[application_fee_percent]', '80');
     stripeParams.append('subscription_data[transfer_data][destination]', connectId);
   }
@@ -117,12 +109,10 @@ exports.handler = async function (event) {
     'X-Content-Type-Options': 'nosniff',
   };
 
-  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
-  // Accepte seulement POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -131,7 +121,6 @@ exports.handler = async function (event) {
     };
   }
 
-  // Vérifie Stripe config
   if (!process.env.STRIPE_SECRET_KEY) {
     return {
       statusCode: 500,
@@ -140,7 +129,6 @@ exports.handler = async function (event) {
     };
   }
 
-  // Parse body
   let body;
   try {
     body = JSON.parse(event.body || '{}');
@@ -175,7 +163,6 @@ exports.handler = async function (event) {
     const success_url = `${base}/shop/${acct}?payment=success&email=${encodeURIComponent(email)}`;
     const cancel_url  = `${base}/shop/${acct}`;
 
-    // Créer un Price dynamique Stripe (price_data) — pas de Price ID fixe
     const stripeParams = new URLSearchParams({
       'payment_method_types[]': 'card',
       mode: 'payment',
@@ -191,10 +178,9 @@ exports.handler = async function (event) {
       locale: 'fr',
     });
 
-    // Split vers le compte Connect du client (Nexa prélève 80% de frais de service, client garde 20%)
     stripeParams.append('payment_intent_data[transfer_data][destination]', acct);
     stripeParams.append('payment_intent_data[application_fee_amount]',
-      String(Math.round(Number(price) * 100 * 0.80)) // 80% pour Nexa
+      String(Math.round(Number(price) * 100 * 0.80))
     );
 
     try {
@@ -224,7 +210,6 @@ exports.handler = async function (event) {
   }
 
   // ── Cas standard : forfaits Nexa (starter / pro / annuel) ──────
-  // Résout la clé plan selon le billing (monthly par défaut)
   const isAnnual = billing === 'annual';
   const planKey  = isAnnual ? `${plan}_annual` : plan;
 
@@ -235,7 +220,6 @@ exports.handler = async function (event) {
 
   const mode = checkoutModeForPlan(planKey);
   const base = getSiteUrl();
-  // ✅ SPA sur index.html — pas de /Netlify/dashboard.html (404 sur Netlify)
   const success_url = `${base}/?payment=success&session_id={CHECKOUT_SESSION_ID}`;
   const cancel_url  = `${base}/#pricing`;
 
@@ -258,7 +242,8 @@ exports.handler = async function (event) {
     });
 
     if (referrer_id) {
-      stripeParams.append('metadata[referrer_id]', String(referrer_id));
+      // ⚠️ CORRECTION LIGNE 178 : Remplacement de metadata[referrer_id] par nexa_partner_id
+      stripeParams.append('metadata[nexa_partner_id]', String(referrer_id));
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -289,10 +274,8 @@ exports.handler = async function (event) {
       session = { error: { message: raw || 'Invalid response' } };
     }
 
-    // Gère erreur Stripe
     if (!stripeRes.ok || session.error) {
-      const msg =
-        session.error?.message || raw || `Error (${stripeRes.status})`;
+      const msg = session.error?.message || raw || `Error (${stripeRes.status})`;
       console.error('Stripe error:', msg);
       return {
         statusCode: 400,
@@ -301,7 +284,6 @@ exports.handler = async function (event) {
       };
     }
 
-    // Vérifie URL checkout
     if (!session.url) {
       return {
         statusCode: 500,
