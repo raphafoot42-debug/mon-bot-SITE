@@ -13,7 +13,7 @@
     Content-Type = "text/css"
 
 [[headers]]
-  for = "/netlify/functions/js/*"
+  for = "/netlify/functions/JS/*"
   [headers.values]
     Content-Type = "application/javascript"
 
@@ -42,8 +42,8 @@
   status = 200
 
 [[redirects]]
-  from = "/netlify/functions/js/*"
-  to = "/netlify/functions/js/:splat"
+  from = "/netlify/functions/JS/*"
+  to = "/netlify/functions/JS/:splat"
   status = 200
 
 # Page de vente dynamique clients affiliation
@@ -88,8 +88,8 @@
 # ════════════════════════════════════════════════════════
 [secrets_scan]
   SECRETS_SCAN_OMIT_PATHS = [
-    "netlify/functions/js/config.js",
+    ,
     "netlify/functions/JS/config.js",
-    "netlify/functions/js/nexa.js",
+    ,
     "netlify/functions/JS/nexa.js"
   ]
