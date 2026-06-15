@@ -1,6 +1,6 @@
 /* Nexa — app cliente (Netlify Functions)
  * Fichiers à publier ensemble : index.html, netlify/css/nexa.css, netlify/functions/JS/nexa.js
- * Ordre de chargement : Stripe (head, synchrone) → Supabase → ce script (en dernier).
+ * Ordre de chargement : Stripe (head, synchrone) → Supabase → config.js → utils.js → auth.js → payment.js → dashboard.js → nexa.js (ce script, en dernier).
  */
 
 // ===== VARIABLES GLOBALES (déclarées en premier pour éviter les ReferenceError) =====
@@ -58,9 +58,8 @@ async function saveAndSyncStripe() {
     btn.disabled = true;
     try {
         const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-        const _sb = getSb();
-        if(_sb && user.id) {
-            const { error } = await _sb.from('users').update({
+        if(sb && user.id) {
+            const { error } = await sb.from('users').update({
                 stripe_connect_id: stripeId
                 // commission_rate retiré — défini côté serveur uniquement
             }).eq('id', user.id);
@@ -83,13 +82,41 @@ async function saveAndSyncStripe() {
 }
 
 // ===== CONFIG =====
-// STRIPE_PK est défini dans config.js
+const STRIPE_PK = 'pk_live_51TH5RcP6KQQPJW2bnHPJyEcMNn4b6Sv2VjHtliuO85GJ95mTzCf3dG6EGHKyJhvVFiVOSg2z37BOl6DZzb52YjtU00JuOJk8d1'; // mode LIVE
+// ✅ Netlify Functions — clés cachées côté serveur
 const PROXY_URL = '/.netlify/functions/claude';
 const STRIPE_URL = '/.netlify/functions/stripe-checkout';
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514'; // model string Anthropic API (format stable)
 let stripe = null;
 let sb = null;
 let CLIENT_STORE_URL = '';
+
+// ===== FALLBACKS SÉCURISÉS (au cas où utils.js non chargé) =====
+// getSb() — wrapper pour register/checkEmailVerified/resendVerifyEmail/checkEmailVerifyReturn
+function getSb() {
+    if (!sb) throw new Error('Supabase non initialisé');
+    return sb;
+}
+
+// toast() — fallback si utils.js absent
+if (typeof toast !== 'function') {
+    window.toast = function(msg, type) {
+        const t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.88rem;z-index:99999;pointer-events:none;transition:opacity 0.5s;' +
+            (type === 'err' ? 'background:#ff4444;color:#fff;' : 'background:var(--accent,#39ff14);color:#000;');
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2800);
+    };
+}
+
+// LS — fallback si utils.js absent
+if (typeof LS === 'undefined') {
+    window.LS = {
+        user: () => { try { return JSON.parse(localStorage.getItem('nexaai_user') || 'null'); } catch(e) { return null; } },
+        setUser: (u) => { try { localStorage.setItem('nexaai_user', JSON.stringify(u)); } catch(e) {} }
+    };
+}
 
 // ===== RETOUR TIKTOK =====
 async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await loadDashboard)
@@ -230,7 +257,7 @@ window.addEventListener('load', async () => {
                 console.warn('[Nexa] Stripe.js indisponible : vérifie le script dans index.html ou un bloqueur de pub.');
             }
             if(!window.supabase) {
-                console.warn('[Nexa] Supabase SDK non chargé : vérifie le script avant netlify/functions/JS/nexa.js.');
+                console.warn('[Nexa] Supabase SDK non chargé : vérifie le script defer avant js/nexa.js.');
                 return;
             }
             sb = window.supabase.createClient(
