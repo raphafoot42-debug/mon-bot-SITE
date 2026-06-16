@@ -149,7 +149,7 @@ function isMalicious(text) {
 async function scoreProfile({ username, bio, followers, niche, productName }) {
   try {
     const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 200,
       temperature: 0.3,
       system: `Analyze TikTok profiles to match our target audience.
@@ -185,7 +185,7 @@ Score this profile.`
 async function generateFirstDM({ username, bio, productName, productDesc, shopUrl }) {
   try {
     const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 150,
       temperature: 0.8,
       system: `Send a natural, human first DM on TikTok.
@@ -222,7 +222,7 @@ Generate first DM hook.`
 async function generateDMReply({ incomingMessage, history, productName, productDesc, shopUrl }) {
   try {
     const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 200,
       temperature: 0.7,
       system: `You are a natural sales assistant on TikTok DM.
