@@ -541,19 +541,19 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Ordre de chargement obligatoire :
-         1. config.js                — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
-         2. utils.js                 — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
-         3. auth.js                  — register, login, logout
-         4. payment.js               — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
-         5. dashboard.js             — renderDashboard, saveSettings, showDash
-         6. nexa_verify_onboarding.js — showEmailVerifyPage, checkEmailVerified, onboarding 3 étapes
-         7. nexa.js                  — logique principale SPA (charge en dernier, dépend de tout le reste)
+         1. config.js  — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
+         2. utils.js   — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
+         3. payment.js — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
+         4. nexa.js    — logique principale SPA (auth, dashboard, onboarding, chat — tout en un)
+
+         Fichiers retirés (conflits de variables globales + schéma Supabase désynchronisé) :
+         - auth.js               → fonctions absorbées dans nexa.js
+         - dashboard.js          → fonctions absorbées dans nexa.js
+         - nexa-verify-onboarding.js → conflit const _state, jamais actif
     -->
     <script src="/netlify/functions/JS/config.js"></script>
     <script src="/netlify/functions/JS/utils.js"></script>
-    <script src="/netlify/functions/JS/auth.js"></script>
     <script src="/netlify/functions/JS/payment.js"></script>
-    <script src="/netlify/functions/JS/dashboard.js"></script>
     <script src="/netlify/functions/JS/nexa.js"></script>
 
 </body>
