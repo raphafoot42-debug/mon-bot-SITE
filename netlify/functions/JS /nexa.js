@@ -780,6 +780,21 @@ async function loadDashboard(user) {
     if(badges) badges.innerHTML = '';
     if(badges && user.platforms?.includes('tiktok')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">🎵 TikTok connecté</span>';
     if(badges && user.platforms?.includes('instagram')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">📸 Instagram connecté</span>';
+    // Liens ambassadeur — visibles uniquement si plan affiliation
+    const elAffLinks = document.getElementById('dash-aff-links');
+    if(elAffLinks) {
+        if(user.plan === 'affiliation' && user.stripe_connect_id) {
+            const shopUrl = window.location.origin + '/shop/' + user.stripe_connect_id;
+            const affUrl  = window.location.origin + '?ref=' + user.stripe_connect_id;
+            elAffLinks.style.display = 'block';
+            const elShopUrl = document.getElementById('dash-shop-url');
+            const elAffUrl  = document.getElementById('dash-aff-url');
+            if(elShopUrl) elShopUrl.textContent = shopUrl;
+            if(elAffUrl)  elAffUrl.textContent  = affUrl;
+        } else {
+            elAffLinks.style.display = 'none';
+        }
+    }
     // Settings
     const elPrenom = document.getElementById('s-prenom'); if(elPrenom) elPrenom.value = user.prenom || '';
     const elEmail = document.getElementById('s-email'); if(elEmail) elEmail.value = user.email || '';
@@ -2481,10 +2496,15 @@ async function bqSendToAI(userText) {
             userAff.store_url = bqData.store_url || '';
             userAff.affiliation_mode = bqData._affMode || 'lien';
             userAff.plan = 'affiliation';
-            LS.setUser(userAff);
 
             const shopLink = window.location.origin + '/shop/' + (bqData.stripe_connect_id || '');
             const affLink  = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
+
+            // Sauvegarder les liens dans le profil pour les retrouver dans le dashboard
+            userAff.shop_url = shopLink;
+            userAff.aff_link = affLink;
+            LS.setUser(userAff);
+            await saveUserToDB({ email: userAff.email, shop_url: shopLink });
 
             if (bqData._affMode === 'ia_close') {
                 bqAIMsg(
