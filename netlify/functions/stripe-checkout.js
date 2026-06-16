@@ -51,33 +51,13 @@ function checkoutModeForPlan(plan) {
 }
 
 /**
- * Résout le Connect account ID
+ * Résout le Connect account ID.
+ * Le lien d'affiliation contient déjà directement le stripe_connect_id (acct_...)
+ * de l'ambassadeur — pas besoin d'aller le chercher en base, on valide juste son format.
  */
-async function resolveConnectAccountId({ referrer_id }) {
-  if (!referrer_id) return '';
-
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return '';
-
-  try {
-    const res = await fetch(
-      `${url}/rest/v1/users?id=eq.${encodeURIComponent(referrer_id)}&select=stripe_connect_id`,
-      {
-        headers: {
-          Authorization: `Bearer ${key}`,
-          apikey: key,
-        },
-      }
-    );
-    if (!res.ok) return '';
-    const rows = await res.json();
-    const connectId = rows?.[0]?.stripe_connect_id || '';
-    return typeof connectId === 'string' && connectId.startsWith('acct_') ? connectId : '';
-  } catch (e) {
-    console.error('resolveConnectAccountId error:', e.message);
-    return '';
-  }
+function resolveConnectAccountId({ referrer_id }) {
+  if (!referrer_id || typeof referrer_id !== 'string') return '';
+  return referrer_id.startsWith('acct_') ? referrer_id : '';
 }
 
 /**
@@ -242,15 +222,14 @@ exports.handler = async function (event) {
     });
 
     if (referrer_id) {
-      // ⚠️ CORRECTION LIGNE 178 : Remplacement de metadata[referrer_id] par nexa_partner_id
-      stripeParams.append('metadata[nexa_partner_id]', String(referrer_id));
+      stripeParams.append('metadata[referrer_id]', String(referrer_id));
     }
 
     // ════════════════════════════════════════════════════════════════
     // 2️⃣ ADD CONNECT SPLIT
     // ════════════════════════════════════════════════════════════════
 
-    const connectId = await resolveConnectAccountId({ referrer_id });
+    const connectId = resolveConnectAccountId({ referrer_id });
     appendConnectSplit({ stripeParams, mode, connectId });
 
     // ════════════════════════════════════════════════════════════════
