@@ -1,1 +1,367 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Chargement...</title>
+  <style>
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── DESIGN 1 : MINIMAL ── */
+    body.minimal {
+      background: #050505; color: #fff;
+      font-family: 'Inter', Arial, sans-serif;
+      min-height: 100vh;
+    }
+    body.minimal .hero { background: #050505; }
+    body.minimal .accent { color: #39ff14; }
+    body.minimal .btn-buy { background: #39ff14; color: #000; }
+    body.minimal .card { background: #111; border: 1px solid #222; }
+    body.minimal .badge { background: rgba(57,255,20,0.1); color: #39ff14; }
+    body.minimal .guarantee-box { background: #0a1a0a; border: 1px solid #39ff14; color: #ccc; }
+    body.minimal .testi-card { background: #111; border: 1px solid #222; }
+    body.minimal .spots { background: #1a0000; border: 1px solid #ff4444; color: #ff6b6b; }
+
+    /* ── DESIGN 2 : PREMIUM ── */
+    body.premium {
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1025 50%, #0f0a1a 100%);
+      color: #f0e6d3; font-family: 'Georgia', serif; min-height: 100vh;
+    }
+    body.premium .hero { background: transparent; }
+    body.premium .accent { color: #d4af37; }
+    body.premium .btn-buy { background: linear-gradient(135deg, #d4af37, #f0c040); color: #000; }
+    body.premium .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,175,55,0.3); }
+    body.premium .badge { background: rgba(212,175,55,0.15); color: #d4af37; }
+    body.premium .guarantee-box { background: rgba(212,175,55,0.05); border: 1px solid rgba(212,175,55,0.4); color: #c9b99a; }
+    body.premium .testi-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,175,55,0.2); }
+    body.premium .spots { background: rgba(255,50,50,0.1); border: 1px solid rgba(255,100,100,0.4); color: #ff9999; }
+
+    /* ── DESIGN 3 : ENERGY ── */
+    body.energy {
+      background: #f5f5f5; color: #111;
+      font-family: 'Arial Black', Arial, sans-serif; min-height: 100vh;
+    }
+    body.energy .hero { background: linear-gradient(135deg, #ff6b35, #f7c59f); }
+    body.energy .hero * { color: #fff !important; }
+    body.energy .accent { color: #ff6b35; }
+    body.energy .btn-buy { background: linear-gradient(135deg, #ff6b35, #ff4500); color: #fff; }
+    body.energy .card { background: #fff; border: none; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    body.energy .badge { background: rgba(255,107,53,0.1); color: #ff6b35; }
+    body.energy .guarantee-box { background: #f0fff0; border: 1px solid #4caf50; color: #2e7d32; }
+    body.energy .testi-card { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: none; }
+    body.energy .spots { background: #fff3f3; border: 1px solid #ffcccc; color: #d32f2f; }
+    body.energy .section-bg { background: #fff; }
+
+    /* ── PAGE SUCCÈS ── */
+    .success-page { display:none; min-height:100vh; align-items:center; justify-content:center; text-align:center; padding:40px 20px; }
+    .success-box { max-width:480px; margin:0 auto; }
+    .success-icon { font-size:4rem; margin-bottom:20px; animation: pop 0.5s ease; }
+    .success-title { font-size:2rem; font-weight:900; margin-bottom:12px; }
+    .success-sub { font-size:1rem; opacity:0.7; line-height:1.6; margin-bottom:32px; }
+    .success-email { display:inline-block; padding:8px 20px; border-radius:20px; font-size:0.85rem; margin-bottom:32px; }
+    body.minimal .success-email { background:rgba(57,255,20,0.1); color:#39ff14; }
+    body.premium .success-email { background:rgba(212,175,55,0.15); color:#d4af37; }
+    body.energy .success-email { background:rgba(255,107,53,0.1); color:#ff6b35; }
+    .btn-back-home { display:inline-block; padding:14px 32px; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.95rem; margin-top:8px; }
+    body.minimal .btn-back-home { background:#222; color:#fff; }
+    body.premium .btn-back-home { background:rgba(212,175,55,0.2); color:#d4af37; }
+    body.energy .btn-back-home { background:#f0f0f0; color:#111; }
+    @keyframes pop { 0%{transform:scale(0.5);opacity:0} 80%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+    .container { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+    .hero { padding: 60px 20px 48px; text-align: center; }
+    .hero-badge { display: inline-block; padding: 6px 18px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; }
+    .hero-title { font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 900; line-height: 1.15; margin-bottom: 16px; }
+    .hero-desc { font-size: 1.05rem; line-height: 1.7; opacity: 0.8; max-width: 520px; margin: 0 auto 28px; }
+    .hero-price { font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; margin-bottom: 8px; }
+    .hero-price span { font-size: 1rem; opacity: 0.6; }
+    .spots { padding: 12px 20px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 0.9rem; margin: 0 auto 24px; max-width: 320px; }
+    .btn-buy { display: block; width: 100%; max-width: 380px; margin: 0 auto; padding: 20px 40px; font-size: 1.15rem; font-weight: 900; border: none; border-radius: 14px; cursor: pointer; transition: transform 0.15s, opacity 0.15s; letter-spacing: 0.5px; }
+    .btn-buy:hover { transform: translateY(-2px); opacity: 0.9; }
+    .btn-buy:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .secure { text-align: center; font-size: 0.75rem; opacity: 0.45; margin-top: 12px; }
+    .section { padding: 48px 20px; }
+    .section-title { font-size: 1.4rem; font-weight: 900; text-align: center; margin-bottom: 28px; }
+    .card { border-radius: 16px; padding: 28px; margin-bottom: 16px; }
+
+    /* Témoignages */
+    .testi-grid { display: grid; gap: 16px; }
+    .testi-card { border-radius: 14px; padding: 24px; }
+    .testi-stars { color: #fbbf24; font-size: 1.1rem; margin-bottom: 10px; }
+    .testi-text { font-size: 0.97rem; line-height: 1.6; font-style: italic; margin-bottom: 12px; opacity: 0.85; }
+    .testi-name { font-weight: 700; font-size: 0.85rem; opacity: 0.6; }
+
+    /* Garantie */
+    .guarantee-box { border-radius: 14px; padding: 28px; text-align: center; margin: 0 auto; max-width: 480px; }
+    .guarantee-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .guarantee-title { font-weight: 900; font-size: 1.1rem; margin-bottom: 8px; }
+    .guarantee-text { font-size: 0.9rem; line-height: 1.6; opacity: 0.8; }
+
+    /* Footer */
+    .shop-footer { text-align: center; padding: 24px 20px; font-size: 0.75rem; opacity: 0.35; }
+    .shop-footer a { color: inherit; }
+
+    /* Loader */
+    .loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-size: 1rem; opacity: 0.5; }
+    .error-box { max-width: 400px; margin: 80px auto; text-align: center; padding: 40px 20px; }
+  </style>
+</head>
+<body class="minimal">
+
+  <!-- PAGE SUCCÈS -->
+  <div id="success-page" class="success-page">
+    <div class="success-box">
+      <div class="success-icon">🎉</div>
+      <h1 class="success-title">Paiement confirmé !</h1>
+      <p class="success-sub">Merci pour ton achat. Tu vas recevoir un email de confirmation dans quelques minutes.</p>
+      <div id="success-email" class="success-email"></div>
+      <br>
+      <a href="/" class="btn-back-home">← Retour à NexaAI</a>
+    </div>
+  </div>
+
+  <!-- MODAL EMAIL -->
+  <div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#111;border:1px solid #333;border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center;">
+      <p style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">📧 Ton email de confirmation</p>
+      <p style="color:#888;font-size:0.85rem;margin-bottom:20px;">Pour recevoir ton accès et ta facture</p>
+      <input id="email-input" type="email" placeholder="ton@email.com" autocomplete="email"
+        style="width:100%;padding:14px 16px;border-radius:10px;border:1px solid #444;background:#000;color:#fff;font-size:1rem;margin-bottom:12px;outline:none;">
+      <p id="email-error" style="color:#ff6b6b;font-size:0.8rem;min-height:18px;margin-bottom:10px;"></p>
+      <button id="email-confirm" style="width:100%;padding:14px;border-radius:10px;border:none;font-weight:900;font-size:1rem;cursor:pointer;background:#39ff14;color:#000;margin-bottom:10px;">
+        Continuer vers le paiement →
+      </button>
+      <button id="email-cancel" style="background:transparent;border:none;color:#555;cursor:pointer;font-size:0.85rem;">Annuler</button>
+    </div>
+  </div>
+
+  <div id="loader" class="loader">⏳ Chargement...</div>
+
+  <div id="shop-content" style="display:none;">
+    <!-- HERO -->
+    <div class="hero">
+      <div class="container">
+        <div id="hero-badge" class="hero-badge badge"></div>
+        <h1 id="hero-title" class="hero-title"></h1>
+        <p id="hero-desc" class="hero-desc"></p>
+        <div id="hero-price" class="hero-price accent"></div>
+        <div id="spots-box" class="spots" style="display:none;"></div>
+        <button id="btn-buy-top" class="btn-buy">🛒 Je veux accéder maintenant</button>
+        <p class="secure">🔒 Paiement 100% sécurisé par Stripe</p>
+      </div>
+    </div>
+
+    <!-- TÉMOIGNAGES -->
+    <div id="testi-section" class="section" style="display:none;">
+      <div class="container">
+        <h2 class="section-title">Ce qu'ils en disent</h2>
+        <div id="testi-grid" class="testi-grid"></div>
+      </div>
+    </div>
+
+    <!-- GARANTIE -->
+    <div id="guarantee-section" class="section" style="display:none;">
+      <div class="container">
+        <div class="guarantee-box">
+          <div class="guarantee-icon">🛡️</div>
+          <div class="guarantee-title" id="guarantee-title"></div>
+          <div class="guarantee-text" id="guarantee-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA BAS -->
+    <div class="section" style="text-align:center;">
+      <div class="container">
+        <div id="spots-box-2" class="spots" style="display:none;margin-bottom:20px;"></div>
+        <button id="btn-buy-bottom" class="btn-buy">🛒 Je veux accéder maintenant</button>
+        <p class="secure" style="margin-top:12px;">🔒 Paiement 100% sécurisé par Stripe</p>
+      </div>
+    </div>
+
+    <div class="shop-footer">
+      Propulsé par <strong>NEXA AI</strong> &nbsp;·&nbsp;
+      <a href="/privacy.html">Confidentialité</a> &nbsp;·&nbsp;
+      <a href="/terms.html">CGV</a>
+    </div>
+  </div>
+
+  <div id="error-content" style="display:none;" class="error-box">
+    <p style="font-size:2rem;margin-bottom:16px;">😕</p>
+    <p style="margin-bottom:16px;">Cette page de vente n'existe pas ou n'est plus disponible.</p>
+    <a href="/" style="color:inherit;text-decoration:underline;">← Retour à NexaAI</a>
+  </div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+(async function() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const acctId = parts[parts.length - 1];
+
+  if (!acctId || !acctId.startsWith('acct_')) { showError(); return; }
+
+  // ── Détecter retour paiement réussi ──────────────────────────
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment') === 'success') {
+    const email = urlParams.get('email') || '';
+    document.body.className = localStorage.getItem('shop_design_' + acctId) || 'minimal';
+    document.getElementById('loader').style.display = 'none';
+    const sp = document.getElementById('success-page');
+    sp.style.display = 'flex';
+    if (email) document.getElementById('success-email').textContent = '📧 Confirmation envoyée à ' + email;
+    window.history.replaceState({}, '', window.location.pathname);
+    return;
+  }
+
+  // ── Modal email ───────────────────────────────────────────────
+  let _resolveEmail = null;
+  function askEmail() {
+    return new Promise(resolve => {
+      _resolveEmail = resolve;
+      document.getElementById('email-modal').style.display = 'flex';
+      document.getElementById('email-input').value = '';
+      document.getElementById('email-error').textContent = '';
+      setTimeout(() => document.getElementById('email-input').focus(), 100);
+    });
+  }
+  document.getElementById('email-confirm').onclick = () => {
+    const val = document.getElementById('email-input').value.trim();
+    if (!val || !val.includes('@') || !val.includes('.')) {
+      document.getElementById('email-error').textContent = '❌ Email invalide';
+      return;
+    }
+    document.getElementById('email-modal').style.display = 'none';
+    if (_resolveEmail) _resolveEmail(val);
+  };
+  document.getElementById('email-cancel').onclick = () => {
+    document.getElementById('email-modal').style.display = 'none';
+    if (_resolveEmail) _resolveEmail(null);
+  };
+  document.getElementById('email-input').onkeydown = (e) => {
+    if (e.key === 'Enter') document.getElementById('email-confirm').click();
+  };
+
+  try {
+    const res = await fetch('/.netlify/functions/get-product?acct=' + encodeURIComponent(acctId));
+    if (!res.ok) { showError(); return; }
+    const data = await res.json();
+    if (!data.success || !data.product) { showError(); return; }
+
+    const p = data.product;
+    const design = p.design || 'minimal';
+    document.body.className = design;
+    localStorage.setItem('shop_design_' + acctId, design);
+
+    // Remplir le contenu
+    document.title = p.name + ' — ' + (design === 'premium' ? '✨' : design === 'energy' ? '⚡' : '🖤');
+    document.getElementById('hero-badge').textContent = p.niche ? '📌 ' + p.niche : 'Offre exclusive';
+    document.getElementById('hero-title').textContent = p.name;
+    document.getElementById('hero-desc').textContent = p.description || '';
+    document.getElementById('hero-price').innerHTML = '€' + p.price + '<span> · accès unique</span>';
+
+    // Places limitées
+    if (p.spots_left && p.spots_left > 0) {
+      const spotsHtml = '🔥 Plus que ' + p.spots_left + ' place' + (p.spots_left > 1 ? 's' : '') + ' disponible' + (p.spots_left > 1 ? 's' : '') + ' !';
+      const s1 = document.getElementById('spots-box');
+      const s2 = document.getElementById('spots-box-2');
+      s1.textContent = spotsHtml; s1.style.display = 'block';
+      s2.textContent = spotsHtml; s2.style.display = 'block';
+    }
+
+    // Témoignages
+    const testis = Array.isArray(p.testimonials) ? p.testimonials : [];
+    if (testis.length > 0) {
+      const grid = document.getElementById('testi-grid');
+      testis.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'testi-card';
+        card.innerHTML =
+          '<div class="testi-stars">⭐⭐⭐⭐⭐</div>' +
+          '<p class="testi-text">"' + escHtml(t.text || '') + '"</p>' +
+          '<p class="testi-name">— ' + escHtml(t.name || 'Client vérifié') + '</p>';
+        grid.appendChild(card);
+      });
+      document.getElementById('testi-section').style.display = 'block';
+    }
+
+    // Garantie
+    if (p.guarantee) {
+      document.getElementById('guarantee-title').textContent = p.guarantee;
+      document.getElementById('guarantee-text').textContent =
+        'Tu bénéficies de cette garantie dès ton achat. Si tu n\'es pas satisfait, contacte-nous.';
+      document.getElementById('guarantee-section').style.display = 'block';
+    }
+
+    // Afficher la page
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('shop-content').style.display = 'block';
+
+    // Boutons d'achat
+    const handleBuy = async function() {
+      document.getElementById('btn-buy-top').disabled = true;
+      document.getElementById('btn-buy-bottom').disabled = true;
+      document.getElementById('btn-buy-top').textContent = '⏳ Redirection...';
+      document.getElementById('btn-buy-bottom').textContent = '⏳ Redirection...';
+
+      try {
+        // ✅ Vraie modal email — plus de prompt()
+        const email = await askEmail();
+        if (!email) { resetBtns(); return; }
+
+        const checkoutRes = await fetch('/.netlify/functions/stripe-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: 'affiliation_product',
+            email: email,
+            acct: acctId,
+            price: p.price,
+            product_name: p.name,
+            referrer_id: acctId
+          })
+        });
+        const checkoutData = await checkoutRes.json();
+        if (checkoutData.url) {
+          // Stocker l'email pour la page succès
+          localStorage.setItem('shop_email_' + acctId, email);
+          window.location.href = checkoutData.url;
+        } else {
+          throw new Error(checkoutData.error || 'Erreur paiement');
+        }
+      } catch(err) {
+        resetBtns();
+        // Toast inline — pas d'alert()
+        const errEl = document.createElement('p');
+        errEl.textContent = '❌ ' + (err.message || 'Erreur, réessaie');
+        errEl.style.cssText = 'color:#ff6b6b;text-align:center;margin-top:12px;font-size:0.9rem;';
+        document.getElementById('btn-buy-bottom').after(errEl);
+        setTimeout(() => errEl.remove(), 4000);
+      }
+    };
+
+    document.getElementById('btn-buy-top').onclick = handleBuy;
+    document.getElementById('btn-buy-bottom').onclick = handleBuy;
+
+  } catch(e) { showError(); }
+
+  function showError() {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('error-content').style.display = 'block';
+  }
+
+  function resetBtns() {
+    document.getElementById('btn-buy-top').disabled = false;
+    document.getElementById('btn-buy-bottom').disabled = false;
+    document.getElementById('btn-buy-top').textContent = '🛒 Je veux accéder maintenant';
+    document.getElementById('btn-buy-bottom').textContent = '🛒 Je veux accéder maintenant';
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+})();
+</script>
+</body>
+</html>
