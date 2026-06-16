@@ -14,7 +14,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 // ════════════════════════════════════════════════════════════════
 
 const NEXA_CONFIG = {
-  MODEL:       process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
+  MODEL:       process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
   MAX_TOKENS:  1000,
   TEMPERATURE: 0.7,
 };
