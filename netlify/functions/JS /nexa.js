@@ -1,6 +1,6 @@
 /* Nexa — app cliente (Netlify Functions)
  * Fichiers à publier ensemble : index.html, netlify/css/nexa.css, netlify/functions/JS/nexa.js
- * Ordre de chargement : Stripe (head, synchrone) → Supabase → config.js → utils.js → auth.js → payment.js → dashboard.js → nexa.js (ce script, en dernier).
+ * Ordre de chargement : Stripe (head, synchrone) → Supabase → config.js → utils.js → payment.js → nexa.js (ce script, en dernier).
  */
 
 // ===== VARIABLES GLOBALES (déclarées en premier pour éviter les ReferenceError) =====
