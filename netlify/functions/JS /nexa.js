@@ -86,7 +86,7 @@ const STRIPE_PK = 'pk_live_51TH5RcP6KQQPJW2bnHPJyEcMNn4b6Sv2VjHtliuO85GJ95mTzCf3
 // ✅ Netlify Functions — clés cachées côté serveur
 const PROXY_URL = '/.netlify/functions/claude';
 const STRIPE_URL = '/.netlify/functions/stripe-checkout';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514'; // model string Anthropic API (format stable)
+const CLAUDE_MODEL = 'claude-sonnet-4-6'; // model string Anthropic API (format stable)
 let stripe = null;
 let sb = null;
 let CLIENT_STORE_URL = '';
