@@ -16,7 +16,6 @@ const Anthropic = require("@anthropic-ai/sdk");
 const NEXA_CONFIG = {
   MODEL:       process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
   MAX_TOKENS:  1000,
-  TEMPERATURE: 0.7,
 };
 
 const CHAT_CONFIG = {
@@ -182,26 +181,6 @@ function getQuotaForPlan(plan) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// 🛡️ RATE LIMITING (par IP — en mémoire)
-// ⚠️ NOTE : fonctionne sur instance unique (dev/staging).
-// Limite : 30 requêtes / minute par IP
-// ════════════════════════════════════════════════════════════════
-const _ipWindows = {};
-const RATE_LIMIT = 30;
-const RATE_WINDOW_MS = 60 * 1000;
-
-function checkIpRate(ip) {
-  const now = Date.now();
-  _ipWindows[ip] = (_ipWindows[ip] || []).filter(t => now - t < RATE_WINDOW_MS);
-  if (_ipWindows[ip].length >= RATE_LIMIT) {
-    const err = new Error("Rate limit dépassé");
-    err.rateLimit = true;
-    throw err;
-  }
-  _ipWindows[ip].push(now);
-}
-
-// ════════════════════════════════════════════════════════════════
 // 🔍 ACTION 1 : SCOUT
 // ════════════════════════════════════════════════════════════════
 
@@ -220,7 +199,6 @@ Réponds UNIQUEMENT avec le JSON valide.
   const response = await client.messages.create({
     model: NEXA_CONFIG.MODEL,
     max_tokens: NEXA_CONFIG.MAX_TOKENS,
-    temperature: NEXA_CONFIG.TEMPERATURE,
     system: PROMPT_SCOUT,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -258,7 +236,6 @@ Génère le PROCHAIN message. Respecte les règles. Réponds JUSTE le message.
   const response = await client.messages.create({
     model: NEXA_CONFIG.MODEL,
     max_tokens: 300,
-    temperature: 0.7,
     system: PROMPT_CLOSER,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -289,7 +266,6 @@ Génère le rapport de monitoring JSON. Réponds UNIQUEMENT avec le JSON valide.
   const response = await client.messages.create({
     model: NEXA_CONFIG.MODEL,
     max_tokens: 800,
-    temperature: 0.4,
     system: PROMPT_SECURITY,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -323,7 +299,6 @@ async function nexaChat({ userText, history, salesLink, quotaAvailable }) {
   const response = await client.messages.create({
     model: NEXA_CONFIG.MODEL,
     max_tokens: 400,
-    temperature: 0.7,
     system: systemPrompt,
     messages,
   });
@@ -369,17 +344,8 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
   }
 
-  // Rate limiting IP
-  const ip = (event.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
-
-  try {
-    checkIpRate(ip);
-  } catch (err) {
-    if (err.rateLimit) {
-      return { statusCode: 429, headers, body: JSON.stringify({ error: "Rate limited. Retry après 60s." }) };
-    }
-    throw err;
-  }
+  // Rate limiting IP — retiré : inefficace en mémoire sur Netlify
+  // (chaque invocation peut tourner sur une instance différente)
 
   let body;
   try {
