@@ -1023,7 +1023,6 @@ const checkRate = (key, limit, ms) => {
 // LS est défini dans utils.js — chargé avant nexa.js
 
 
-const withTimeout = (promise, ms = 8000) => Promise.race([
   promise,
   new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms))
 ]);
