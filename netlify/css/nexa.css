@@ -326,6 +326,6 @@ a:focus-visible,
   .sidebar-menu li { margin: 0; flex-shrink: 0; }
   .dash-main { padding: 20px; }
   #chatBtn { bottom: 20px; right: 20px; }
-  #chatWindow { width: 100%; right: 0; bottom: 0; left: 0; top: 0; max-height: 100vh; height: 100dvh; border-radius: 0; border: none; }
+  #chatWindow { width: 100%; right: 0; bottom: 0; left: 0; top: 0; max-height: 100vh; height: 100dvh; border-radius: 0; border: none; display: flex; flex-direction: column; }
   .pricing-grid, .option-grid, .plan-select-grid { grid-template-columns: 1fr; }
 }
