@@ -325,8 +325,7 @@ a:focus-visible,
   .sidebar-menu { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; }
   .sidebar-menu li { margin: 0; flex-shrink: 0; }
   .dash-main { padding: 20px; }
-  #chatBtn { bottom: 90px; }
-  /* bottom = position #chatBtn (90px) + hauteur (65px) + gap (15px) */
-  #chatWindow { width: calc(100% - 20px); right: 10px; bottom: calc(90px + 65px + 15px); max-height: calc(100vh - 200px); }
+  #chatBtn { bottom: 20px; right: 20px; }
+  #chatWindow { width: 100%; right: 0; bottom: 0; left: 0; top: 0; max-height: 100vh; height: 100dvh; border-radius: 0; border: none; }
   .pricing-grid, .option-grid, .plan-select-grid { grid-template-columns: 1fr; }
 }
