@@ -1011,7 +1011,6 @@ function onAffModeChange() {
 // ════════════════════════════════════════════════════════════════
 
 
-const genToken = () => crypto.getRandomValues(new Uint8Array(32)).join('');
 
 let _rateLimits = {};
 const checkRate = (key, limit, ms) => {
@@ -1023,10 +1022,6 @@ const checkRate = (key, limit, ms) => {
 
 // LS est défini dans utils.js — chargé avant nexa.js
 
-const isOnline = () => {
-  if (!navigator.onLine) throw new Error('❌ Pas de connexion internet');
-  return true;
-};
 
 const withTimeout = (promise, ms = 8000) => Promise.race([
   promise,
