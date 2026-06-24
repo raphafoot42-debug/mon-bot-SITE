@@ -153,7 +153,7 @@ exports.handler = async function (event) {
     const partnerEmail = partner.email;
     const commission   = (Number(amount) * 0.20).toFixed(2);
     if (partnerEmail) {
-      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+      fetch(`${process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app'}/.netlify/functions/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ exports.handler = async function (event) {
     }
 
     // ── Notifier le owner (toi) par email (non-bloquant) ────────
-    fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+    fetch(`${process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app'}/.netlify/functions/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
