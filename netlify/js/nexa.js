@@ -870,9 +870,6 @@ async function loadDashboard(user) {
     }
 }
 
-function escHtml(str) {
-    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
 
 function loadProspects(list) {
     const tbody = document.getElementById('prospects-body');
@@ -1013,8 +1010,6 @@ function onAffModeChange() {
 // 🔐 UTILITAIRES SÉCURITÉ & VÉRIFICATION EMAIL
 // ════════════════════════════════════════════════════════════════
 
-const sanitize = (val, maxLen = 255) =>
-  escHtml((val || '').toString().trim()).slice(0, maxLen);
 
 const genToken = () => crypto.getRandomValues(new Uint8Array(32)).join('');
 
