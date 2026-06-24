@@ -84,6 +84,11 @@ function initSupabase() {
     return null;
   }
 
+  // ✅ Guard : déjà initialisé, on retourne l'instance existante
+  if (window.sb) {
+    return window.sb;
+  }
+
   // Vérifie que Supabase CDN est chargé
   if (typeof window.supabase === 'undefined') {
     console.error('⚠️ Supabase CDN not loaded. Check script tag in index.html');
