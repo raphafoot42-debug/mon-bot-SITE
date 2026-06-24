@@ -67,7 +67,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           id:         String(id).trim(),
           email:      String(email).trim().toLowerCase(),
-          plan:       'free',
+          plan:       'pending',
           status:     'pending_verify',
           ...(alreadyExists ? {} : { created_at: new Date().toISOString() }),
           updated_at: new Date().toISOString(),
@@ -84,7 +84,7 @@ exports.handler = async (event) => {
 
     // Email de bienvenue (non-bloquant) — uniquement pour les nouveaux comptes
     if (!alreadyExists) {
-      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+      fetch(`${process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app'}/.netlify/functions/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
