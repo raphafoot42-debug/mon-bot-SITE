@@ -229,14 +229,11 @@ window.addEventListener('load', async () => {
             } else {
                 console.warn('[Nexa] Stripe.js indisponible : vérifie le script dans index.html ou un bloqueur de pub.');
             }
-            if(!window.supabase) {
-                console.warn('[Nexa] Supabase SDK non chargé : vérifie le script defer avant js/nexa.js.');
+            if(!window.sb) {
+                console.warn('[Nexa] Supabase non initialisé : vérifie que config.js est chargé avant nexa.js.');
                 return;
             }
-            sb = window.supabase.createClient(
-                "https://aubjtlxwqndfawdidwfq.supabase.co",
-                "sb_publishable_ac-EaAMzdCCmFRxU6Iny9A_NgMHlUHB"
-            );
+            sb = window.sb;
             if(await checkEmailVerifyReturn()) return;
             if(await checkTikTokReturn()) return;
             if(await checkStripeReturn()) return;
