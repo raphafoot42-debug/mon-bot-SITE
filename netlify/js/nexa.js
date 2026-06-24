@@ -1069,7 +1069,8 @@ async function register() {
         email,
         password: pwd,
         options: { emailRedirectTo: window.location.origin + window.location.pathname + '?verified=1' }
-      })
+      }),
+      15000
     );
 
     if (error) throw error;
@@ -1082,8 +1083,8 @@ async function register() {
       plan: 'pending',
       platforms: [],
       status: 'pending_verify',
-      emailVerified: false,
-      createdAt: new Date().toISOString(),
+      email_verified: false,
+      created_at: new Date().toISOString(),
       prospects: []
     };
 
@@ -1161,7 +1162,7 @@ async function checkEmailVerified() {
     if (statusEl) statusEl.textContent = MSG.confirmChecking;
 
     const client = getSb();
-    const { data: { user }, error } = await withTimeout(client.auth.getUser());
+    const { data: { user }, error } = await withTimeout(client.auth.getUser(), 15000);
     if (error) throw error;
 
     if (user?.email_confirmed_at) {
@@ -1203,7 +1204,7 @@ async function resendVerifyEmail() {
     if (!email) throw new Error('Email introuvable');
 
     const client = getSb();
-    const { error } = await withTimeout(client.auth.resend({ type: 'signup', email }));
+    const { error } = await withTimeout(client.auth.resend({ type: 'signup', email }), 15000);
     if (error) throw error;
 
     toast(MSG.resendOk, 'ok');
