@@ -1818,7 +1818,7 @@ function toggleChat() {
     chatOpen = !chatOpen;
     const win = document.getElementById('chatWindow');
     if(!win) return; // CORRECTION: null-check
-    win.style.display = chatOpen ? 'flex' : 'none';
+    if(chatOpen) { win.classList.add('active'); } else { win.classList.remove('active'); }
     if(chatOpen && chatHist.length === 0) {
         addMsg('ai', "Salut 👋 Moi c'est Nexa.\n\nJe vais être directe — en combien de temps tu veux automatiser ta prospection ?", [
             '⚡ Le plus vite possible', '📅 Ce mois-ci', '🤔 Je cherche encore', '💬 Explique-moi d\'abord'
