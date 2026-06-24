@@ -1022,11 +1022,6 @@ const checkRate = (key, limit, ms) => {
 
 // LS est défini dans utils.js — chargé avant nexa.js
 
-
-  promise,
-  new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms))
-]);
-
 const MSG = {
   offline: '❌ Pas de connexion internet',
   fillAll: '⚠️ Remplir tous les champs',
