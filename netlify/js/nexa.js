@@ -283,7 +283,25 @@ async function loadUserData() {
     dashChatHist = [];
 
     const userData = await loadUserFromDB(authUser.email);
-    
+
+    // ===== DÉTECTION CONFIGURATION INCOMPLÈTE =====
+    const warningBanner   = document.getElementById('setup-warning-banner');
+    const btnTikTok       = document.getElementById('btn-connect-tiktok');
+    const btnInstagram    = document.getElementById('btn-connect-instagram');
+    const planFromDB      = userData && userData.plan;
+    if (!planFromDB || planFromDB === 'pending') {
+        // Plan absent ou en attente → bloquer les boutons et afficher le bandeau
+        if (warningBanner) warningBanner.style.display = 'flex';
+        if (btnTikTok)    { btnTikTok.disabled    = true; btnTikTok.style.opacity    = '0.5'; }
+        if (btnInstagram) { btnInstagram.disabled  = true; btnInstagram.style.opacity = '0.5'; }
+    } else {
+        // Plan actif/payé → tout activer
+        if (warningBanner) warningBanner.style.display = 'none';
+        if (btnTikTok)    { btnTikTok.disabled    = false; btnTikTok.style.opacity    = '1'; }
+        if (btnInstagram) { btnInstagram.disabled  = false; btnInstagram.style.opacity = '1'; }
+    }
+    // ===== FIN DÉTECTION CONFIGURATION INCOMPLÈTE =====
+
     if(userData) {
         // L'utilisateur existe en BDD
         const prospects = await loadProspectsFromDB(userData.id);
@@ -2589,4 +2607,14 @@ async function bqSendToAI(userText) {
         if(bqTypC) bqTypC.style.display = 'none';
         bqAIMsg('Nexa analyse tes données... Continue !');
     }
+}
+
+// ===== REPRISE DE PARCOURS =====
+function resumeGuide() {
+    const landingPage   = document.getElementById('landing-page');
+    const dashboardPage = document.getElementById('dashboard-page');
+    if (landingPage)   landingPage.style.display   = 'block';
+    if (dashboardPage) dashboardPage.style.display = 'none';
+    const demoSection = document.getElementById('demo');
+    if (demoSection) demoSection.scrollIntoView({ behavior: 'smooth' });
 }
