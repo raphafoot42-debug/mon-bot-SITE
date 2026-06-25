@@ -277,7 +277,7 @@ exports.handler = async function (event) {
     const userRow = updatedRows[0] || {};
     if (userRow.email) {
       // Email au client
-      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+      fetch(`${process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app'}/.netlify/functions/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -288,7 +288,7 @@ exports.handler = async function (event) {
       }).catch(e => console.warn('send-email client:', e.message));
 
       // Email à toi (owner)
-      fetch(`${process.env.SITE_URL || 'https://nexaai.fr'}/.netlify/functions/send-email`, {
+      fetch(`${process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app'}/.netlify/functions/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
