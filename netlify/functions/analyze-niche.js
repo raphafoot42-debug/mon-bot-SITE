@@ -81,15 +81,15 @@ exports.handler = async (event) => {
     const result = JSON.parse(match[0]);
     return { statusCode: 200, headers, body: JSON.stringify(result) };
 
-return {
-  statusCode: 503,
-  headers,
-  body: JSON.stringify({
-    score: 0,
-    verdict: "Analyse temporairement indisponible. Réessaie dans quelques minutes.",
-    suggestion: ""
-  })
-};
+  } catch (err) {
+    console.error("analyze-niche error:", err.message);
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        score: 0,
+        verdict: "Analyse temporairement indisponible. Réessaie dans quelques minutes.",
+        suggestion: ""
       })
     };
   }
