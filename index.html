@@ -236,6 +236,134 @@
 
 
 
+
+<!-- MODAL LOGIN ADMIN -->
+<div id="adminLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99000;align-items:center;justify-content:center;">
+    <div style="background:#111;border:1px solid #333;border-radius:16px;padding:40px 36px;max-width:380px;width:90%;text-align:center;position:relative;">
+        <button onclick="closeAdminLogin()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#666;font-size:1.3rem;cursor:pointer;">✕</button>
+        <div style="color:var(--accent);font-size:1.4rem;font-weight:900;letter-spacing:2px;margin-bottom:6px;">✦ NEXA AI</div>
+        <div style="color:#555;font-size:0.8rem;margin-bottom:28px;letter-spacing:1px;">ACCÈS ADMINISTRATEUR</div>
+        <input type="password" id="adminSecretPwd" placeholder="Mot de passe admin" onkeydown="if(event.key==='Enter')checkAdminLogin()" style="width:100%;box-sizing:border-box;padding:14px 16px;background:#000;border:1px solid #333;border-radius:10px;color:#fff;font-size:1rem;font-family:inherit;margin-bottom:16px;outline:none;">
+        <button onclick="checkAdminLogin()" style="width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Accéder au panel</button>
+    </div>
+</div>
+
+<!-- PANEL ADMIN -->
+<div id="adminPanel" style="display:none;position:fixed;inset:0;background:#0a0a0a;z-index:98000;overflow-y:auto;">
+    <div style="max-width:1200px;margin:0 auto;padding:30px 20px;">
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;border-bottom:1px solid #222;padding-bottom:20px;">
+            <div>
+                <div style="color:var(--accent);font-size:1.5rem;font-weight:900;letter-spacing:2px;">✦ NEXA AI</div>
+                <div style="color:#555;font-size:0.8rem;letter-spacing:1px;margin-top:2px;">PANEL ADMINISTRATEUR</div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;">
+                <span id="a-last-update" style="color:#444;font-size:0.75rem;"></span>
+                <button onclick="loadAdminData()" style="padding:8px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:8px;cursor:pointer;font-size:0.8rem;">↻ Actualiser</button>
+                <button onclick="closeAdminPanel()" style="padding:8px 16px;background:#ff4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">✕ Fermer</button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:30px;">
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-total" style="font-size:2rem;font-weight:900;color:var(--accent);">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">Total clients</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-paying" style="font-size:2rem;font-weight:900;color:var(--accent);">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">Payants</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-free" style="font-size:2rem;font-weight:900;color:#555;">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">Gratuits</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-revenue" style="font-size:2rem;font-weight:900;color:var(--accent);">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">MRR</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-new-today" style="font-size:2rem;font-weight:900;color:#60c8ff;">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">Inscrits aujourd'hui</div>
+            </div>
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;">
+                <div id="a-suspended" style="font-size:2rem;font-weight:900;color:#ff4444;">—</div>
+                <div style="color:#555;font-size:0.75rem;margin-top:4px;">Suspendus</div>
+            </div>
+        </div>
+
+        <!-- Graphique revenus -->
+        <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;margin-bottom:30px;">
+            <div style="color:var(--text);font-weight:700;margin-bottom:20px;">📊 Revenus par mois (6 derniers mois)</div>
+            <div id="revenue-chart" style="display:flex;align-items:flex-end;gap:8px;height:120px;"></div>
+            <div id="revenue-chart-labels" style="display:flex;gap:8px;margin-top:8px;"></div>
+        </div>
+
+        <!-- Outils admin -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;">
+            <!-- Message broadcast -->
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;">
+                <div style="color:var(--text);font-weight:700;margin-bottom:16px;">📨 Envoyer un message</div>
+                <input type="email" id="msg-email" placeholder="Email client (vide = tous)" style="width:100%;box-sizing:border-box;padding:10px 14px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;font-family:inherit;font-size:0.85rem;margin-bottom:10px;">
+                <textarea id="msg-content" placeholder="Ton message..." rows="3" style="width:100%;box-sizing:border-box;padding:10px 14px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;font-family:inherit;font-size:0.85rem;resize:vertical;margin-bottom:10px;"></textarea>
+                <button onclick="sendAdminMessage()" style="padding:10px 20px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">Envoyer</button>
+            </div>
+            <!-- Export -->
+            <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;">
+                <div style="color:var(--text);font-weight:700;margin-bottom:16px;">📤 Exports</div>
+                <button onclick="exportCSV()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;margin-bottom:10px;">⬇ Exporter CSV clients</button>
+                <div style="color:#444;font-size:0.75rem;margin-top:8px;">Export BOM UTF-8 compatible Excel</div>
+            </div>
+        </div>
+
+        <!-- Liste clients -->
+        <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                <div style="color:var(--text);font-weight:700;">👥 Clients <span id="a-count" style="color:#555;font-weight:400;font-size:0.85rem;"></span></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <input type="search" id="admin-search" placeholder="Rechercher..." oninput="filterAdminUsers(this.value)" style="padding:8px 14px;background:#000;border:1px solid #333;border-radius:8px;color:#fff;font-family:inherit;font-size:0.85rem;">
+                    <select id="admin-filter" onchange="filterAdminUsers(document.getElementById('admin-search').value)" style="padding:8px 14px;background:#000;border:1px solid #333;border-radius:8px;color:#aaa;font-family:inherit;font-size:0.85rem;">
+                        <option value="">Tous</option>
+                        <option value="paying">Payants</option>
+                        <option value="pending">Gratuits</option>
+                        <option value="suspended">Suspendus</option>
+                        <option value="starter">Starter</option>
+                        <option value="pro">Pro</option>
+                        <option value="affiliation">Ambassadeurs</option>
+                    </select>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                    <thead>
+                        <tr style="border-bottom:1px solid #222;">
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Prénom</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Email</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Business</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Forfait</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Changer plan</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Date</th>
+                            <th style="text-align:center;padding:10px 8px;color:#555;font-weight:600;">Prospects</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Statut</th>
+                            <th style="text-align:left;padding:10px 8px;color:#555;font-weight:600;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DÉTAIL UTILISATEUR -->
+<div id="userDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99500;align-items:center;justify-content:center;">
+    <div style="background:#111;border:1px solid #333;border-radius:16px;padding:32px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;position:relative;">
+        <button onclick="closeUserDetail()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#666;font-size:1.3rem;cursor:pointer;">✕</button>
+        <div style="color:var(--accent);font-weight:700;font-size:1.1rem;margin-bottom:20px;">👤 Détail client</div>
+        <div id="userDetailContent"></div>
+    </div>
+</div>
+
 <!-- FLOATING CHATBOT -->
 <button id="chatBtn" onclick="toggleChat()">🤖</button>
 <div id="chatWindow">
@@ -534,6 +662,11 @@
         <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
         <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte à Nexa.</p>
     </div><!-- fin #nexa-commission-setup -->
+
+    <!-- BOUTON ADMIN DISCRET -->
+    <div style="text-align:center;padding:40px 0 20px;">
+        <button onclick="openAdminLogin()" style="background:none;border:none;color:#333;font-size:0.7rem;cursor:pointer;font-family:inherit;letter-spacing:1px;opacity:0.4;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">admin</button>
+    </div>
 
 </div><!-- fin #home -->
 
