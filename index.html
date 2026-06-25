@@ -245,6 +245,15 @@
             <main class="dash-main">
                 <section id="tab-overview" class="dashboard-tab-content active">
                     <h2 class="dash-page-title">Tableau de bord</h2>
+
+                    <div id="setup-warning-banner" style="display: none; background: rgba(255, 152, 0, 0.15); border: 1px solid #ff9800; padding: 20px; border-radius: 8px; margin-bottom: 25px; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
+                        <div>
+                            <strong style="color: #ff9800; display: block; font-size: 16px; margin-bottom: 4px;">⚡ Configuration incomplète</strong>
+                            <p style="font-size: 14px; margin: 0; color: #fff; opacity: 0.85;">Ton robot de prospection ne peut pas fonctionner. Termine le guide immédiatement pour activer tous tes outils et automatiser ton business.</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" style="white-space: nowrap; margin-left: 20px;" onclick="resumeGuide();">Terminer le guide ➔</button>
+                    </div>
+
                     <div class="dash-stats-grid">
                         <div class="dash-stat-card">
                             <span class="dash-stat-title">Conversations ce mois</span>
@@ -336,7 +345,7 @@
                     <div class="dash-card">
                         <h3 class="dash-card-title">💳 Statut de facturation</h3>
                         <div style="margin: 20px 0; padding: 20px; background: var(--bg-light); border-radius: 8px; border-left: 4px solid var(--accent);">
-                            <p>Ton compte est actuellement associé à un forfait actif géré de manière externe ou via notre système partenaire sécurisé.</p>
+                            <p>Ton compte est actuellement associé à un forfait actif géré de manière externe ou via notre systeme partenaire sécurisé.</p>
                         </div>
                         <p class="text-light">Besoin d'annuler, de modifier ou de mettre à jour tes informations de paiement ? Contacte directement notre support sur notre serveur ou via l'adresse officielle de facturation.</p>
                     </div>
