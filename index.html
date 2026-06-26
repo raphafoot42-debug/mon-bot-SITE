@@ -3,469 +3,544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--
+      ⚠️ SÉCURITÉ : configurer les headers suivants dans netlify.toml :
+      [[headers]]
+        for = "/*"
+        [headers.values]
+          X-Frame-Options = "DENY"
+          X-Content-Type-Options = "nosniff"
+          Referrer-Policy = "strict-origin-when-cross-origin"
+          Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+          Content-Security-Policy = "default-src 'self'; script-src 'self' https://js.stripe.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.anthropic.com https://*.supabase.co https://api.stripe.com; frame-src https://js.stripe.com; img-src 'self' data: https:;"
+    -->
     <link rel="canonical" href="https://steady-centaur-82e10a.netlify.app">
     <title>NEXA AI — Automatise ta prospection TikTok & Instagram</title>
     <meta name="description" content="Nexa automatise ta prospection sur TikTok et Instagram. Répond à tes DMs 24h/24, qualifie tes prospects et close tes ventes automatiquement.">
-    <meta property="og:title" content="NEXA AI — Automatise ta prospection TikTok & Instagram">
-    <meta property="og:description" content="Nexa automatise ta prospection sur TikTok et Instagram. Répond à tes DMs 24h/24, qualifie tes prospects et close tes ventes automatiquement.">
+    <meta property="og:title" content="NEXA AI — Automatise ta prospection">
+    <meta property="og:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
     <meta property="og:type" content="website">
+    <meta property="og:image" content="https://steady-centaur-82e10a.netlify.app/og-image.png">
     <meta property="og:url" content="https://steady-centaur-82e10a.netlify.app">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NEXA AI — Automatise ta prospection">
+    <meta name="twitter:description" content="Nexa automatise ta prospection sur TikTok et Instagram.">
+    <meta name="twitter:image" content="https://steady-centaur-82e10a.netlify.app/og-image.png">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✦%3C/text%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/netlify/css/nexa.css">
+    <style>
+        /* FAQ — indicateur +/- */
+        details summary .faq-icon::before { content: '+'; }
+        details[open] summary .faq-icon::before { content: '−'; }
+        /* Hover témoignages — remplace les onmouseover/onmouseout inline */
+        .temoignage-card:hover { border-color: var(--accent) !important; }
+        /* Hover FAQ details */
+        details:hover { border-color: rgba(57,255,20,0.35) !important; }
+    </style>
 </head>
 <body>
-    <div id="landing-page">
-        <header class="main-header">
-            <div class="container header-container">
-                <a href="#" class="logo">NEXA<span class="dot">.</span></a>
-                <nav class="main-nav">
-                    <ul>
-                        <li><a href="#features">Fonctionnalités</a></li>
-                        <li><a href="#demo">Démo</a></li>
-                        <li><a href="#pricing">Tarifs</a></li>
-                    </ul>
-                </nav>
-                <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="showAuthModal('signin')">Connexion</button>
-                    <button class="btn btn-primary" onclick="scrollToElement('demo')">Essayer Gratuitement</button>
-                </div>
+
+<!-- HEADER -->
+<header>
+    <nav class="container">
+        <a href="#" class="logo" onclick="showPage('home');return false;">✦ NexaAI ✦</a>
+        <div class="nav-right">
+            <select class="lang-selector" onchange="changeLang(this.value)">
+                <option value="fr">🇫🇷 FR</option>
+                <option value="en">🇬🇧 EN</option>
+                <option value="cn">🇨🇳 中文</option>
+            </select>
+            <div class="auth-btns">
+                <button class="login-btn" onclick="showPage('login')" id="loginBtn">Connexion</button>
+                <button class="signup-btn" onclick="showPage('register')" id="signupBtn">S'inscrire</button>
             </div>
-        </header>
+        </div>
+    </nav>
+</header>
 
-        <section class="hero-section">
-            <div class="container hero-container text-center">
-                <div class="badge-container">
-                    <span class="hero-badge">⚡ Propulsé par l'IA la plus avancée du marché</span>
-                </div>
-                <h1 class="hero-title">Automatise Ta Prospection <span class="text-gradient">TikTok & Instagram</span></h1>
-                <p class="hero-subtitle">NEXA répond à tes DMs 24h/24, qualifie tes prospects et génère des ventes en automatique pendant que tu te concentres sur ton contenu.</p>
-                <div class="hero-buttons">
-                    <button class="btn btn-primary btn-lg" onclick="scrollToElement('demo')">Lancer la démo en 30s</button>
-                    <button class="btn btn-secondary btn-lg" onclick="scrollToElement('features')">Découvrir les fonctionnalités</button>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat-item">
-                        <span class="stat-number">24/7</span>
-                        <span class="stat-label">Disponibilité totale</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">100%</span>
-                        <span class="stat-label">Conforme aux CGU</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">x3.4</span>
-                        <span class="stat-label">Augmentation moyenne du CA</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="features" class="features-section">
-            <div class="container">
-                <h2 class="section-title text-center">Pourquoi Choisir <span class="text-gradient">NEXA AI</span> ?</h2>
-                <p class="section-subtitle text-center">Une suite d'outils puissants pour transformer tes réseaux sociaux en machine à cash.</p>
-                
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">💬</div>
-                        <h3 class="feature-card-title">Réponse Instantanée 24/7</h3>
-                        <p class="feature-card-text">Ne perds plus aucun prospect. NEXA répond en moins de 5 secondes à tous tes messages privés, jour et nuit, avec un ton ultra-naturel.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🎯</div>
-                        <h3 class="feature-card-title">Qualification Avancée</h3>
-                        <p class="feature-card-text">L'IA pose les bonnes questions pour comprendre le besoin, le budget et le profil de ton prospect avant de lui proposer ton offre.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">💰</div>
-                        <h3 class="feature-card-title">Fermeture Automatique</h3>
-                        <p class="feature-card-text">Envoie tes liens de paiement Stripe, redirige vers ton calendrier Calendly ou capture des emails directement dans la conversation au bon moment.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔒</div>
-                        <h3 class="feature-card-title">Sécurité Maximale</h3>
-                        <p class="feature-card-text">Notre technologie respecte scrupuleusement les limitations des plateformes pour garantir la sécurité totale de tes comptes sociaux.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="demo" class="demo-section">
-            <div class="container">
-                <div class="demo-wrapper">
-                    <div class="demo-info">
-                        <h2 class="demo-title">Configure Ton Agent IA <span class="text-gradient">En Direct</span></h2>
-                        <p class="demo-text">Réponds aux questions de notre assistant de configuration pour créer un clone virtuel adapté à ton business. Tu pourras ensuite tester ses réponses immédiatement.</p>
-                        
-                        <div class="demo-steps-list">
-                            <div class="demo-step-item active" id="step-indicator-1">
-                                <span class="step-num">1</span>
-                                <span class="step-text">Ton profil</span>
-                            </div>
-                            <div class="demo-step-item" id="step-indicator-2">
-                                <span class="step-num">2</span>
-                                <span class="step-text">Ton offre</span>
-                            </div>
-                            <div class="demo-step-item" id="step-indicator-3">
-                                <span class="step-num">3</span>
-                                <span class="step-text">Ton objectif</span>
-                            </div>
-                            <div class="demo-step-item" id="step-indicator-4">
-                                <span class="step-num">4</span>
-                                <span class="step-text">Génération de l'IA</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="demo-chat-container">
-                        <div class="chat-header">
-                            <div class="chat-bot-avatar">N</div>
-                            <div class="chat-bot-info">
-                                <span class="chat-bot-name">NEXA Configuration</span>
-                                <span class="chat-bot-status"><span class="status-dot"></span> Assistant IA</span>
-                            </div>
-                        </div>
-                        <div class="chat-messages" id="bq-messages">
-                            </div>
-                        <div class="chat-progress-container">
-                            <div class="chat-progress-bar" id="bq-progress" style="width: 20%;"></div>
-                        </div>
-                        <div class="chat-input-area" id="bq-input-container">
-                            <input type="text" id="bq-input" placeholder="Écris ta réponse ici..." autocomplete="off">
-                            <button class="btn btn-primary btn-icon" id="bq-send-btn">➔</button>
-                        </div>
-                        <div id="bq-typing" class="chat-message bot" style="display: none; background: transparent; padding: 5px 15px;">
-                            <div class="typing-indicator"><span></span><span></span><span></span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="testimonials-section">
-            <div class="container">
-                <h2 class="section-title text-center">Ils ont choisi NEXA. Regardez les résultats.</h2>
-                <div class="testimonials-grid">
-                    <div class="testimonial-card">
-                        <div class="testimonial-stars">★★★★★</div>
-                        <p class="testimonial-text"><strong>800 €</strong> en 3 semaines. Je réponds à <strong>5 à 6 DM</strong> par jour max avec NEXA. <strong>75 messages de qualification</strong> envoyés chaque jour, mon CA a explosé !</p>
-                        <div class="testimonial-author">
-                            <span class="author-name">Lucas M.</span>
-                            <span class="author-role">Coach Fitness Pro</span>
-                        </div>
-                    </div>
-
-                    <div class="testimonial-card">
-                        <div class="testimonial-stars">★★★★★</div>
-                        <p class="testimonial-text"><strong>900 €</strong> le premier mois. J'avais peur que ce soit trop robotique avec mes clients, mais ils ne voient pas la différence. Ils achètent, c'est tout !</p>
-                        <div class="testimonial-author">
-                            <span class="author-name">Sarah</span>
-                            <span class="author-role">E-commerce mode start-up</span>
-                        </div>
-                    </div>
-
-                    <div class="testimonial-card">
-                        <div class="testimonial-stars">★★★★★</div>
-                        <p class="testimonial-text"><strong>2 000 €</strong> en 2 mois. <strong>75 messages par jour en automatique</strong>. Je me concentre sur la création du contenu, NEXA fait le reste.</p>
-                        <div class="testimonial-author">
-                            <span class="author-name">Julien R.</span>
-                            <span class="author-role">Créateur de contenu</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="pricing" class="pricing-section">
-            <div class="container">
-                <h2 class="section-title text-center">Des Tarifs Simples, <span class="text-gradient">Sans Engagement</span></h2>
-                <p class="section-subtitle text-center">Choisis le plan adapté à la taille de ton audience et commence à automatiser dès aujourd'hui.</p>
-                
-                <div class="pricing-grid">
-                    <div class="pricing-card">
-                        <h3 class="plan-name">Starter</h3>
-                        <div class="plan-price">€39<span class="plan-period">/mois</span></div>
-                        <p class="plan-desc">Idéal pour les créateurs qui se lancent et veulent tester l'automatisation.</p>
-                        <ul class="plan-features">
-                            <li><span>✓</span> 1 Compte Réseau Social (TikTok ou Insta)</li>
-                            <li><span>✓</span> Jusqu'à 75 conversations / jour</li>
-                            <li><span>✓</span> Réponses IA personnalisables</li>
-                            <li><span>✓</span> Intégration Stripe de base</li>
-                            <li><span>✓</span> Support par email sous 48h</li>
-                        </ul>
-                        <button class="btn btn-secondary w-100" onclick="scrollToElement('demo')">Commencer Starter</button>
-                    </div>
-
-                    <div class="pricing-card featured">
-                        <div class="card-badge">Plus Populaire</div>
-                        <h3 class="plan-name">Pro</h3>
-                        <div class="plan-price">€59<span class="plan-period">/mois</span></div>
-                        <p class="plan-desc">Pour les business sérieux qui veulent scaler leur prospection au maximum.</p>
-                        <ul class="plan-features">
-                            <li><span>✓</span> Multi-comptes (TikTok + Instagram simultanés)</li>
-                            <li><span>✓</span> Conversations illimitées</li>
-                            <li><span>✓</span> IA Avancée (mémoire contextuelle longue)</li>
-                            <li><span>✓</span> Intégrations Stripe, Calendly & Webhooks</li>
-                            <li><span>✓</span> Dashboard de statistiques avancé</li>
-                            <li><span>✓</span> Support Prioritaire 7j/7 (Discord + Email)</li>
-                        </ul>
-                        <button class="btn btn-primary w-100" onclick="scrollToElement('demo')">Devenir Pro 🚀</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <footer class="main-footer">
-            <div class="container footer-container text-center">
-                <p>&copy; 2026 NEXA AI. Tous droits réservés. Développé de manière éthique et sécurisée.</p>
-            </div>
-        </footer>
-    </div>
-
-    <div id="dashboard-page" style="display: none;">
-        <div class="dashboard-wrapper">
-            <aside class="sidebar">
-                <div class="sidebar-brand">NEXA<span class="dot">.</span></div>
-                <div class="user-profile-summary">
-                    <div class="user-avatar" id="dash-avatar">U</div>
-                    <div class="user-meta-info">
-                        <span class="user-display-name" id="dash-username">Chargement...</span>
-                        <span class="user-current-plan-badge" id="dash-plan-badge">Plan...</span>
-                    </div>
-                </div>
-                <ul class="sidebar-menu">
-                    <li><button class="sidebar-link active" onclick="switchTab('overview')">📊 Vue d'ensemble</button></li>
-                    <li><button class="sidebar-link" onclick="switchTab('agent')">🤖 Mon Agent IA</button></li>
-                    <li><button class="sidebar-link" onclick="switchTab('analytics')">📈 Statistiques</button></li>
-                    <li><button class="sidebar-link" id="menu-billing-btn" onclick="switchTab('billing')" style="display: none;">💳 Mon Forfait</button></li>
-                    <li><button class="sidebar-link text-danger" onclick="handleSignOut()">🚪 Déconnexion</button></li>
-                </ul>
-            </aside>
-
-            <main class="dash-main">
-                <section id="tab-overview" class="dashboard-tab-content active">
-                    <h2 class="dash-page-title">Tableau de bord</h2>
-
-                    <div id="setup-warning-banner" style="display: none; background: rgba(255, 152, 0, 0.15); border: 1px solid #ff9800; padding: 20px; border-radius: 8px; margin-bottom: 25px; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
-                        <div>
-                            <strong style="color: #ff9800; display: block; font-size: 16px; margin-bottom: 4px;">⚡ Configuration incomplète</strong>
-                            <p style="font-size: 14px; margin: 0; color: #fff; opacity: 0.85;">Ton robot de prospection ne peut pas fonctionner. Termine le guide immédiatement pour activer tous tes outils et automatiser ton business.</p>
-                        </div>
-                        <button class="btn btn-primary btn-sm" style="white-space: nowrap; margin-left: 20px;" onclick="resumeGuide();">Terminer le guide ➔</button>
-                    </div>
-
-                    <div class="dash-stats-grid">
-                        <div class="dash-stat-card">
-                            <span class="dash-stat-title">Conversations ce mois</span>
-                            <span class="dash-stat-value" id="stat-conv-count">0</span>
-                        </div>
-                        <div class="dash-stat-card">
-                            <span class="dash-stat-title">Prospects Qualifiés</span>
-                            <span class="dash-stat-value" id="stat-leads-count">0</span>
-                        </div>
-                        <div class="dash-stat-card">
-                            <span class="dash-stat-title">Statut de l'Agent</span>
-                            <span class="dash-stat-value text-accent" id="stat-agent-status">Actif 🟢</span>
-                        </div>
-                    </div>
-
-                    <div class="dash-card">
-                        <h3 class="dash-card-title">🔗 Comptes Réseaux Sociaux Connectés</h3>
-                        <p class="dash-card-desc">Associe tes profils pour activer la prospection automatique de NEXA.</p>
-                        <div class="social-connect-grid">
-                            <div class="social-connect-card tiktok">
-                                <div class="social-icon">🎵</div>
-                                <span class="social-name">TikTok</span>
-                                <button class="btn btn-primary btn-sm" id="btn-connect-tiktok" onclick="connectSocial('tiktok')">Connecter</button>
-                            </div>
-                            <div class="social-connect-card instagram">
-                                <div class="social-icon">📸</div>
-                                <span class="social-name">Instagram</span>
-                                <button class="btn btn-primary btn-sm" id="btn-connect-instagram" onclick="connectSocial('instagram')">Connecter</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="tab-agent" class="dashboard-tab-content">
-                    <h2 class="dash-page-title">Configuration de ton Clone Virtuel</h2>
-                    <div class="dash-grid-two-col">
-                        <div class="dash-card">
-                            <h3 class="dash-card-title">🧠 Base de connaissances de l'IA</h3>
-                            <form id="agent-config-form" onsubmit="saveAgentConfig(event)">
-                                <div class="form-group">
-                                    <label class="form-label" for="cfg-prenom">Prénom de l'agent</label>
-                                    <input type="text" id="cfg-prenom" class="form-input" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label" for="cfg-business">Description de ton business / offre</label>
-                                    <textarea id="cfg-business" class="form-textarea" rows="4" required></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label" for="cfg-pseudo">Ton pseudo TikTok/Insta ciblé</label>
-                                    <input type="text" id="cfg-pseudo" class="form-input" placeholder="@moncompte" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label" for="cfg-store">Lien de redirection (Stripe, Calendly, Site)</label>
-                                    <input type="url" id="cfg-store" class="form-input" placeholder="https://" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
-                            </form>
-                        </div>
-
-                        <div class="dash-card flex-column">
-                            <h3 class="dash-card-title">🧪 Teste ton Agent en direct</h3>
-                            <p class="dash-card-desc">Simule une conversation de client pour ajuster ses réponses.</p>
-                            <div class="dash-test-chat-box">
-                                <div class="chat-messages" id="dash-chat-messages" style="flex-grow: 1; min-height: 250px;">
-                                    </div>
-                                <div id="dash-chat-typing" class="chat-message bot" style="display: none; background: transparent; padding: 5px 15px;">
-                                    <div class="typing-indicator"><span></span><span></span><span></span></div>
-                                </div>
-                                <div class="chat-input-area" style="border-top: 1px solid var(--border); padding-top: 10px;">
-                                    <input type="text" id="dash-chat-input" placeholder="Dis-lui bonjour !" autocomplete="off">
-                                    <button class="btn btn-primary btn-icon" onclick="sendDashTestMsg()">➔</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="tab-analytics" class="dashboard-tab-content">
-                    <h2 class="dash-page-title">Analyses de performance</h2>
-                    <div class="dash-card text-center" style="padding: 60px 20px;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">📈</div>
-                        <h3>Graphiques de conversion en cours de génération</h3>
-                        <p class="text-light" style="max-width: 450px; margin: 10px auto 0;">Dès que ton agent aura complété ses premières conversations réelles sur tes réseaux, tu retrouveras ici le détail des taux de clic et de transformation au jour le jour.</p>
-                    </div>
-                </section>
-
-                <section id="tab-billing" class="dashboard-tab-content">
-                    <h2 class="dash-page-title">Gestion de ton Abonnement</h2>
-                    <div class="dash-card">
-                        <h3 class="dash-card-title">💳 Statut de facturation</h3>
-                        <div style="margin: 20px 0; padding: 20px; background: var(--bg-light); border-radius: 8px; border-left: 4px solid var(--accent);">
-                            <p>Ton compte est actuellement associé à un forfait actif géré de manière externe ou via notre systeme partenaire sécurisé.</p>
-                        </div>
-                        <p class="text-light">Besoin d'annuler, de modifier ou de mettre à jour tes informations de paiement ? Contacte directement notre support sur notre serveur ou via l'adresse officielle de facturation.</p>
-                    </div>
-                </section>
-            </main>
+<!-- LOGIN -->
+<div id="login" class="page">
+    <div class="tunnel-wrap">
+        <div class="tunnel-card">
+            <h2 id="loginTitle">Connexion</h2>
+            <p class="step-info">Content de te revoir.</p>
+            <div class="form-group"><label id="loginEmailL" for="loginEmail">Email</label><input type="email" id="loginEmail" name="email" autocomplete="email" placeholder="toi@example.com"></div>
+            <div class="form-group"><label id="loginPwdL" for="loginPassword">Mot de passe</label><input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter')login()"></div>
+            <button class="btn btn-primary btn-full" id="loginSubmit" onclick="login()" style="margin-bottom:12px;">Se connecter</button>
+            <button class="btn btn-secondary btn-full" id="loginBack" onclick="showPage('home')">Retour</button>
         </div>
     </div>
+</div>
 
-    <div class="modal-overlay" id="auth-modal" style="display: none;">
-        <div class="modal-card">
-            <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
-            <h3 class="modal-title" id="auth-modal-title">Connexion à NEXA</h3>
-            
-            <div id="auth-error-alert" class="auth-error-msg" style="display: none;">Erreur d'authentification</div>
-
-            <form id="auth-form" onsubmit="handleAuthSubmit(event)">
-                <div class="form-group">
-                    <label class="form-label" for="auth-email">Adresse Email</label>
-                    <input type="email" id="auth-email" class="form-input" placeholder="nom@exemple.com" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="auth-password">Mot de passe</label>
-                    <input type="password" id="auth-password" class="form-input" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" id="auth-submit-btn">Se connecter</button>
-            </form>
-            
-            <div class="modal-footer-text">
-                <span id="auth-switch-prompt">Pas encore de compte ?</span>
-                <button class="btn-text-link" id="auth-switch-btn" onclick="toggleAuthMode()">Créer un compte</button>
+<!-- PAGE INSCRIPTION -->
+<div id="register" class="page">
+    <div class="tunnel-wrap">
+        <div class="tunnel-card">
+            <h2>Créer un compte</h2>
+            <p class="step-info">Rejoins Nexa.</p>
+            <div class="form-group"><label for="regEmail">Email *</label><input type="email" id="regEmail" name="email" autocomplete="email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')register()"></div>
+            <div class="form-group"><label for="regPwd">Mot de passe *</label><input type="password" id="regPwd" name="new-password" autocomplete="new-password" placeholder="Minimum 8 caractères" onkeydown="if(event.key==='Enter')register()"></div>
+            <div class="form-group"><label for="regPwd2">Confirme le mot de passe *</label><input type="password" id="regPwd2" name="confirm-password" autocomplete="new-password" placeholder="Répète ton mot de passe" onkeydown="if(event.key==='Enter')register()"></div>
+            <button class="btn btn-primary btn-full" onclick="register()" id="regBtn" style="margin-bottom:12px;">Créer mon compte</button>
+            <div style="text-align:center;color:var(--text-light);font-size:0.85rem;">
+                Déjà un compte ? <button onclick="showPage('login')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;font-family:inherit;">Se connecter</button>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="modal-overlay" id="modal-pay" style="display: none; z-index: 10000;">
-        <div class="modal-card" style="max-width: 500px;">
-            <h3 class="modal-title" style="text-align: center; font-size: 24px;">Félicitations ! 🎉</h3>
-            <p style="text-align: center; color: var(--text-light); margin-bottom: 25px;">Ton agent IA est prêt et configuré. Sélectionne ton forfait pour l'activer sur tes comptes.</p>
-            
-            <div id="modal-pay-error" class="auth-error-msg" style="display: none; margin-bottom: 15px; text-align: center;">Veuillez sélectionner un forfait valide pour continuer.</div>
+<!-- BOT QUALIFY PAGE -->
+<div id="bot-qualify" class="page">
+    <div class="tunnel-wrap">
+        <div class="tunnel-card" style="max-width:650px;">
+            <div class="progress-bar"><div class="progress-fill" id="bq-progress" style="width:0%"></div></div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                <div style="width:44px;height:44px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">🤖</div>
+                <div>
+                    <div style="color:var(--accent);font-weight:800;font-size:1rem;">Nexa</div>
+                    <div style="font-size:0.72rem;color:var(--accent);display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;background:var(--accent);border-radius:50%;display:inline-block;"></span> En ligne</div>
+                </div>
+            </div>
+            <div id="bq-msgs" style="min-height:200px;display:flex;flex-direction:column;gap:12px;margin-bottom:20px;max-height:380px;overflow-y:auto;padding-right:4px;"></div>
+            <div id="bq-typing" style="display:none;margin-bottom:12px;">
+                <div style="display:inline-flex;gap:4px;align-items:center;background:#000;border:1px solid var(--border);border-radius:14px;padding:10px 14px;">
+                    <span style="width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bd 1s infinite 0s;display:inline-block;"></span>
+                    <span style="width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bd 1s infinite 0.2s;display:inline-block;"></span>
+                    <span style="width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bd 1s infinite 0.4s;display:inline-block;"></span>
+                </div>
+            </div>
+            <div id="bq-opts" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="bq-input" aria-label="Tape ta réponse" placeholder="Tape ta réponse..." onkeydown="if(event.key==='Enter')bqSend()" style="flex:1;padding:12px 16px;background:#000;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-size:0.9rem;font-family:inherit;transition:border-color 0.3s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                <button onclick="bqSend()" aria-label="Envoyer" style="background:var(--accent);border:none;border-radius:10px;width:44px;height:44px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:transform 0.3s;flex-shrink:0;">➤</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- DASHBOARD -->
+<div id="dashboard-page" class="page">
+    <div class="dashboard-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-logo">✦ Nexa</div>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" data-dash="overview" onclick="showDash('overview',this);return false;">Aperçu</a></li>
+                <li><a href="#" data-dash="prospects" onclick="showDash('prospects',this);return false;">Prospects</a></li>
+                <li><a href="#" data-dash="bot" onclick="showDash('bot',this);return false;">Assistant IA</a></li>
+                <li><a href="#" data-dash="settings" onclick="showDash('settings',this);return false;">Paramètres</a></li>
+            </ul>
+        </aside>
+        <div class="dash-main">
+            <div id="d-overview">
+                <h1 id="dash-welcome">Tableau de bord</h1>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-number" id="st-prospects">0</div><div class="stat-label" id="stProspects">Prospects</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-msgs">0</div><div class="stat-label" id="stMsgs">Messages</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-rate">0%</div><div class="stat-label" id="stRate">Conversion</div></div>
+                    <div class="stat-card"><div class="stat-number" id="st-revenue">€0</div><div class="stat-label" id="stRevenue">Revenu estimé</div></div>
+                </div>
+                <div style="background:var(--bg-light);border:2px solid var(--border);border-radius:15px;padding:25px;">
+                    <h3 style="color:var(--accent);margin-bottom:12px;">Bot actif</h3>
+                    <p style="color:var(--text-light);font-size:0.9rem;line-height:1.7;">Nexa travaille. Tu encaisses.</p>
+                    <div style="display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;" id="platform-badges"></div>
+                </div>
+
+                <!-- LIENS AMBASSADEUR — affiché uniquement si plan affiliation -->
+                <div id="dash-aff-links" style="display:none;background:#0a1a0a;border:1px solid var(--accent);border-radius:14px;padding:20px;margin-top:20px;">
+                    <p style="color:var(--accent);font-weight:800;font-size:0.95rem;margin-bottom:16px;">🔗 Tes liens</p>
+                    <p style="color:#888;font-size:0.8rem;margin-bottom:4px;">🛍️ Ta page de vente</p>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                        <span id="dash-shop-url" style="color:#fff;font-size:0.82rem;word-break:break-all;flex:1;"></span>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('dash-shop-url').textContent).then(()=>toast('✅ Copié !','ok'))" style="padding:6px 14px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.8rem;white-space:nowrap;">Copier</button>
+                    </div>
+                    <p style="color:#888;font-size:0.8rem;margin-bottom:4px;">🤝 Ton lien d'affiliation</p>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="dash-aff-url" style="color:#fff;font-size:0.82rem;word-break:break-all;flex:1;"></span>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('dash-aff-url').textContent).then(()=>toast('✅ Copié !','ok'))" style="padding:6px 14px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.8rem;white-space:nowrap;">Copier</button>
+                    </div>
+                </div>
+            </div>
+            <div id="d-prospects" style="display:none;">
+                <h1>Prospects</h1>
+                <table class="prospects-table">
+                    <thead><tr><th>Nom</th><th>Réseau</th><th>Statut</th><th>Dernier message IA</th><th>Date</th></tr></thead>
+                    <tbody id="prospects-body">
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:40px;">Connecte tes réseaux. Nexa fait le reste.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="d-bot" style="display:none;">
+                <h1 id="botTitle">Nexa — Ton agent IA</h1>
+                <p id="botSub" style="color:var(--text-light);margin-bottom:20px;">Nexa connaît ton business. Pose-lui n'importe quelle question.</p>
+                <div class="dash-chat">
+                    <div class="dash-chat-header">
+                        <div class="dash-chat-av">🤖</div>
+                        <div><div class="dash-chat-name">Nexa</div><div class="dash-chat-status">🟢 En ligne</div></div>
+                    </div>
+                    <div class="dash-msgs" id="dash-msgs">
+                        <div class="dash-msg-ai" id="dash-welcome-msg">Chargement de ton profil...</div>
+                    </div>
+                    <div class="dash-chat-input-row">
+                        <input type="text" id="dash-input" aria-label="Pose ta question à Nexa" placeholder="Pose ta question..." onkeydown="if(event.key==='Enter')sendDashMsg()">
+                        <button class="dash-send" onclick="sendDashMsg()">➤</button>
+                    </div>
+                </div>
+            </div>
+            <div id="d-settings" style="display:none;">
+                <h1 id="settingsTitle">Paramètres</h1>
+                <div style="background:var(--bg-light);border:2px solid var(--border);border-radius:15px;padding:35px;max-width:550px;">
+                    <h3 style="color:var(--accent);margin-bottom:20px;">Informations</h3>
+                    <div class="form-group"><label id="sPrenomL">Prénom</label><input type="text" id="s-prenom" placeholder="Ton prénom"></div>
+                    <div class="form-group"><label id="sEmailL">Email</label><input type="email" id="s-email" placeholder="ton@email.com"></div>
+                    <div class="form-group"><label id="sPwdL">Nouveau mot de passe</label><input type="password" id="s-pwd" placeholder="Laisser vide pour ne pas changer"></div>
+                    <h3 style="color:var(--accent);margin:25px 0 20px;">Business</h3>
+                    <div class="form-group"><label id="sBusinessL">Nom du business</label><input type="text" id="s-business" placeholder="Nom de ta marque"></div>
+                    <div class="form-group"><label id="sTypeL">Type de business</label>
+                        <select id="s-type">
+                            <option value="coaching">Coaching / Formation</option>
+                            <option value="ecommerce">E-commerce</option>
+                            <option value="service">Service / Freelance</option>
+                            <option value="saas">💻 SaaS</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    <h3 style="color:var(--accent);margin:25px 0 20px;">Abonnement</h3>
+                    <div style="background:rgba(var(--accent-rgb),0.05);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:20px;display:flex;justify-content:space-between;">
+                        <div><span style="font-weight:700;" id="s-plan">Starter</span><div style="color:var(--text-light);font-size:0.8rem;" id="s-billing">Abonnement mensuel</div></div>
+                        <div style="color:var(--accent);font-weight:900;" id="s-price">€39/mois</div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="sSaveBtn" onclick="saveSettings()" style="margin-bottom:10px;">Sauvegarder</button>
+                    <button class="btn btn-secondary btn-full" id="sLogoutBtn" onclick="logout()">Déconnexion</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Contact support -->
+    <div style="text-align:center;padding:20px 0 10px;border-top:1px solid #222;margin-top:20px;">
+        <p style="color:#666;font-size:0.8rem;">📞 Support : <a href="tel:+330780112707" style="color:var(--accent);text-decoration:none;">07 80 11 27 07</a></p>
+    </div>
+</div>
+
+<!--
+  ⚠️  SÉCURITÉ ADMIN — Le modal de login admin et le panel entier ont été retirés du HTML public.
+       Le mot de passe ne doit JAMAIS être vérifié en JS côté client (visible dans DevTools).
+       Implémenter une Edge Function Supabase qui :
+         1. Reçoit le mot de passe via POST
+         2. Le valide côté serveur (bcrypt ou variable d'env)
+         3. Retourne un JWT signé à durée limitée
+       Puis injecter le panel admin dynamiquement UNIQUEMENT après validation du JWT.
+-->
+
+
+
+<!-- FLOATING CHATBOT -->
+<button id="chatBtn" onclick="toggleChat()">🤖</button>
+<div id="chatWindow">
+    <div class="chat-hdr">
+        <div><div class="chat-hdr-title" id="chatHdrTitle">Nexa</div><div class="chat-hdr-sub"><span class="chat-hdr-dot"></span> En ligne</div></div>
+        <button class="chat-close-x" onclick="toggleChat()">×</button>
+    </div>
+    <div id="chatMsgs"></div>
+    <div id="typingBubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+    <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="Votre message..." autocomplete="off" onkeydown="if(event.key==='Enter'){sendChatMsg(this.value.trim());this.value=''}" style="caret-color:var(--text);">
+        <button class="chat-send-btn" aria-label="Envoyer" onclick="(function(){var i=document.getElementById('chatInput');var v=i.value.trim();if(!v)return;i.value='';sendChatMsg(v);})()">➤</button>
+    </div>
+</div>
+
+<!-- MODAL ONBOARDING 4 ÉTAPES -->
+<div id="onboardingModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeOnboarding()">✕</button>
+        <div class="modal-steps-bar">
+            <div class="modal-step-dot active" id="dot1"></div>
+            <div class="modal-step-dot" id="dot2"></div>
+            <div class="modal-step-dot" id="dot3"></div>
+            <div class="modal-step-dot" id="dot4"></div>
+        </div>
+
+        <!-- ÉTAPE 1 : Infos personnelles -->
+        <div class="modal-step active" id="modal-step1">
+            <div class="modal-title">👤 Qui es-tu ?</div>
+            <div class="modal-subtitle">Étape 1 sur 4 — Informations personnelles</div>
+            <div class="form-group"><label>Prénom *</label><input type="text" id="m-prenom" placeholder="Ton prénom"></div>
+            <div class="form-group"><label>Email *</label><input type="email" id="m-email" placeholder="ton@email.com"></div>
+            <div class="form-group"><label>Téléphone</label><input type="tel" id="m-phone" placeholder="+33 6 00 00 00 00"></div>
+            <div class="form-group"><label>Pays</label>
+                <select id="m-pays">
+                    <option value="fr">🇫🇷 France</option>
+                    <option value="be">🇧🇪 Belgique</option>
+                    <option value="ch">🇨🇭 Suisse</option>
+                    <option value="ca">🇨🇦 Canada</option>
+                    <option value="other">Autre</option>
+                </select>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="modalNext(1)">Continuer →</button>
+        </div>
+
+        <!-- ÉTAPE 2 : Business -->
+        <div class="modal-step" id="modal-step2">
+            <div class="modal-title">💼 Ton business</div>
+            <div class="modal-subtitle">Étape 2 sur 4 — Détails du business</div>
+            <div class="form-group"><label>Nom de ton business *</label><input type="text" id="m-business" placeholder="Ex: Mon Coaching Pro"></div>
+            <div class="form-group"><label>Type de business *</label>
+                <div class="option-grid">
+                    <div class="option-card" onclick="pickOpt(this,'mbtype','coaching')">🎯 Coaching / Formation</div>
+                    <div class="option-card" onclick="pickOpt(this,'mbtype','ecommerce')">📦 E-commerce</div>
+                    <div class="option-card" onclick="pickOpt(this,'mbtype','service')">💼 Service / Freelance</div>
+                    <div class="option-card" onclick="pickOpt(this,'mbtype','saas')">💻 SaaS</div>
+                </div>
+            </div>
+            <div class="form-group"><label>Objectif de revenus ce mois-ci</label>
+                <select id="m-objectif">
+                    <option value="1000">💰 1 000€ / mois</option>
+                    <option value="5000">🚀 5 000€ / mois</option>
+                    <option value="10000">🔥 10 000€+ / mois</option>
+                </select>
+            </div>
+            <div class="form-group"><label>DMs reçus par jour ?</label><input type="number" id="m-dms" placeholder="Ex: 15" min="0" inputmode="numeric"></div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary" onclick="modalPrev(2)" style="flex:1;">← Retour</button>
+                <button class="btn btn-primary" onclick="modalNext(2)" style="flex:2;">Continuer →</button>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 3 : Réseaux sociaux -->
+        <div class="modal-step" id="modal-step3">
+            <div class="modal-title">📱 Tes réseaux</div>
+            <div class="modal-subtitle">Étape 3 sur 4 — Configuration</div>
+            <div class="form-group"><label>Pseudo TikTok</label><input type="text" id="m-tiktok" placeholder="@tonpseudo"></div>
+            <div class="form-group"><label>Pseudo Instagram</label><input type="text" id="m-instagram" placeholder="@tonpseudo"></div>
+            <div class="form-group"><label>Niche / Type de contenu</label><input type="text" id="m-niche" placeholder="Ex: Coaching fitness, dropshipping..."></div>
+            <div style="background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:10px;padding:15px;margin-bottom:20px;">
+                <p style="color:var(--accent);font-weight:700;font-size:0.85rem;margin-bottom:6px;">🔒 Connexion sécurisée</p>
+                <p style="color:var(--text-light);font-size:0.8rem;">Nexa utilisera ces infos pour personnaliser ta prospection. La vraie connexion OAuth arrive bientôt.</p>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary" onclick="modalPrev(3)" style="flex:1;">← Retour</button>
+                <button class="btn btn-primary" onclick="validateStep3()" style="flex:2;">Continuer →</button>
+            </div>
+            <div id="step3-error" style="display:none;color:#ff6b6b;font-size:0.8rem;text-align:center;margin-top:10px;">⚠️ Entre au moins un réseau social (TikTok ou Instagram)</div>
+        </div>
+
+        <!-- ÉTAPE 4 : Choix du plan et paiement -->
+        <div class="modal-step" id="modal-step4">
+            <div class="modal-title">🚀 Choisis ton plan</div>
+            <div class="modal-subtitle">Étape 4 sur 4 — Activation</div>
             <div class="plan-select-grid">
-                <div class="plan-select-card" id="pcard-starter" onclick="selectPlan('starter')">
-                    <div class="plan-select-header">
-                        <span class="p-name">⚡ Starter</span>
-                        <span class="p-price">€39/mois</span>
-                    </div>
-                    <p class="p-desc">1 compte social, jusqu'à 75 conversations de qualification par jour.</p>
+                <div class="plan-select-card" onclick="selectModalPlan(this,'starter')" data-plan="starter">
+                    <div class="plan-name">Starter</div>
+                    <div class="plan-price">€39<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
+                    <div class="plan-desc">40 messages/jour<br>Dashboard de suivi</div>
                 </div>
-
-                <div class="plan-select-card" id="pcard-pro" onclick="selectPlan('pro')">
-                    <div class="plan-select-header">
-                        <span class="p-name">🚀 Pro</span>
-                        <span class="p-price">€59/mois</span>
-                    </div>
-                    <p class="p-desc">TikTok + Instagram simultanés, conversations illimitées, accès complet.</p>
+                <div class="plan-select-card selected" onclick="selectModalPlan(this,'pro')" data-plan="pro">
+                    <div style="font-size:0.7rem;color:var(--accent);font-weight:900;margin-bottom:4px;">🔥 POPULAIRE</div>
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-price">€59<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
+                    <div class="plan-desc">75 messages/jour<br>Support 24/7 + API</div>
                 </div>
-                
-                <div class="plan-select-card" id="pcard-ambassador" onclick="selectPlan('ambassador')" style="border-color: var(--purple);">
-                    <div class="plan-select-header">
-                        <span class="p-name" style="color: var(--purple-light);">🤝 Ambassadeur</span>
-                        <span class="p-price" style="color: var(--purple-light);">€0</span>
-                    </div>
-                    <p class="p-desc">Réservé aux partenaires et affiliés officiels NEXA disposant d'une validation.</p>
+                <div class="plan-select-card" onclick="selectModalPlan(this,'affiliation')" data-plan="affiliation">
+                    <div class="plan-name">Ambassadeur 🤝</div>
+                    <div class="plan-price">€0<span style="font-size:0.85rem;font-weight:400;">/mois</span></div>
+                    <div class="plan-desc">50 messages/jour<br>20% sur chaque vente</div>
                 </div>
             </div>
-
-            <button class="btn btn-primary w-100 btn-lg" style="margin-top: 20px;" onclick="confirmPlanAndCheckout()">Activer mon Agent IA ➔</button>
+            <div id="modal-pay-error" style="display:none;color:#ff6b6b;font-size:0.8rem;text-align:center;margin-bottom:10px;">⚠️ Sélectionne un plan avant de continuer</div>
+            <button class="btn btn-primary btn-full" id="modalPayBtn" onclick="modalPayGuard()" style="margin-bottom:10px;">🔒 Activer mon plan →</button>
+            <button class="btn btn-secondary btn-full" onclick="modalPrev(4)">← Retour</button>
+            <p style="text-align:center;color:var(--text-light);font-size:0.75rem;margin-top:12px;">Sans engagement • Résiliable à tout moment • Paiement sécurisé Stripe</p>
         </div>
     </div>
+</div>
 
+<!-- PAGE PRINCIPALE -->
+<div id="home" class="page active">
+
+    <!-- TÉMOIGNAGES -->
+    <section style="padding:80px 0;background:var(--bg);">
+        <div class="container" style="max-width:1100px;">
+            <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:15px;">Ils ont choisi Nexa. Regarde les résultats.</h2>
+            <p style="text-align:center;color:var(--text-light);margin-bottom:60px;font-size:1rem;">Des vrais clients. Des vrais chiffres.</p>
+            <p style="text-align:center;color:var(--text-light);font-size:0.72rem;margin-top:-45px;margin-bottom:40px;opacity:0.6;">* Résultats individuels variables. Les performances présentées ne sont pas garanties et dépendent de l'activité de chaque utilisateur.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:25px;">
+
+                <!-- Témoignage 1 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;position:relative;transition:border-color 0.3s;" class="temoignage-card">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€12 400</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 3 semaines</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">L</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Lucas M.</div><div style="color:var(--text-light);font-size:0.75rem;">Coach fitness • Pro</div></div>
+                    </div>
+                </div>
+
+                <!-- Témoignage 2 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" class="temoignage-card">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€8 900</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">premier mois</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"J'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c'est tout."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">S</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Sarah K.</div><div style="color:var(--text-light);font-size:0.75rem;">E-commerce mode • Starter</div></div>
+                    </div>
+                </div>
+
+                <!-- Témoignage 3 -->
+                <div style="background:#111;border:1px solid var(--border);border-radius:16px;padding:30px;transition:border-color 0.3s;" class="temoignage-card">
+                    <div style="color:var(--accent);font-size:2rem;font-weight:900;margin-bottom:8px;">+€31 000</div>
+                    <div style="color:var(--text-light);font-size:0.8rem;margin-bottom:20px;">en 2 mois</div>
+                    <p style="color:var(--text);font-size:0.9rem;line-height:1.7;margin-bottom:20px;">"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."</p>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:1rem;">A</div>
+                        <div><div style="font-weight:700;font-size:0.9rem;">Antoine R.</div><div style="color:var(--text-light);font-size:0.75rem;">Formation trading • Pro</div></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section style="padding:80px 0;background:var(--bg-light);">
+        <div class="container" style="max-width:800px;">
+            <h2 style="text-align:center;font-size:2rem;font-weight:900;margin-bottom:50px;color:var(--text);">Questions fréquentes</h2>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Comment ça fonctionne ? <span class="faq-icon"></span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Nexa se connecte à tes réseaux et répond à tes DMs automatiquement. Elle qualifie chaque prospect et le guide vers ton offre — 24h/24.</p>
+                </details>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Mes données sont-elles sécurisées ? <span class="faq-icon"></span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Toutes tes données sont chiffrées et hébergées en sécurité. Rien n'est revendu, jamais.</p>
+                </details>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Puis-je annuler ? <span class="faq-icon"></span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Oui. Sans engagement, sans frais cachés. Résiliation en un clic depuis ton dashboard.</p>
+                </details>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Quand est-ce que ça fonctionne ? <span class="faq-icon"></span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">Les premiers prospects arrivent dans les 24h suivant l'activation. Les résultats significatifs dans la première semaine.</p>
+                </details>
+                <details style="background:var(--black);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;">
+                    <summary style="font-weight:700;font-size:1rem;color:var(--accent);list-style:none;display:flex;justify-content:space-between;align-items:center;">Sur quels réseaux ? <span class="faq-icon"></span></summary>
+                    <p style="color:var(--text-light);margin-top:12px;line-height:1.7;">TikTok et Instagram. LinkedIn, Twitter et YouTube arrivent prochainement.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION TARIFS -->
+    <section id="pricing" style="padding:80px 0;background:var(--bg);border-top:2px solid var(--border);">
+        <div class="container">
+            <h2 style="text-align:center;font-size:1.75rem;font-weight:900;margin-bottom:10px;color:var(--accent);">Forfaits</h2>
+            <p style="text-align:center;color:var(--text-light);margin-bottom:36px;font-size:0.95rem;">Mensuel ou paiement annuel (10 mois payés = 12 mois d'accès).</p>
+            <div class="pricing-grid">
+
+                <!-- STARTER MENSUEL -->
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <div class="pricing-current">€39</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li><strong>40 messages / jour</strong></li>
+                        <li>Messages automatisés</li>
+                        <li>Dashboard de suivi</li>
+                        <li>Support par email</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('starter')">3 JOURS GRATUITS →</button>
+                </div>
+
+                <!-- STARTER ANNUEL -->
+                <div class="pricing-card">
+                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                    <h3>Starter Annuel</h3>
+                    <div class="pricing-current">€340</div>
+                    <div class="pricing-period">/an</div>
+                    <ul class="pricing-features">
+                        <li><strong>40 messages / jour</strong></li>
+                        <li>Messages automatisés</li>
+                        <li>Dashboard de suivi</li>
+                        <li>Support par email</li>
+                        <li style="color:var(--accent);">Économie de €128</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('starter_annual')">Choisir Starter Annuel →</button>
+                </div>
+
+                <!-- PRO MENSUEL -->
+                <div class="pricing-card featured">
+                    <h3>Pro 🎯</h3>
+                    <div class="pricing-current">€59</div>
+                    <div class="pricing-period">/mois</div>
+                    <ul class="pricing-features">
+                        <li><strong>75 messages / jour</strong></li>
+                        <li>Messages ultra-personnalisés</li>
+                        <li>Dashboard avancé</li>
+                        <li>Support 24/7</li>
+                        <li>API</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('pro')">Choisir Pro →</button>
+                </div>
+
+                <!-- PRO ANNUEL -->
+                <div class="pricing-card featured">
+                    <div style="display:inline-block;background:var(--accent);color:#000;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:0.5px;">🎁 2 MOIS OFFERTS</div>
+                    <h3>Pro Annuel 🎯</h3>
+                    <div class="pricing-current">€590</div>
+                    <div class="pricing-period">/an</div>
+                    <ul class="pricing-features">
+                        <li><strong>75 messages / jour</strong></li>
+                        <li>Messages ultra-personnalisés</li>
+                        <li>Dashboard avancé</li>
+                        <li>Support 24/7</li>
+                        <li style="color:var(--accent);">Économie de €118</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startTunnel('pro_annual')">Choisir Pro Annuel →</button>
+                </div>
+
+            </div><!-- fin .pricing-grid -->
+
+            <!-- AMBASSADEUR SÉPARÉ -->
+            <div style="margin-top:40px;padding:30px;background:rgba(var(--accent-rgb),0.04);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:16px;text-align:center;max-width:500px;margin-left:auto;margin-right:auto;">
+                <div style="font-size:1.5rem;margin-bottom:8px;">🤝</div>
+                <h3 style="font-size:1.2rem;font-weight:900;margin-bottom:6px;">Ambassadeur</h3>
+                <div style="font-size:2rem;font-weight:900;color:var(--accent);">€0</div>
+                <div style="color:var(--text-light);font-size:0.85rem;margin-bottom:16px;">/mois</div>
+                <ul style="list-style:none;padding:0;margin:0 0 20px;color:var(--text-light);font-size:0.9rem;line-height:2;">
+                    <li><strong style="color:var(--text);">50 messages / jour</strong></li>
+                    <li>Lien d'affiliation personnel</li>
+                    <li>20% sur chaque vente générée</li>
+                </ul>
+                <button class="pricing-btn" onclick="startTunnel('affiliation')" style="max-width:280px;margin:0 auto;">Devenir Ambassadeur →</button>
+            </div>
+        </div><!-- fin .container -->
+    </section><!-- fin #pricing -->
+
+    <!-- CONFIGURATION COMMISSIONS CLIENT -->
+    <div id="nexa-commission-setup" style="display:none;margin:40px auto 0; padding:24px; background:rgba(255,255,255,0.03); border:1px dashed rgba(var(--accent-rgb),0.3); border-radius:15px; text-align:center; max-width:600px;">
+        <h4 style="color:var(--accent); margin-bottom:10px;">🚀 Configure ton encaissement IA</h4>
+        <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:15px;">
+            Entre ton <strong>ID Stripe Connect</strong>. Nexa vendra tes services et tu recevras <strong>20%</strong> du montant directement sur ton compte Stripe. Nexa prélève <strong>80%</strong> de frais de service.
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
+            <input type="text" id="clientStripeId" placeholder="acct_1..." pattern="^acct_[a-zA-Z0-9]+" title="L'ID Stripe Connect doit commencer par acct_" style="padding:10px; border-radius:8px; border:1px solid #333; background:#000; color:#fff; width:250px; font-family:inherit;">
+            <button onclick="saveAndSyncStripe()" id="btnSaveStripe" style="padding:10px 20px; background:var(--accent); color:#000; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-family:inherit;">
+                Enregistrer & Activer le 80/20
+            </button>
+        </div>
+        <p id="stripeStatus" style="font-size:0.75rem; margin-top:10px; color: #aaa;"></p>
+        <p style="font-size:0.7rem; color:gray; margin-top:10px;">Ton ID commence par "acct_". C'est ce qui permet de lier ton compte à Nexa.</p>
+    </div><!-- fin #nexa-commission-setup -->
+
+</div><!-- fin #home -->
+
+    <!-- Ordre fixe : Stripe → Supabase → nexa.js (pas de defer, pas d'injection dynamique) -->
     <script>
-        // Fonctions utilitaires globales immédiates pour le fonctionnement de la Landing Page
-        function scrollToElement(id) {
-            var el = document.getElementById(id);
-            if(el) el.scrollIntoView({ behavior: 'smooth' });
-        }
-        function showAuthModal(mode) {
-            var modal = document.getElementById('auth-modal');
-            var title = document.getElementById('auth-modal-title');
-            var btn = document.getElementById('auth-submit-btn');
-            var prompt = document.getElementById('auth-switch-prompt');
-            var switchBtn = document.getElementById('auth-switch-btn');
-            var err = document.getElementById('auth-error-alert');
-            
-            if(err) err.style.display = 'none';
-            if(modal) modal.style.display = 'flex';
-            
-            if(mode === 'signup') {
-                if(title) title.textContent = "Créer un compte NEXA";
-                if(btn) btn.textContent = "S'inscrire";
-                if(prompt) prompt.textContent = "Déjà un compte ?";
-                if(switchBtn) {
-                    switchBtn.textContent = "Se connecter";
-                    switchBtn.setAttribute('onclick', "showAuthModal('signin')");
-                }
-            } else {
-                if(title) title.textContent = "Connexion à NEXA";
-                if(btn) btn.textContent = "Se connecter";
-                if(prompt) prompt.textContent = "Pas encore de compte ?";
-                if(switchBtn) {
-                    switchBtn.textContent = "Créer un compte";
-                    switchBtn.setAttribute('onclick', "showAuthModal('signup')");
-                }
-            }
-        }
-        function closeAuthModal() {
-            var modal = document.getElementById('auth-modal');
-            if(modal) modal.style.display = 'none';
-        }
-        function toggleAuthMode() {
-            var title = document.getElementById('auth-modal-title');
-            if(title && title.textContent.includes('Connexion')) {
-                showAuthModal('signup');
-            } else {
-                showAuthModal('signin');
-            }
-        }
-        function confirmPlanAndCheckout() {
-            if(typeof handleModalPay === 'function') {
+        function modalPayGuard() {
+            if (typeof handleModalPay === 'function') {
                 handleModalPay();
             } else {
                 var selected = document.querySelectorAll('.plan-select-card.selected');
@@ -480,9 +555,21 @@
     </script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Ordre de chargement obligatoire :
+         1. config.js  — NEXA_PATTERNS, NEXA_MESSAGES, NEXA_TIMEOUTS, NEXA_RATE_LIMITS, initSupabase
+         2. utils.js   — escHtml, LS, getSb, toast, rateLimiter, apiCall, formatPrice
+         3. payment.js — NEXA_PLANS, startCheckout, selectPlan, verifyPaymentAfterCheckout
+         4. nexa.js    — logique principale SPA (auth, dashboard, onboarding, chat — tout en un)
+
+         Fichiers retirés (conflits de variables globales + schéma Supabase désynchronisé) :
+         - auth.js               → fonctions absorbées dans nexa.js
+         - dashboard.js          → fonctions absorbées dans nexa.js
+         - nexa-verify-onboarding.js → conflit const _state, jamais actif
+    -->
     <script src="/netlify/js/config.js"></script>
     <script src="/netlify/js/utils.js"></script>
     <script src="/netlify/js/payment.js"></script>
     <script src="/netlify/js/nexa.js"></script>
+
 </body>
 </html>
