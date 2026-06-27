@@ -622,13 +622,25 @@ async function handlePlanSelection(plan) {
         if(!email && sb) {
             const { data: { user } } = await sb.auth.getUser();
             if(user) email = user.email;
-            if(email) td.email = email; // CORRECTION: synchroniser td.email pour éviter perte de contexte
+            if(email) td.email = email;
         }
         if(!email) {
             toast('⚠️ Email requis ! Connecte-toi ou passe par le tunnel avec ton email.', 'err');
             resetStripePayButtons();
             return;
         }
+
+        // Annuler l'ancien abonnement Stripe avant d'en créer un nouveau
+        try {
+            const userLocal = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+            if(userLocal.stripe_subscription_id) {
+                await fetch('/.netlify/functions/cancel-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription_id: userLocal.stripe_subscription_id, email })
+                });
+            }
+        } catch(cancelErr) { console.warn('Annulation ancien abonnement échouée (non bloquant):', cancelErr); }
 
         const rawPartner = localStorage.getItem('nexa_partner_id');
         const referrerId = (rawPartner && rawPartner.startsWith('acct_')) ? rawPartner : null;
@@ -1429,7 +1441,7 @@ function adminConfirm(message) {
 }
 
 async function toggleSuspend(email, isSuspended) {
-    const newStatus = isSuspended ? 'actif' : 'suspended';
+    const newStatus = isSuspended ? 'active' : 'suspended';
     if(!isSuspended && !(await adminConfirm('Suspendre le compte de ' + email + ' ?'))) return;
 
     if(sb) await sb.from('users').update({ status: newStatus }).eq('email', email);
@@ -1859,9 +1871,48 @@ function optClick(opt) { sendChatMsg(opt); }
 
 let awaitingAdminPwd = false;
 let _chatSending = false; // guard contre les double-envois
+
+// ════════════════════════════════════════════════════════════════
+// 🔢 COMPTEURS DE MESSAGES PAR JOUR
+// ════════════════════════════════════════════════════════════════
+const MSG_LIMITS = { chat: 20, dash: 5 };
+
+function _getMsgCount(key) {
+    const today = new Date().toDateString();
+    const stored = JSON.parse(localStorage.getItem('nexa_msg_' + key) || '{"date":"","count":0}');
+    if (stored.date !== today) return 0;
+    return stored.count;
+}
+
+function _incMsgCount(key) {
+    const today = new Date().toDateString();
+    const count = _getMsgCount(key) + 1;
+    localStorage.setItem('nexa_msg_' + key, JSON.stringify({ date: today, count }));
+    return count;
+}
+
+function _checkMsgLimit(key, onBlocked) {
+    const count = _getMsgCount(key);
+    const limit = MSG_LIMITS[key];
+    if (count >= limit) {
+        onBlocked(count, limit);
+        return false;
+    }
+    return true;
+}
 // dashChatHist est déclaré globalement en haut du fichier
 
 async function sendChatMsg(text) {
+    // Vérifier limite messages chat flottant (20/jour)
+    if (text.toLowerCase().trim() !== 'admin' && !awaitingAdminPwd) {
+        const blocked = !_checkMsgLimit('chat', () => {
+            addMsg('ai', "Tu as atteint ta limite de 20 messages aujourd'hui 🔒\n\nReviens demain ou prends un forfait pour continuer sans limite !", [
+                '⚡ Voir les forfaits'
+            ]);
+        });
+        if (blocked) return;
+        _incMsgCount('chat');
+    }
     // Détecter "admin" pour accès admin via chatbot
     if(text.toLowerCase().trim() === 'admin' && !awaitingAdminPwd) {
         addMsg('user', text);
@@ -1974,6 +2025,18 @@ async function sendDashMsg() {
     const text = inp.value.trim();
     if(!text) return;
     inp.value = '';
+    // Vérifier limite messages dashboard (5/jour)
+    const dashBlocked = !_checkMsgLimit('dash', () => {
+        const msgs = document.getElementById('dash-msgs');
+        if (!msgs) return;
+        const d = document.createElement('div');
+        d.className = 'dash-msg-ai';
+        d.textContent = "Tu as atteint ta limite de 5 messages aujourd'hui 🔒 Reviens demain !";
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
+    });
+    if (dashBlocked) return;
+    _incMsgCount('dash');
     const msgs = document.getElementById('dash-msgs');
     if(!msgs) return;
     const ud = document.createElement('div');
