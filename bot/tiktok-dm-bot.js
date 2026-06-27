@@ -151,7 +151,6 @@ async function scoreProfile({ username, bio, followers, niche, productName }) {
     const response = await aiClient.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 200,
-      temperature: 0.3,
       system: `Analyze TikTok profiles to match our target audience.
 Reply ONLY in JSON: { "score": 0-100, "reason": "short reason" }
 Score > 50 = contact them. Score < 50 = skip.`,
@@ -187,7 +186,6 @@ async function generateFirstDM({ username, bio, productName, productDesc, shopUr
     const response = await aiClient.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 150,
-      temperature: 0.8,
       system: `Send a natural, human first DM on TikTok.
 STRICT RULES:
 - 1-2 sentences max — SMS style
@@ -224,7 +222,6 @@ async function generateDMReply({ incomingMessage, history, productName, productD
     const response = await aiClient.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
       max_tokens: 200,
-      temperature: 0.7,
       system: `You are a natural sales assistant on TikTok DM.
 Product: ${productName}
 Description: ${productDesc}
@@ -257,7 +254,7 @@ RULES:
 async function getActiveClients() {
   try {
     const res = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/users?plan=in.(affiliation,starter,pro)&status=eq.active&select=id,email,prenom,plan,tiktok_username,tiktok_password_encrypted,stripe_connect_id`,
+      `${process.env.SUPABASE_URL}/rest/v1/users?plan=in.(affiliation,starter,pro)&status=eq.active&select=id,email,prenom,plan,tiktok_username,tiktok_password_encrypted,stripe_connect_id,store_url,niche_tiktok,business`,
       { 
         headers: { 
           Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 
@@ -449,7 +446,10 @@ async function runBotForClient(clientData, product) {
       console.error(`⚠️ Login error for ${clientData.prenom}: ${err.message}`);
     }
 
-    const shopUrl = `${process.env.SITE_URL}/shop/${clientData.stripe_connect_id}`;
+    // Pour les ambassadeurs : page shop Nexa. Pour les clients payants : leur propre tunnel.
+    const shopUrl = clientData.stripe_connect_id
+      ? `${process.env.SITE_URL}/shop/${clientData.stripe_connect_id}`
+      : (clientData.store_url || process.env.SITE_URL || '');
 
     // ── 2. SEARCH PROFILES TO CONTACT ──────────────────
     console.log(`🔍 Searching profiles for niche: ${product.niche}...`);
