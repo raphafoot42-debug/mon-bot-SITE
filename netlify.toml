@@ -66,11 +66,6 @@
 
 # Page de callback TikTok OAuth (page de transition vers la SPA)
 [[redirects]]
-  from = "/dashboard.html"
-  to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
   from = "/tiktok-bridge.html"
   to = "/tiktok-bridge.html"
   status = 200
@@ -98,6 +93,12 @@
 # supabaseUrl, supabaseAnonKey, STRIPE_PK sont des clés
 # publiques conçues pour être dans le code client
 # ════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════
+# SCHEDULED FUNCTIONS
+# ════════════════════════════════════════════════════════
+[functions."block-account"]
+  schedule = "@daily"
+
 [secrets_scan]
   SECRETS_SCAN_OMIT_PATHS = [
     "netlify/functions/js/config.js",
