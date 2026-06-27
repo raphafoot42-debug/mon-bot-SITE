@@ -66,7 +66,6 @@ exports.handler = async (event) => {
     const response = await client.messages.create({
       model: process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
       max_tokens: 500,
-      temperature: 0.3,
       system: PROMPT,
       messages: [{
         role: "user",
