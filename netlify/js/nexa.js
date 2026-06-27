@@ -2005,7 +2005,8 @@ async function sendDashMsg() {
             + ' | Objectif: ' + (user.objectif||nr)
             + ' | Plan: ' + (user.plan||'pending')
             + ' | Pays: ' + (user.pays||nr)
-            + ' | En tant que Nexa agent IA personnel, utilise ces infos pour conseiller ultra-personnalise, aider a rediger des messages de closing, calculer le potentiel de revenus et motiver avec des donnees concretes.';
+            + ' | Lien paiement/tunnel: ' + (user.store_url||nr)
+            + ' | En tant que Nexa agent IA personnel, utilise ces infos pour conseiller ultra-personnalise, aider a rediger des messages de closing, donner le lien de paiement aux prospects si disponible, calculer le potentiel de revenus et motiver avec des donnees concretes.';
         const fullSystem = SYS + '\n\nContexte client: ' + ctx;
         dashChatHist.push({ role: 'user', content: text });
         // CORRECTION: tronquer l'historique pour éviter de dépasser la limite de tokens API
@@ -2201,16 +2202,31 @@ async function bqSendToAI(userText) {
         }
         bqData.stripe_connect_id = stripeIdMatch[0];
 
+        // Demander le pseudo TikTok pour les deux modes
+        bqData._affStep = 'ask_tiktok';
+        bqAIMsg(
+            "✅ ID Stripe enregistré !\n\n" +
+            "C'est quoi ton pseudo TikTok ? (ex: @moncompte)\n\n" +
+            "Nexa en a besoin pour prospecter sur ton compte."
+        );
+        return;
+    }
+
+    // Réception pseudo TikTok ambassadeur
+    if (bqData._affStep === 'ask_tiktok') {
+        bqHist.pop();
+        const tiktokMatch = userText.trim().match(/@?[\w.]+/);
+        const pseudo = tiktokMatch ? tiktokMatch[0].replace('@', '') : userText.trim().slice(0, 50);
+        bqData.tiktok_pseudo = pseudo;
+
         if (bqData._affMode === 'ia_close') {
-            // Mode IA close → on crée la page produit → demander le nom du produit
             bqData._affStep = 'ask_product_name';
             bqAIMsg(
-                "✅ ID Stripe enregistré !\n\n" +
+                "Top @" + pseudo + " 👍\n\n" +
                 "Maintenant je vais créer ta page de vente sur Nexa. C'est toi qui vends, moi je prospecte et je close.\n\n" +
                 "C'est quoi le nom de ton produit ou service ?"
             );
         } else {
-            // Mode lien → finaliser directement
             bqData._affStep = 'done';
             await _finalizeAmbassadeur();
         }
@@ -2474,12 +2490,14 @@ async function bqSendToAI(userText) {
                 prenom: bqData.prenom || 'Ambassadeur',
                 stripe_connect_id: bqData.stripe_connect_id || '',
                 store_url: bqData.store_url || '',
-                affiliation_mode: bqData._affMode || 'lien'
+                affiliation_mode: bqData._affMode || 'lien',
+                tiktok_pseudo: bqData.tiktok_pseudo || ''
             });
             const userAff = LS.user() || {};
             userAff.stripe_connect_id = bqData.stripe_connect_id || '';
             userAff.store_url = bqData.store_url || '';
             userAff.affiliation_mode = bqData._affMode || 'lien';
+            userAff.tiktok_pseudo = bqData.tiktok_pseudo || '';
             userAff.plan = 'affiliation';
 
             const shopLink = window.location.origin + '/shop/' + (bqData.stripe_connect_id || '');
@@ -2525,17 +2543,58 @@ async function bqSendToAI(userText) {
     for(const p of planMap) {
         if(p.keys.some(k => lower.includes(k)) && bqStep >= 1) {
             bqData.plan = p.plan;
+            // Extraire les données business de la conversation avant de sauvegarder
+            const businessData = _extractBusinessDataFromHist();
             try {
-                await saveUserToDB({ email: bqData.email, plan: p.plan, prenom: bqData.prenom || 'Client Premium' });
+                await saveUserToDB({
+                    email:          bqData.email,
+                    plan:           p.plan,
+                    prenom:         bqData.prenom || businessData.prenom || 'Client',
+                    business:       businessData.business || bqData.business || '',
+                    niche_tiktok:   businessData.niche || '',
+                    tiktok_pseudo:  businessData.tiktok || bqData.tiktok || '',
+                    prix_produit:   businessData.prix_produit || '',
+                    objectif:       businessData.objectif || ''
+                });
                 bqHist.pop();
-                bqAIMsg(`Parfait, plan ${p.name} (${p.price}/mois) sélectionné ! 🔥 Je te redirige vers le paiement sécurisé...`);
-                setTimeout(() => handlePlanSelection(p.plan), 1200);
+                // Demander le lien de paiement si pas encore collecté
+                if (!bqData.store_url) {
+                    bqAIMsg(`Parfait, plan ${p.name} sélectionné ! 🔥\n\nDernière chose avant le paiement : tu as un lien Stripe, une page de vente ou un tunnel pour vendre ton produit ?\n\nEnvoie-le moi (ex: https://buy.stripe.com/xxx ou https://ton-site.com/vente). Si tu n'en as pas encore, réponds "non".`);
+                    bqData._waitingStoreUrl = true;
+                    bqData._pendingPlan = p.plan;
+                } else {
+                    bqAIMsg(`Parfait, plan ${p.name} (${p.price}/mois) sélectionné ! 🔥 Je te redirige vers le paiement sécurisé...`);
+                    setTimeout(() => handlePlanSelection(p.plan), 1200);
+                }
             } catch(saveErr) {
                 console.error('saveUserToDB error (plan):', saveErr);
                 bqAIMsg("Une erreur est survenue, réessaie !");
             }
             return;
         }
+    }
+
+    // Attente du lien de paiement/tunnel
+    if (bqData._waitingStoreUrl) {
+        bqData._waitingStoreUrl = false;
+        const plan = bqData._pendingPlan;
+        const urlMatch = userText.match(/https?:\/\/[^\s]+/);
+        if (urlMatch) {
+            bqData.store_url = urlMatch[0].trim();
+        }
+        // Mettre à jour Supabase avec le lien
+        try {
+            await saveUserToDB({
+                email:        bqData.email,
+                store_url:    bqData.store_url || '',
+                business:     bqData.business || '',
+                niche_tiktok: bqData._extractedNiche || '',
+                prix_produit: bqData._extractedPrix || ''
+            });
+        } catch(e) { console.error('saveUserToDB store_url:', e); }
+        bqAIMsg('✅ Parfait' + (bqData.store_url ? ' — lien enregistré !' : ' — pas de problème !') + '\n\nJe te redirige vers le paiement sécurisé...');
+        setTimeout(() => handlePlanSelection(plan), 1200);
+        return;
     }
 
     // --- LOGIQUE NORMALE (IA) ---
@@ -2590,6 +2649,102 @@ async function bqSendToAI(userText) {
         if(bqTypC) bqTypC.style.display = 'none';
         bqAIMsg('Nexa analyse tes données... Continue !');
     }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔍 EXTRACTION DONNÉES BUSINESS DEPUIS L'HISTORIQUE CONVERSATION
+// ════════════════════════════════════════════════════════════════
+function _extractBusinessDataFromHist() {
+    const result = { prenom: '', business: '', niche: '', tiktok: '', prix_produit: '', objectif: '' };
+    if (!bqHist.length) return result;
+
+    // Parcourir les messages utilisateur pour extraire les infos clés
+    const userMsgs = bqHist.filter(m => m.role === 'user').map(m => m.content || '');
+
+    // Prénom = premier message
+    if (userMsgs[0]) {
+        result.prenom = userMsgs[0].trim().split(' ')[0];
+        result.prenom = result.prenom.charAt(0).toUpperCase() + result.prenom.slice(1).toLowerCase();
+    }
+
+    // Chercher business, niche, tiktok, prix dans tous les messages
+    userMsgs.forEach(msg => {
+        const lower = msg.toLowerCase();
+
+        // TikTok pseudo (@xxx ou "mon tiktok c'est xxx")
+        const tiktokMatch = msg.match(/@[\w.]+/) || msg.match(/tiktok[^\w]+([\w.@]+)/i);
+        if (tiktokMatch && !result.tiktok) result.tiktok = tiktokMatch[0].replace('@','').trim();
+
+        // Prix (chiffre suivi de € ou "euros")
+        const prixMatch = msg.match(/(\d+[\.,]?\d*)\s*[€$euros]/i);
+        if (prixMatch && !result.prix_produit) result.prix_produit = prixMatch[1];
+
+        // Business / nom de business (souvent 2e ou 3e message)
+        if (!result.business && msg.length > 2 && msg.length < 80 && !lower.includes('http') && !lower.match(/@[\w]+/)) {
+            if (lower.includes('business') || lower.includes('je vends') || lower.includes('je fais') || lower.includes('mon produit') || lower.includes('ma formation') || lower.includes('coaching')) {
+                result.business = msg.trim().slice(0, 80);
+            }
+        }
+
+        // Niche
+        const niches = ['coaching', 'formation', 'dropshipping', 'ecommerce', 'e-commerce', 'immobilier', 'sport', 'bien-être', 'bienetre', 'crypto', 'trading', 'freelance', 'saas'];
+        niches.forEach(n => { if (lower.includes(n) && !result.niche) result.niche = n; });
+    });
+
+    // Si pas de business détecté, prendre le 2e message utilisateur (souvent la réponse au "ton business c'est quoi")
+    if (!result.business && userMsgs[1]) {
+        result.business = userMsgs[1].trim().slice(0, 80);
+    }
+
+    return result;
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔄 MODAL CHANGEMENT DE FORFAIT
+// ════════════════════════════════════════════════════════════════
+function openUpgradeModal() {
+    let modal = document.getElementById('_upgradeModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = '_upgradeModal';
+        modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99000;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+          <div style="background:#111;border:1px solid #333;border-radius:16px;padding:32px;max-width:440px;width:90%;position:relative;">
+            <button onclick="document.getElementById('_upgradeModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#666;font-size:1.3rem;cursor:pointer;">✕</button>
+            <div style="color:var(--accent);font-weight:900;font-size:1.1rem;margin-bottom:6px;">🔄 Changer de forfait</div>
+            <p style="color:#666;font-size:0.82rem;margin-bottom:24px;">Choisis ton nouveau forfait. Tu seras redirigé vers Stripe.</p>
+            <div style="display:grid;gap:12px;">
+              <div onclick="closeUpgradeAndPay('starter')" style="background:#000;border:1px solid #333;border-radius:12px;padding:16px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#333'">
+                <div style="font-weight:700;color:var(--text);">⚡ Starter</div>
+                <div style="color:var(--accent);font-weight:900;font-size:1.2rem;">€39<span style="font-size:0.8rem;color:#666;">/mois</span></div>
+                <div style="color:#555;font-size:0.78rem;margin-top:4px;">40 messages/jour</div>
+              </div>
+              <div onclick="closeUpgradeAndPay('starter_annual')" style="background:#000;border:1px solid #333;border-radius:12px;padding:16px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#333'">
+                <div style="font-weight:700;color:var(--text);">⚡ Starter Annuel <span style="background:var(--accent);color:#000;font-size:0.68rem;font-weight:900;padding:2px 8px;border-radius:10px;margin-left:6px;">2 mois offerts</span></div>
+                <div style="color:var(--accent);font-weight:900;font-size:1.2rem;">€340<span style="font-size:0.8rem;color:#666;">/an</span></div>
+                <div style="color:#555;font-size:0.78rem;margin-top:4px;">40 messages/jour</div>
+              </div>
+              <div onclick="closeUpgradeAndPay('pro')" style="background:#000;border:1px solid #333;border-radius:12px;padding:16px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#333'">
+                <div style="font-weight:700;color:var(--text);">🚀 Pro</div>
+                <div style="color:var(--accent);font-weight:900;font-size:1.2rem;">€59<span style="font-size:0.8rem;color:#666;">/mois</span></div>
+                <div style="color:#555;font-size:0.78rem;margin-top:4px;">75 messages/jour</div>
+              </div>
+              <div onclick="closeUpgradeAndPay('pro_annual')" style="background:#000;border:1px solid #333;border-radius:12px;padding:16px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='#333'">
+                <div style="font-weight:700;color:var(--text);">🚀 Pro Annuel <span style="background:var(--accent);color:#000;font-size:0.68rem;font-weight:900;padding:2px 8px;border-radius:10px;margin-left:6px;">2 mois offerts</span></div>
+                <div style="color:var(--accent);font-weight:900;font-size:1.2rem;">€590<span style="font-size:0.8rem;color:#666;">/an</span></div>
+                <div style="color:#555;font-size:0.78rem;margin-top:4px;">75 messages/jour</div>
+              </div>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+}
+
+function closeUpgradeAndPay(plan) {
+    const modal = document.getElementById('_upgradeModal');
+    if (modal) modal.style.display = 'none';
+    handlePlanSelection(plan);
 }
 
 // 🔄 Reprendre le guide de configuration
