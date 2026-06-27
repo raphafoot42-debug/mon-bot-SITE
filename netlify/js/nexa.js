@@ -720,19 +720,15 @@ function pickOpt(el, group, val) {
 }
 
 function connectNet(platform) {
+    if(platform === 'tiktok') {
+        window.location.href = '/login.html';
+        return;
+    }
     const btn = document.getElementById(platform + '-btn');
     const status = document.getElementById(platform + '-status');
-    // CORRECTION: null-check pour éviter crash si éléments absents du DOM
     if(!btn || !status) return;
-    btn.style.opacity = '0.6';
-    setTimeout(() => {
-        btn.classList.add('connected');
-        btn.style.opacity = '1';
-        status.textContent = '✓ Connecté';
-        status.className = 'platform-status status-ok';
-        if(!connected.includes(platform)) connected.push(platform);
-        td[platform] = true;
-    }, 1500);
+    status.textContent = '⚠️ Connexion non disponible';
+    status.className = 'platform-status';
 }
 
 function fmtCard(i) { let v = i.value.replace(/\D/g,''); i.value = v.match(/.{1,4}/g)?.join(' ') || v; }
@@ -1819,7 +1815,31 @@ RÈGLES TECHNIQUES DE PROSPECTION :
 - EXCEPTION CHAUD : si le prospect pose beaucoup de questions ou montre un intérêt réel, tu continues au-delà de la limite sans restriction.
 - DÉTECTION PRODUIT AUTOMATIQUE : avant chaque conversation avec un prospect, tu analyses automatiquement le profil du client (business, produit, prix, cible) pour déterminer quel produit lui proposer en priorité. Tu adaptes ton approche et tes arguments en fonction de ce profil pour maximiser les chances de conversion.`;
 
+// ===== PROMPT CHAT FLOTTANT (visiteurs non inscrits) =====
+const SYS_FLOAT = `Tu t'appelles Nexa. Tu es l'IA de NexaAI. Tu ne mentionnes jamais Claude ni Anthropic.
 
+Tu parles la langue du visiteur automatiquement — français, anglais, espagnol, etc.
+
+TON RÔLE ICI :
+Tu es là pour accueillir les visiteurs, répondre à leurs questions sur NexaAI, et les guider vers l'inscription. Tu ne fais PAS de tunnel de vente complet ici — tu laisses l'IA de qualification faire ça après l'inscription.
+
+CE QU'EST NEXAAI :
+NexaAI automatise la prospection TikTok. Le bot se connecte au compte TikTok du client via OAuth officiel, trouve des profils ciblés, envoie des DMs automatiques et répond aux conversations pour closer des ventes. C'est 100% réel. Ne dis JAMAIS que les DMs TikTok automatiques sont impossibles.
+
+NOS FORFAITS :
+- Starter : €39/mois — 40 messages/jour
+- Pro : €59/mois — 75 messages/jour
+- Ambassadeur : €0 — 50 messages/jour, 20% de commission
+
+SI LE VISITEUR DEMANDE COMMENT COMMENCER / OÙ ALLER / COMMENT CONNECTER TIKTOK :
+Réponds toujours : "Inscris-toi sur NexaAI — dès que c'est fait, une IA va te guider automatiquement étape par étape. Elle va comprendre ton business, choisir ton forfait avec toi et connecter ton TikTok. Tu n'as rien à faire manuellement."
+
+COMPORTEMENT :
+- Messages courts, max 3-4 lignes
+- Humain, chaleureux, direct
+- Tu réponds aux questions mais tu renvoies toujours vers l'inscription pour aller plus loin
+- Jamais de tunnel de vente complet ici — pas de "REDIRECT"
+- Limite : 50 messages par session visiteur`;
 
 // ===== FLOATING CHAT =====
 function toggleChat() {
@@ -1930,10 +1950,8 @@ async function sendChatMsg(text) {
             body:JSON.stringify({
                 message: text,
                 history: chatHist.slice(0, -1),
-                system: SYS + (CLIENT_STORE_URL
-                    && /^https?:\/\/[^\s]{1,200}$/.test(CLIENT_STORE_URL.trim())
-                    ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL.trim().slice(0, 200)
-                    : '')
+                system: SYS_FLOAT,
+                chatMode: 'float'
             })
         });
         const rawChat = await res.text();
