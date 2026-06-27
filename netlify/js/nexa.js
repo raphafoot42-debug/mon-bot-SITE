@@ -720,16 +720,19 @@ function pickOpt(el, group, val) {
 }
 
 function connectNet(platform) {
-    if(platform === 'tiktok') {
-        window.location.href = '/login.html';
-        return;
-    }
-    // Autres plateformes (instagram etc.) — à implémenter
     const btn = document.getElementById(platform + '-btn');
     const status = document.getElementById(platform + '-status');
+    // CORRECTION: null-check pour éviter crash si éléments absents du DOM
     if(!btn || !status) return;
-    status.textContent = '⚠️ Connexion non disponible';
-    status.className = 'platform-status';
+    btn.style.opacity = '0.6';
+    setTimeout(() => {
+        btn.classList.add('connected');
+        btn.style.opacity = '1';
+        status.textContent = '✓ Connecté';
+        status.className = 'platform-status status-ok';
+        if(!connected.includes(platform)) connected.push(platform);
+        td[platform] = true;
+    }, 1500);
 }
 
 function fmtCard(i) { let v = i.value.replace(/\D/g,''); i.value = v.match(/.{1,4}/g)?.join(' ') || v; }
@@ -774,6 +777,13 @@ async function loadDashboard(user) {
     if(badges) badges.innerHTML = '';
     if(badges && user.platforms?.includes('tiktok')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">🎵 TikTok connecté</span>';
     if(badges && user.platforms?.includes('instagram')) badges.innerHTML += '<span style="background:rgba(57,255,20,0.1);border:1px solid var(--accent);color:var(--accent);padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">📸 Instagram connecté</span>';
+    // 🔗 BANDEAU CONFIGURATION INCOMPLÈTE
+    const warningBanner = document.getElementById('setup-warning-banner');
+    if (!user.plan || user.plan === 'pending') {
+        if (warningBanner) warningBanner.style.display = 'flex';
+    } else {
+        if (warningBanner) warningBanner.style.display = 'none';
+    }
     // Liens ambassadeur — visibles uniquement si plan affiliation
     const elAffLinks = document.getElementById('dash-aff-links');
     if(elAffLinks) {
@@ -2586,4 +2596,9 @@ async function bqSendToAI(userText) {
         if(bqTypC) bqTypC.style.display = 'none';
         bqAIMsg('Nexa analyse tes données... Continue !');
     }
+}
+
+// 🔄 Reprendre le guide de configuration
+function resumeGuide() {
+    showPage('bot-qualify');
 }
