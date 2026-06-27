@@ -10,7 +10,6 @@
 
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
 const MAX_TOKENS = 1024;
-const TEMPERATURE = 0.7;
 
 // ════════════════════════════════════════════════════════════════
 // 🛡️ RATE LIMITING (par IP — en mémoire)
@@ -126,7 +125,6 @@ async function callClaudeAPI(messages, systemPrompt) {
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE,
         system: systemPrompt,
         messages,
       }),
@@ -243,10 +241,13 @@ exports.handler = async function (event) {
   // ── Extraction body ─────────────────────────────────────────
   // ⚠️ SÉCURITÉ : `system_instructions` ignoré depuis le client.
   // Le system prompt vient UNIQUEMENT de la variable d'env serveur CLAUDE_SYSTEM_PROMPT.
-  const { message, history = [], chatMode = 'qualify' } = body;
-  const systemPrompt = chatMode === 'float'
+  const { message, history = [], chatMode = 'qualify', system: clientSystem = '' } = body;
+  const basePrompt = chatMode === 'float'
     ? (process.env.CLAUDE_SYSTEM_PROMPT_FLOAT || process.env.CLAUDE_SYSTEM_PROMPT || '')
     : (process.env.CLAUDE_SYSTEM_PROMPT || '');
+  const systemPrompt = (chatMode === 'dash' && clientSystem && typeof clientSystem === 'string')
+    ? clientSystem.slice(0, 8000)
+    : basePrompt;
 
   try {
     const { text, history: validHistory } = validateInput(message, history);
