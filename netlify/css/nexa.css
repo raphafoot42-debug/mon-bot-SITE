@@ -329,3 +329,41 @@ a:focus-visible,
   #chatWindow { width: 100%; right: 0; bottom: 0; left: 0; top: 0; max-height: 100vh; height: 100dvh; border-radius: 0; border: none; display: flex; flex-direction: column; }
   .pricing-grid, .option-grid, .plan-select-grid { grid-template-columns: 1fr; }
 }
+
+/* ── TÉMOIGNAGES ─────────────────────────────────────── */
+.temoignage-card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 16px;
+  position: relative;
+}
+.temoignage-card::before {
+  content: '"';
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-size: 3rem;
+  color: var(--accent);
+  opacity: 0.3;
+  line-height: 1;
+  font-family: Georgia, serif;
+}
+.temoignage-card p {
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin: 0 0 12px;
+  padding-top: 8px;
+}
+.temoignage-card .temoignage-author {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.temoignage-card .temoignage-stars {
+  color: #f5c518;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
