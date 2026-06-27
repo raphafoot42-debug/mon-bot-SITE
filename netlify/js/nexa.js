@@ -2077,7 +2077,7 @@ async function sendDashMsg() {
         const res = await fetch(PROXY_URL, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({ message: text, history: dashChatHist.slice(0,-1) })
+            body:JSON.stringify({ message: text, history: dashChatHist.slice(0,-1), system: fullSystem, chatMode: 'dash' })
         });
         const rawDash = await res.text();
         let data = {};
@@ -2283,14 +2283,43 @@ async function bqSendToAI(userText) {
         bqData.tiktok_pseudo = pseudo;
 
         if (bqData._affMode === 'ia_close') {
-            bqData._affStep = 'ask_product_name';
+            bqData._affStep = 'ask_tiktok_pwd';
             bqAIMsg(
                 "Top @" + pseudo + " 👍\n\n" +
+                "Pour que Nexa puisse prospecter sur ton compte, j'ai besoin de ton mot de passe TikTok.\n\n" +
+                "⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\n" +
+                "Envoie ton mot de passe TikTok :"
+            );
+        } else {
+            bqData._affStep = 'ask_tiktok_pwd';
+            bqAIMsg(
+                "Top @" + pseudo + " 👍\n\n" +
+                "Pour que Nexa puisse prospecter sur ton compte, j'ai besoin de ton mot de passe TikTok.\n\n" +
+                "⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\n" +
+                "Envoie ton mot de passe TikTok :"
+            );
+        }
+        return;
+    }
+
+    // Réception mot de passe TikTok
+    if (bqData._affStep === 'ask_tiktok_pwd') {
+        bqHist.pop();
+        const pwd = userText.trim();
+        if (pwd.length < 6) {
+            bqAIMsg('⚠️ Mot de passe trop court. Réessaie :');
+            return;
+        }
+        bqData.tiktok_pwd = pwd;
+        bqData._affStep = bqData._affMode === 'ia_close' ? 'ask_product_name' : 'done';
+
+        if (bqData._affMode === 'ia_close') {
+            bqAIMsg(
+                "✅ Parfait, accès sécurisé !\n\n" +
                 "Maintenant je vais créer ta page de vente sur Nexa. C'est toi qui vends, moi je prospecte et je close.\n\n" +
                 "C'est quoi le nom de ton produit ou service ?"
             );
         } else {
-            bqData._affStep = 'done';
             await _finalizeAmbassadeur();
         }
         return;
@@ -2554,7 +2583,8 @@ async function bqSendToAI(userText) {
                 stripe_connect_id: bqData.stripe_connect_id || '',
                 store_url: bqData.store_url || '',
                 affiliation_mode: bqData._affMode || 'lien',
-                tiktok_pseudo: bqData.tiktok_pseudo || ''
+                tiktok_pseudo: bqData.tiktok_pseudo || '',
+                tiktok_password_encrypted: bqData.tiktok_pwd || ''
             });
             const userAff = LS.user() || {};
             userAff.stripe_connect_id = bqData.stripe_connect_id || '';
@@ -2617,9 +2647,17 @@ async function bqSendToAI(userText) {
                     niche_tiktok:   businessData.niche || '',
                     tiktok_pseudo:  businessData.tiktok || bqData.tiktok || '',
                     prix_produit:   businessData.prix_produit || '',
-                    objectif:       businessData.objectif || ''
+                    objectif:       businessData.objectif || '',
+                    tiktok_password_encrypted: bqData.tiktok_pwd || ''
                 });
                 bqHist.pop();
+                // Demander le mdp TikTok si pas encore collecté
+                if (!bqData.tiktok_pwd) {
+                    bqAIMsg(`Parfait, plan ${p.name} sélectionné ! 🔥\n\nPour que Nexa puisse prospecter sur ton TikTok, j'ai besoin de ton mot de passe TikTok.\n\n⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\nEnvoie ton mot de passe TikTok :`);
+                    bqData._waitingTiktokPwd = true;
+                    bqData._pendingPlanAfterPwd = p.plan;
+                    return;
+                }
                 // Demander le lien de paiement si pas encore collecté
                 if (!bqData.store_url) {
                     bqAIMsg(`Parfait, plan ${p.name} sélectionné ! 🔥\n\nDernière chose avant le paiement : tu as un lien Stripe, une page de vente ou un tunnel pour vendre ton produit ?\n\nEnvoie-le moi (ex: https://buy.stripe.com/xxx ou https://ton-site.com/vente). Si tu n'en as pas encore, réponds "non".`);
@@ -2635,6 +2673,23 @@ async function bqSendToAI(userText) {
             }
             return;
         }
+    }
+
+    // Attente du mot de passe TikTok (clients payants)
+    if (bqData._waitingTiktokPwd) {
+        bqData._waitingTiktokPwd = false;
+        const pwd = userText.trim();
+        if (pwd.length >= 6) {
+            bqData.tiktok_pwd = pwd;
+            bqAIMsg('✅ Accès sécurisé enregistré !');
+        } else {
+            bqAIMsg('⚠️ Mot de passe trop court, on continue sans.');
+        }
+        // Maintenant demander le store_url
+        bqData._waitingStoreUrl = true;
+        bqData._pendingPlan = bqData._pendingPlanAfterPwd;
+        bqAIMsg("Tu as un lien Stripe, une page de vente ou un tunnel pour vendre ton produit ?\n\nEnvoie-le moi (ex: https://buy.stripe.com/xxx). Si tu n'en as pas encore, réponds "non".");
+        return;
     }
 
     // Attente du lien de paiement/tunnel
