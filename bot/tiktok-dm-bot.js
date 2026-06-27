@@ -10,12 +10,10 @@
  */
 
 const puppeteer  = require('puppeteer');
-const Anthropic  = require('@anthropic-ai/sdk');
 const crypto     = require('crypto');
 const fs         = require('fs');
 const path       = require('path');
 
-const aiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ════════════════════════════════════════════════════════════════
 // ⚙️ CONFIG
@@ -148,29 +146,19 @@ function isMalicious(text) {
 
 async function scoreProfile({ username, bio, followers, niche, productName }) {
   try {
-    const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 200,
-      system: `Analyze TikTok profiles to match our target audience.
-Reply ONLY in JSON: { "score": 0-100, "reason": "short reason" }
-Score > 50 = contact them. Score < 50 = skip.`,
-      messages: [{
-        role: 'user',
-        content: `TikTok Profile:
-Username: @${username}
-Bio: ${bio || 'empty'}
-Followers: ${followers || 'unknown'}
-Our niche: ${niche}
-Our product: ${productName}
-
-Score this profile.`
-      }]
+    const res = await fetch(`${process.env.SITE_URL}/.netlify/functions/nexa-ai-engine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'scout',
+        tiktok_username: username,
+        client_products: [{ name: productName, niche }],
+        bio, followers
+      })
     });
-
-    const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { score: 0, reason: 'parse error' };
-    return JSON.parse(match[0]);
+    if (!res.ok) throw new Error(`nexa-ai-engine scout error: ${res.status}`);
+    const data = await res.json();
+    return { score: data.score_certitude || 0, reason: data.recommandation || '' };
   } catch (err) {
     console.error('Error scoring profile:', err.message);
     return { score: 0, reason: 'error' };
@@ -183,30 +171,24 @@ Score this profile.`
 
 async function generateFirstDM({ username, bio, productName, productDesc, shopUrl }) {
   try {
-    const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 150,
-      system: `Send a natural, human first DM on TikTok.
-STRICT RULES:
-- 1-2 sentences max — SMS style
-- Personalized hook based on profile
-- No links in first message
-- Never direct sales pitch
-- Create curiosity or ask question
-- Never say you're an AI
-- Always in French`,
-      messages: [{
-        role: 'user',
-        content: `Target profile: @${username}
-Bio: ${bio || 'empty'}
-Product to sell: ${productName}
-Description: ${productDesc}
-
-Generate first DM hook.`
-      }]
+    const res = await fetch(`${process.env.SITE_URL}/.netlify/functions/nexa-ai-engine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'closer',
+        prospect_data: {
+          username, bio,
+          score: 75,
+          psycho_profile: 'Curious',
+          sales_link: shopUrl
+        },
+        conversation_history: [],
+        quota: 40
+      })
     });
-
-    return response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
+    if (!res.ok) throw new Error(`nexa-ai-engine closer error: ${res.status}`);
+    const data = await res.json();
+    return data.next_message || '';
   } catch (err) {
     console.error('Error generating first DM:', err.message);
     return '';
@@ -219,28 +201,27 @@ Generate first DM hook.`
 
 async function generateDMReply({ incomingMessage, history, productName, productDesc, shopUrl }) {
   try {
-    const response = await aiClient.messages.create({
-      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 200,
-      system: `You are a natural sales assistant on TikTok DM.
-Product: ${productName}
-Description: ${productDesc}
-Shop link: ${shopUrl}
-
-RULES:
-- 1-3 sentences max — SMS style
-- Adapt tone to person
-- Push link ONLY if clearly interested
-- If hostile/malicious → reply politely and stop
-- If asked if you're AI → say yes honestly
-- Never fake urgency`,
-      messages: [
-        ...(history || []).slice(-8),
-        { role: 'user', content: incomingMessage }
-      ]
+    const res = await fetch(`${process.env.SITE_URL}/.netlify/functions/nexa-ai-engine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'closer',
+        prospect_data: {
+          username: 'prospect',
+          score: 65,
+          psycho_profile: 'Engaged',
+          sales_link: shopUrl
+        },
+        conversation_history: [
+          ...(history || []).slice(-8),
+          { role: 'user', text: incomingMessage }
+        ],
+        quota: 30
+      })
     });
-
-    return response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
+    if (!res.ok) throw new Error(`nexa-ai-engine closer error: ${res.status}`);
+    const data = await res.json();
+    return data.next_message || '';
   } catch (err) {
     console.error('Error generating DM reply:', err.message);
     return '';
