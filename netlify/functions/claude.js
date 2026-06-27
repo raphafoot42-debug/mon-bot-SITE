@@ -243,8 +243,10 @@ exports.handler = async function (event) {
   // ── Extraction body ─────────────────────────────────────────
   // ⚠️ SÉCURITÉ : `system_instructions` ignoré depuis le client.
   // Le system prompt vient UNIQUEMENT de la variable d'env serveur CLAUDE_SYSTEM_PROMPT.
-  const { message, history = [] } = body;
-  const systemPrompt = process.env.CLAUDE_SYSTEM_PROMPT || '';
+  const { message, history = [], chatMode = 'qualify' } = body;
+  const systemPrompt = chatMode === 'float'
+    ? (process.env.CLAUDE_SYSTEM_PROMPT_FLOAT || process.env.CLAUDE_SYSTEM_PROMPT || '')
+    : (process.env.CLAUDE_SYSTEM_PROMPT || '');
 
   try {
     const { text, history: validHistory } = validateInput(message, history);
