@@ -205,6 +205,7 @@ exports.handler = async function (event) {
       status: 'active',
       updated_at: new Date().toISOString(),
       stripe_session_id: session_id,
+      stripe_subscription_id: session.subscription || null,
     };
 
     const patchRes = await fetchWithTimeout(
