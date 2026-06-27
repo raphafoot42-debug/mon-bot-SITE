@@ -136,13 +136,6 @@
         <div class="dash-main">
             <div id="d-overview">
                 <h1 id="dash-welcome">Tableau de bord</h1>
-                <div id="setup-warning-banner" style="display:none;background:rgba(255,152,0,0.15);border:1px solid #ff9800;padding:20px;border-radius:8px;margin-bottom:25px;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box;">
-                    <div>
-                        <strong style="color:#ff9800;display:block;font-size:16px;margin-bottom:4px;">⚡ Configuration incomplète</strong>
-                        <p style="font-size:14px;margin:0;color:#fff;opacity:0.85;">Ton robot de prospection ne peut pas fonctionner. Termine le guide pour activer tous tes outils.</p>
-                    </div>
-                    <button class="btn btn-primary btn-sm" style="white-space:nowrap;margin-left:20px;" onclick="resumeGuide();">Terminer le guide ➔</button>
-                </div>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-number" id="st-prospects">0</div><div class="stat-label" id="stProspects">Prospects</div></div>
                     <div class="stat-card"><div class="stat-number" id="st-msgs">0</div><div class="stat-label" id="stMsgs">Messages</div></div>
@@ -220,6 +213,7 @@
                         <div style="color:var(--accent);font-weight:900;" id="s-price">€39/mois</div>
                     </div>
                     <button class="btn btn-primary btn-full" id="sSaveBtn" onclick="saveSettings()" style="margin-bottom:10px;">Sauvegarder</button>
+                    <button class="btn btn-secondary btn-full" onclick="openUpgradeModal()" style="margin-bottom:10px;">🔄 Changer de forfait</button>
                     <button class="btn btn-secondary btn-full" id="sLogoutBtn" onclick="logout()">Déconnexion</button>
                 </div>
             </div>
