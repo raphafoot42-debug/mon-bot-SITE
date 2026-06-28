@@ -2597,10 +2597,10 @@ async function bqSendToAI(userText) {
             const affLink  = window.location.origin + '?ref=' + (bqData.stripe_connect_id || '');
 
             // Sauvegarder les liens dans le profil pour les retrouver dans le dashboard
-            userAff.shop_url = shopLink;
+            userAff.store_url = shopLink;
             userAff.aff_link = affLink;
             LS.setUser(userAff);
-            await saveUserToDB({ email: userAff.email, shop_url: shopLink });
+            await saveUserToDB({ email: userAff.email, store_url: shopLink });
 
             if (bqData._affMode === 'ia_close') {
                 bqAIMsg(
