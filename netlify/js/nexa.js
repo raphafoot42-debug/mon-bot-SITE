@@ -2604,10 +2604,13 @@ async function bqSendToAI(userText) {
                 tiktok_password_encrypted: bqData.tiktok_pwd || ''
             });
             const userAff = LS.user() || {};
+            userAff.email = userAff.email || bqData.email || ''; // garanti non-vide
+            userAff.prenom = userAff.prenom || bqData.prenom || '';
             userAff.stripe_connect_id = bqData.stripe_connect_id || '';
             userAff.store_url = bqData.store_url || '';
             userAff.affiliation_mode = bqData._affMode || 'lien';
             userAff.tiktok_pseudo = bqData.tiktok_pseudo || '';
+            userAff.tiktok_username = bqData.tiktok_pseudo || '';
             userAff.plan = 'affiliation';
 
             const shopLink = window.location.origin + '/shop/' + (bqData.stripe_connect_id || '');
