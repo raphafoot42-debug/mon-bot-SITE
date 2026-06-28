@@ -99,7 +99,9 @@ exports.handler = async (event) => {
     if (objectif)                  userData.objectif                  = String(objectif).trim().slice(0, 200);
     if (pays)                      userData.pays                      = String(pays).trim().slice(0, 50);
     if (tiktok_pseudo)             userData.tiktok_pseudo             = String(tiktok_pseudo).trim().slice(0, 100);
+    // tiktok_username = même valeur que tiktok_pseudo — utilisé par le bot Docker pour se connecter
     if (tiktok_username)           userData.tiktok_username           = String(tiktok_username).trim().slice(0, 100);
+    else if (tiktok_pseudo)        userData.tiktok_username           = String(tiktok_pseudo).trim().slice(0, 100);
     if (tiktok_password_encrypted) userData.tiktok_password_encrypted = encryptPassword(String(tiktok_password_encrypted).trim());
     if (store_url)                 userData.store_url                 = String(store_url).trim().slice(0, 500);
     if (stripe_connect_id)         userData.stripe_connect_id         = String(stripe_connect_id).trim();
