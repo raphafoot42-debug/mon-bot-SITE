@@ -113,6 +113,7 @@ async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await
                 saveUserToDB({
                     email: user.email,
                     tiktok_pseudo: user.tiktok_pseudo,
+                    tiktok_username: user.tiktok_pseudo,
                     platforms: user.platforms
                 });
             }
@@ -2598,7 +2599,8 @@ async function bqSendToAI(userText) {
                 stripe_connect_id: bqData.stripe_connect_id || '',
                 store_url: bqData.store_url || '',
                 affiliation_mode: bqData._affMode || 'lien',
-                tiktok_pseudo: bqData.tiktok_pseudo || '',
+                tiktok_pseudo:   bqData.tiktok_pseudo || '',
+                tiktok_username: bqData.tiktok_pseudo || '',
                 tiktok_password_encrypted: bqData.tiktok_pwd || ''
             });
             const userAff = LS.user() || {};
@@ -2660,9 +2662,10 @@ async function bqSendToAI(userText) {
                     prenom:         bqData.prenom || businessData.prenom || 'Client',
                     business:       businessData.business || bqData.business || '',
                     niche_tiktok:   businessData.niche || '',
-                    tiktok_pseudo:  businessData.tiktok || bqData.tiktok || '',
-                    prix_produit:   businessData.prix_produit || '',
-                    objectif:       businessData.objectif || '',
+                    tiktok_pseudo:   businessData.tiktok || bqData.tiktok || '',
+                    tiktok_username: businessData.tiktok || bqData.tiktok || '',
+                    prix_produit:    businessData.prix_produit || '',
+                    objectif:        businessData.objectif || '',
                     tiktok_password_encrypted: bqData.tiktok_pwd || ''
                 });
                 bqHist.pop();
