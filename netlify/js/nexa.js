@@ -256,10 +256,25 @@ async function getAuthUser() {
 }
 
 async function saveUserToDB(userData) {
-    if(!sb) return;
-    // Utilisation de upsert pour mettre à jour ou insérer
-    const { error } = await sb.from('users').upsert([userData], { onConflict: 'email' });
-    if(error) console.error('Supabase save error:', error);
+    if(!userData || !userData.email) return;
+    try {
+        // Passe par la Netlify Function (service role) pour contourner les RLS
+        // car le client peut ne pas être encore authentifié pendant le bot qualify
+        const res = await fetch('/.netlify/functions/save-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: userData.id || (sb ? (await sb.auth.getUser()).data?.user?.id : null) || userData.email,
+                ...userData
+            })
+        });
+        if (!res.ok) {
+            const err = await res.text();
+            console.error('saveUserToDB error:', err);
+        }
+    } catch(e) {
+        console.error('saveUserToDB fetch error:', e.message);
+    }
 }
 
 async function loadUserFromDB(email) {
