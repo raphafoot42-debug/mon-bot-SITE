@@ -161,14 +161,6 @@ Tu réponds toujours en français, de façon concise et utile.
 // 🔧 HELPERS
 // ════════════════════════════════════════════════════════════════
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
 function trimHistory(history) {
   if (history.length > CHAT_CONFIG.maxHistoryMessages) {
     return history.slice(-CHAT_CONFIG.maxHistoryMessages);
@@ -283,9 +275,6 @@ Génère le rapport de monitoring JSON. Réponds UNIQUEMENT avec le JSON valide.
 async function nexaChat({ userText, history, salesLink, quotaAvailable }) {
   if (!userText?.trim()) throw new Error("Message vide");
   if (quotaAvailable <= 0) throw new Error("Quota dépassé pour aujourd'hui");
-
-  // Délai "lecture" simulé — UX naturelle
-  await sleep(randomBetween(CHAT_CONFIG.preModelDelayMinMs, CHAT_CONFIG.preModelDelayMaxMs));
 
   const systemPrompt = salesLink
     ? PROMPT_CHAT + `\n\nLien de vente du client (à partager si pertinent) : ${salesLink}`
