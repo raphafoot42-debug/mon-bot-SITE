@@ -30,7 +30,15 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const { id, email } = body;
+  const {
+    id, email,
+    // Champs collectés pendant le bot qualify
+    prenom, plan, status,
+    business, type_business, niche_tiktok, prix_produit, objectif, pays,
+    tiktok_pseudo, tiktok_username, tiktok_password_encrypted,
+    store_url, stripe_connect_id, affiliation_mode,
+    stripe_subscription_id
+  } = body;
 
   if (!id || !email) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'id et email requis' }) };
@@ -54,6 +62,32 @@ exports.handler = async (event) => {
     const existingRows = existingRes.ok ? await existingRes.json() : [];
     const alreadyExists = Array.isArray(existingRows) && existingRows.length > 0;
 
+    // Construire l'objet à sauvegarder — on n'écrase que les champs fournis
+    const userData = {
+      id:         String(id).trim(),
+      email:      String(email).trim().toLowerCase(),
+      plan:       plan       || 'pending',
+      status:     status     || 'pending_verify',
+      updated_at: new Date().toISOString(),
+      ...(alreadyExists ? {} : { created_at: new Date().toISOString() }),
+    };
+
+    // Ajouter les champs optionnels seulement s'ils sont fournis
+    if (prenom)                    userData.prenom                    = String(prenom).trim().slice(0, 100);
+    if (business)                  userData.business                  = String(business).trim().slice(0, 200);
+    if (type_business)             userData.type_business             = String(type_business).trim().slice(0, 100);
+    if (niche_tiktok)              userData.niche_tiktok              = String(niche_tiktok).trim().slice(0, 100);
+    if (prix_produit)              userData.prix_produit              = String(prix_produit).trim().slice(0, 50);
+    if (objectif)                  userData.objectif                  = String(objectif).trim().slice(0, 200);
+    if (pays)                      userData.pays                      = String(pays).trim().slice(0, 50);
+    if (tiktok_pseudo)             userData.tiktok_pseudo             = String(tiktok_pseudo).trim().slice(0, 100);
+    if (tiktok_username)           userData.tiktok_username           = String(tiktok_username).trim().slice(0, 100);
+    if (tiktok_password_encrypted) userData.tiktok_password_encrypted = String(tiktok_password_encrypted).trim();
+    if (store_url)                 userData.store_url                 = String(store_url).trim().slice(0, 500);
+    if (stripe_connect_id)         userData.stripe_connect_id         = String(stripe_connect_id).trim();
+    if (affiliation_mode)          userData.affiliation_mode          = String(affiliation_mode).trim().slice(0, 50);
+    if (stripe_subscription_id)    userData.stripe_subscription_id    = String(stripe_subscription_id).trim();
+
     const res = await fetchWithTimeout(
       `${url}/rest/v1/users?on_conflict=id`,
       {
@@ -64,14 +98,7 @@ exports.handler = async (event) => {
           apikey: key,
           Prefer: 'resolution=merge-duplicates',
         },
-        body: JSON.stringify({
-          id:         String(id).trim(),
-          email:      String(email).trim().toLowerCase(),
-          plan:       'pending',
-          status:     'pending_verify',
-          ...(alreadyExists ? {} : { created_at: new Date().toISOString() }),
-          updated_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify(userData),
       },
       8000
     );
