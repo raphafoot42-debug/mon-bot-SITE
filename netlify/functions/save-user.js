@@ -3,6 +3,24 @@
  * Appelé par auth.js après Supabase auth.signUp
  */
 
+const crypto = require('crypto');
+
+function encryptPassword(plainPassword) {
+  try {
+    const encryptionKey = process.env.ENCRYPTION_KEY;
+    if (!encryptionKey || !plainPassword) return plainPassword;
+    const key = Buffer.from(encryptionKey, 'hex').slice(0, 32);
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(Buffer.from(plainPassword));
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
+  } catch (err) {
+    console.error('Encryption error:', err.message);
+    return plainPassword;
+  }
+}
+
 async function fetchWithTimeout(url, options = {}, ms = 10000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -82,7 +100,7 @@ exports.handler = async (event) => {
     if (pays)                      userData.pays                      = String(pays).trim().slice(0, 50);
     if (tiktok_pseudo)             userData.tiktok_pseudo             = String(tiktok_pseudo).trim().slice(0, 100);
     if (tiktok_username)           userData.tiktok_username           = String(tiktok_username).trim().slice(0, 100);
-    if (tiktok_password_encrypted) userData.tiktok_password_encrypted = String(tiktok_password_encrypted).trim();
+    if (tiktok_password_encrypted) userData.tiktok_password_encrypted = encryptPassword(String(tiktok_password_encrypted).trim());
     if (store_url)                 userData.store_url                 = String(store_url).trim().slice(0, 500);
     if (stripe_connect_id)         userData.stripe_connect_id         = String(stripe_connect_id).trim();
     if (affiliation_mode)          userData.affiliation_mode          = String(affiliation_mode).trim().slice(0, 50);
