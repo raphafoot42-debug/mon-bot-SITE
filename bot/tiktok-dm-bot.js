@@ -105,9 +105,11 @@ function decryptPassword(encryptedPassword) {
 const dmCounters = {};
 
 const PLAN_LIMITS = {
-  affiliation: { perHour: 10, perDay: 50 },
-  starter:     { perHour: 8,  perDay: 40 },
-  pro:         { perHour: 15, perDay: 75 },
+  affiliation:    { perHour: 10, perDay: 50 },
+  starter:        { perHour: 8,  perDay: 40 },
+  starter_annual: { perHour: 8,  perDay: 40 },
+  pro:            { perHour: 15, perDay: 75 },
+  pro_annual:     { perHour: 15, perDay: 75 },
 };
 
 function checkDmLimit(clientId, plan) {
@@ -235,7 +237,7 @@ async function generateDMReply({ incomingMessage, history, productName, productD
 async function getActiveClients() {
   try {
     const res = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/users?plan=in.(affiliation,starter,pro)&status=eq.active&select=id,email,prenom,plan,tiktok_username,tiktok_password_encrypted,stripe_connect_id,store_url,niche_tiktok,business`,
+      `${process.env.SUPABASE_URL}/rest/v1/users?plan=in.(affiliation,starter,pro,starter_annual,pro_annual)&status=eq.active&select=id,email,prenom,plan,tiktok_username,tiktok_password_encrypted,stripe_connect_id,store_url,niche_tiktok,business`,
       { 
         headers: { 
           Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 
