@@ -161,6 +161,8 @@ nav { display: flex; justify-content: space-between; align-items: center; }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 .btn-full   { display: block; width: 100%; text-align: center; }
 .btn-inline { display: inline-block; }
+.btn-ghost   { background: transparent; border: none; color: var(--text-light); display: inline-block; }
+.btn-ghost:hover { color: var(--accent); }
 
 .platform-btn { display: flex; align-items: center; gap: 15px; padding: 18px 22px; background: #000; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color 0.3s, background 0.3s; font-size: 0.95rem; font-weight: 600; font-family: inherit; width: 100%; margin-bottom: 12px; }
 .platform-btn:hover { border-color: var(--accent); }
