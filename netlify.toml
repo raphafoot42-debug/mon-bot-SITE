@@ -47,7 +47,6 @@
 # REDIRECTS
 # ════════════════════════════════════════════════════════
 
-# Fichiers statiques — ne pas rediriger vers index.html
 [[redirects]]
   from = "/netlify/css/*"
   to = "/netlify/css/:splat"
@@ -58,41 +57,26 @@
   to = "/netlify/js/:splat"
   status = 200
 
-# Page de vente dynamique clients affiliation
 [[redirects]]
   from = "/shop/*"
   to = "/shop.html"
   status = 200
 
-# Page de callback TikTok OAuth (page de transition vers la SPA)
 [[redirects]]
   from = "/tiktok-bridge.html"
   to = "/tiktok-bridge.html"
   status = 200
 
-# Fichier de vérification domaine TikTok
 [[redirects]]
   from = "/tiktoktWQ8pjrtXhK7wMTbJONaO8QbrnXJxMlQ.txt"
   to = "/tiktoktWQ8pjrtXhK7wMTbJONaO8QbrnXJxMlQ.txt"
   status = 200
 
-# SPA redirect — toutes les autres routes vers index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# ════════════════════════════════════════════════════════
-# VARIABLES D'ENVIRONNEMENT
-# ⚠️ Toutes les variables sont dans Netlify UI uniquement :
-#    Settings > Build & deploy > Environment variables
-# ════════════════════════════════════════════════════════
-
-# ════════════════════════════════════════════════════════
-# SECRETS SCAN — Exclure les fichiers avec clés publiques
-# supabaseUrl, supabaseAnonKey, STRIPE_PK sont des clés
-# publiques conçues pour être dans le code client
-# ════════════════════════════════════════════════════════
 # ════════════════════════════════════════════════════════
 # SCHEDULED FUNCTIONS
 # ════════════════════════════════════════════════════════
