@@ -3,6 +3,9 @@
   functions = "netlify/functions"
   publish = "."
 
+[[plugins]]
+  package = "netlify-plugin-inline-functions-env"
+
 # ════════════════════════════════════════════════════════
 # SECRETS SCANNING
 # Ces clés sont des identifiants PUBLICS (côté navigateur) :
