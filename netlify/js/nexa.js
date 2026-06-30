@@ -1,5 +1,5 @@
 /* Nexa — app cliente (Netlify Functions)
- * Fichiers à publier ensemble : index.html, netlify/css/nexa.css, netlify/functions/JS/nexa.js
+ * Fichiers à publier ensemble : index.html, netlify/css/nexa.css, netlify/js/nexa.js
  * Ordre de chargement : Stripe (head, synchrone) → Supabase → config.js → utils.js → payment.js → nexa.js (ce script, en dernier).
  */
 
@@ -92,6 +92,12 @@ let sb = null;
 let CLIENT_STORE_URL = '';
 
 // ===== RETOUR TIKTOK =====
+function startTikTokOAuthFromBot() {
+    // Sauvegarder où on en était pour reprendre après le retour OAuth
+    sessionStorage.setItem('bq_resume_active', 'true');
+    window.location.href = '/login.html?from=bot-qualify';
+}
+
 async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await loadDashboard)
     const params = new URLSearchParams(window.location.search);
     const tiktok = params.get('tiktok');
@@ -118,7 +124,36 @@ async function checkTikTokReturn() { // CORRECTION: async ajouté (utilise await
                 });
             }
             window.history.replaceState({}, document.title, window.location.pathname);
-            // Afficher le dashboard si connecté
+
+            // Si on venait du bot qualify, on y retourne directement
+            if(sessionStorage.getItem('bq_resume_active') === 'true') {
+                sessionStorage.removeItem('bq_resume_active');
+                const savedData = sessionStorage.getItem('bq_resume_data');
+                if(savedData) {
+                    try { bqData = JSON.parse(savedData); } catch(e) { bqData = {}; }
+                }
+                bqData.tiktok_pseudo = user.tiktok_pseudo;
+                showPage('bot-qualify');
+
+                const isPlanPayant = !!bqData._pendingPlanAfterTikTok;
+                bqData._affStep = isPlanPayant ? null : 'ask_tiktok';
+                if (isPlanPayant) bqData._waitingTiktokPwd = true;
+
+                setTimeout(() => {
+                    bqAIMsg('✅ TikTok connecté avec succès (@' + user.tiktok_pseudo + ') !');
+                    setTimeout(() => {
+                        bqAIMsg(
+                            "Dernière étape technique : pour que Nexa envoie vraiment des DMs automatiques sur ton compte (ce que TikTok ne permet pas via son API officielle), j'ai besoin de ton mot de passe.\n\n" +
+                            "⚠️ Il est chiffré (AES-256) et stocké de façon sécurisée — jamais visible, même par nous.\n\n" +
+                            "Envoie ton mot de passe TikTok :"
+                        );
+                        if (!isPlanPayant) bqData._affStep = 'ask_tiktok_pwd';
+                    }, 600);
+                }, 300);
+                return true;
+            }
+
+            // Sinon, comportement normal : afficher le dashboard
             if(user.email) {
                 await loadDashboard(user);
                 showPage('dashboard-page');
@@ -2281,40 +2316,49 @@ async function bqSendToAI(userText) {
         }
         bqData.stripe_connect_id = stripeIdMatch[0];
 
-        // Demander le pseudo TikTok pour les deux modes
-        bqData._affStep = 'ask_tiktok';
-        bqAIMsg(
-            "✅ ID Stripe enregistré !\n\n" +
-            "C'est quoi ton pseudo TikTok ? (ex: @moncompte)\n\n" +
-            "Nexa en a besoin pour prospecter sur ton compte."
-        );
+        // Étape 1 : vraie connexion OAuth TikTok (officielle)
+        bqData._affStep = 'await_tiktok_oauth';
+        sessionStorage.setItem('bq_resume_step', 'await_tiktok_oauth');
+        sessionStorage.setItem('bq_resume_data', JSON.stringify(bqData));
+        const msgs = document.getElementById('bq-msgs');
+        if(msgs) {
+            const d = document.createElement('div');
+            d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;margin-bottom:10px;';
+            d.innerHTML = "✅ ID Stripe enregistré !<br><br>Maintenant connecte ton compte TikTok officiellement, pour qu'on récupère ton profil.";
+            msgs.appendChild(d);
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'align-self:flex-start;margin-bottom:10px;';
+            const btn = document.createElement('button');
+            btn.textContent = '🔗 Connecter mon TikTok';
+            btn.style.cssText = 'padding:12px 20px;background:#fe2c55;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.9rem;';
+            btn.onclick = startTikTokOAuthFromBot;
+            btnWrap.appendChild(btn);
+            msgs.appendChild(btnWrap);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
         return;
     }
 
-    // Réception pseudo TikTok ambassadeur
+    // Attente du retour OAuth — géré par checkTikTokReturn() au chargement de page
+    if (bqData._affStep === 'await_tiktok_oauth') {
+        // Si le client tape du texte au lieu de cliquer, on le relance
+        bqAIMsg('Clique sur le bouton ci-dessus pour connecter ton TikTok 👆');
+        return;
+    }
+
+    // Réception pseudo TikTok (rempli automatiquement après retour OAuth)
     if (bqData._affStep === 'ask_tiktok') {
         bqHist.pop();
         const tiktokMatch = userText.trim().match(/@?[\w.]+/);
         const pseudo = tiktokMatch ? tiktokMatch[0].replace('@', '') : userText.trim().slice(0, 50);
         bqData.tiktok_pseudo = pseudo;
-
-        if (bqData._affMode === 'ia_close') {
-            bqData._affStep = 'ask_tiktok_pwd';
-            bqAIMsg(
-                "Top @" + pseudo + " 👍\n\n" +
-                "Pour que Nexa puisse prospecter sur ton compte, j'ai besoin de ton mot de passe TikTok.\n\n" +
-                "⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\n" +
-                "Envoie ton mot de passe TikTok :"
-            );
-        } else {
-            bqData._affStep = 'ask_tiktok_pwd';
-            bqAIMsg(
-                "Top @" + pseudo + " 👍\n\n" +
-                "Pour que Nexa puisse prospecter sur ton compte, j'ai besoin de ton mot de passe TikTok.\n\n" +
-                "⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\n" +
-                "Envoie ton mot de passe TikTok :"
-            );
-        }
+        bqData._affStep = 'ask_tiktok_pwd';
+        bqAIMsg(
+            "Top @" + pseudo + " 👍\n\n" +
+            "Dernière étape technique : pour que Nexa envoie vraiment des DMs automatiques sur ton compte (ce que TikTok ne permet pas via son API officielle), j'ai besoin de ton mot de passe.\n\n" +
+            "⚠️ Il est chiffré (AES-256) et stocké de façon sécurisée — jamais visible, même par nous.\n\n" +
+            "Envoie ton mot de passe TikTok :"
+        );
         return;
     }
 
@@ -2672,9 +2716,32 @@ async function bqSendToAI(userText) {
                     tiktok_password_encrypted: bqData.tiktok_pwd || ''
                 });
                 bqHist.pop();
-                // Demander le mdp TikTok si pas encore collecté
+                // Demander la connexion TikTok (OAuth réel) si pas encore fait
+                if (!bqData.tiktok_pseudo) {
+                    bqData._pendingPlanAfterTikTok = p.plan;
+                    sessionStorage.setItem('bq_resume_active', 'true');
+                    sessionStorage.setItem('bq_resume_data', JSON.stringify(bqData));
+                    const msgs = document.getElementById('bq-msgs');
+                    if(msgs) {
+                        const d = document.createElement('div');
+                        d.style.cssText = 'background:#000;border:1px solid var(--border);border-radius:14px;padding:12px 16px;max-width:90%;align-self:flex-start;font-size:0.88rem;line-height:1.5;margin-bottom:10px;';
+                        d.innerHTML = "Parfait, plan " + p.name + " sélectionné ! 🔥<br><br>Connecte ton compte TikTok pour qu'on récupère ton profil.";
+                        msgs.appendChild(d);
+                        const btnWrap = document.createElement('div');
+                        btnWrap.style.cssText = 'align-self:flex-start;margin-bottom:10px;';
+                        const btn = document.createElement('button');
+                        btn.textContent = '🔗 Connecter mon TikTok';
+                        btn.style.cssText = 'padding:12px 20px;background:#fe2c55;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.9rem;';
+                        btn.onclick = startTikTokOAuthFromBot;
+                        btnWrap.appendChild(btn);
+                        msgs.appendChild(btnWrap);
+                        msgs.scrollTop = msgs.scrollHeight;
+                    }
+                    return;
+                }
+                // Demander le mdp TikTok (nécessaire pour les DMs auto) si pas encore collecté
                 if (!bqData.tiktok_pwd) {
-                    bqAIMsg(`Parfait, plan ${p.name} sélectionné ! 🔥\n\nPour que Nexa puisse prospecter sur ton TikTok, j'ai besoin de ton mot de passe TikTok.\n\n⚠️ Il est chiffré et stocké de façon sécurisée — jamais visible.\n\nEnvoie ton mot de passe TikTok :`);
+                    bqAIMsg(`Dernière étape technique : pour que Nexa envoie vraiment des DMs automatiques (ce que l'API officielle TikTok ne permet pas), j'ai besoin de ton mot de passe.\n\n⚠️ Il est chiffré (AES-256) et stocké de façon sécurisée — jamais visible.\n\nEnvoie ton mot de passe TikTok :`);
                     bqData._waitingTiktokPwd = true;
                     bqData._pendingPlanAfterPwd = p.plan;
                     return;
@@ -2708,8 +2775,8 @@ async function bqSendToAI(userText) {
         }
         // Maintenant demander le store_url
         bqData._waitingStoreUrl = true;
-        bqData._pendingPlan = bqData._pendingPlanAfterPwd;
-        bqAIMsg("Tu as un lien Stripe, une page de vente ou un tunnel pour vendre ton produit ?\n\nEnvoie-le moi (ex: https://buy.stripe.com/xxx). Si tu n'en as pas encore, réponds "non".");
+        bqData._pendingPlan = bqData._pendingPlanAfterPwd || bqData._pendingPlanAfterTikTok;
+        bqAIMsg("Tu as un lien Stripe, une page de vente ou un tunnel pour vendre ton produit ?\n\nEnvoie-le moi (ex: https://buy.stripe.com/xxx). Si tu n'en as pas encore, réponds 'non'.");
         return;
     }
 
