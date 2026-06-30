@@ -5,10 +5,12 @@
     "build": "echo 'No build step'"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@supabase/supabase-js": "^2.0.0"
+    "@anthropic-ai/sdk": "^0.39.0"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "netlify-plugin-inline-functions-env": "^1.0.4"
   }
 }
