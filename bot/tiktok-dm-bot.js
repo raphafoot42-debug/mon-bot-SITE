@@ -632,10 +632,21 @@ async function main() {
           continue;
         }
 
-        const product = await getClientProduct(client.stripe_connect_id);
+        // Ambassadeurs : produit réel créé via create-product.js
+        // Clients payants (starter/pro) : pas de table products,
+        // on construit un produit virtuel depuis les données business déjà collectées
+        let product = await getClientProduct(client.stripe_connect_id);
         if (!product) {
-          console.log(`⚠️ No product for ${client.prenom}`);
-          continue;
+          if (client.business || client.niche_tiktok) {
+            product = {
+              name: client.business || 'Produit/Service de ' + (client.prenom || 'client'),
+              description: client.business || '',
+              niche: client.niche_tiktok || ''
+            };
+          } else {
+            console.log(`⚠️ No product/business data for ${client.prenom}`);
+            continue;
+          }
         }
 
         console.log(`\n🔄 Bot active for ${client.prenom} — ${product.name}`);
