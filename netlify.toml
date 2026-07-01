@@ -88,5 +88,6 @@
     "netlify/functions/js/config.js",
     "netlify/js/config.js",
     "netlify/functions/js/nexa.js",
-    "netlify/js/nexa.js"
+    "netlify/js/nexa.js",
+    ".netlify/plugins/deno-cli"
   ]
