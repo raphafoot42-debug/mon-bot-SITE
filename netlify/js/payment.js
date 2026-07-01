@@ -320,7 +320,14 @@ function renderPricingPlans() {
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     renderPricingPlans();
-    verifyPaymentAfterCheckout();
+    // ⚠️ verifyPaymentAfterCheckout() désactivé ici volontairement.
+    // nexa.js (checkStripeReturn(), déclenché sur window 'load') gère déjà
+    // la vérification du retour Stripe. Les deux tournant en même temps
+    // provoquaient un double appel à verify-payment.js → email de confirmation
+    // envoyé en double au client, notif de vente en double, risque de commission
+    // ambassadeur enregistrée deux fois. La fonction reste définie plus bas
+    // (inchangée) si jamais tu en as besoin ailleurs — elle n'est juste plus
+    // appelée automatiquement ici.
   });
 }
 
