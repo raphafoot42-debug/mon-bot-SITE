@@ -144,7 +144,7 @@
                             <div style="color:#666;font-size:0.8rem;margin-top:2px;">Reprends où tu en étais pour activer Nexa sur ton compte.</div>
                         </div>
                     </div>
-                    <button onclick="showPage('bot-qualify');setTimeout(()=>{if(typeof botQualifyStart==='function'){const u=JSON.parse(localStorage.getItem('nexaai_user')||'{}');botQualifyStart(u.email||'');}},300);" style="padding:10px 20px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.85rem;cursor:pointer;white-space:nowrap;">Reprendre la configuration →</button>
+                    <button onclick="resumeGuide()" style="padding:10px 20px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.85rem;cursor:pointer;white-space:nowrap;">Reprendre la configuration →</button>
                 </div>
                 <h1 id="dash-welcome">Tableau de bord</h1>
                 <div class="stats-grid">
