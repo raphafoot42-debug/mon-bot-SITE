@@ -197,6 +197,33 @@ exports.handler = async function (event) {
     const normalizedPlan = planMeta;
 
     // ════════════════════════════════════════════════════════════════
+    // 4️⃣b RÉCUPÉRER L'ANCIEN ABONNEMENT (avant de l'écraser)
+    // ════════════════════════════════════════════════════════════════
+    // On le lit maintenant, avant le PATCH, pour pouvoir l'annuler juste
+    // après — mais seulement une fois qu'on est sûrs que CE paiement-ci
+    // a bien été confirmé. Avant, l'annulation se faisait côté front
+    // AVANT même que le client arrive sur Stripe, ce qui pouvait le
+    // laisser sans aucun abonnement actif s'il abandonnait le paiement.
+
+    let oldSubscriptionId = null;
+    try {
+      const oldRes = await fetchWithTimeout(
+        `${process.env.SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(requestEmail)}&select=stripe_subscription_id`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          },
+        },
+        8000
+      );
+      const oldRows = oldRes.ok ? await oldRes.json() : [];
+      oldSubscriptionId = oldRows[0]?.stripe_subscription_id || null;
+    } catch (e) {
+      console.warn('Lecture ancien abonnement échouée (non-bloquant):', e.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════
     // 5️⃣ UPDATE SUPABASE USER
     // ════════════════════════════════════════════════════════════════
 
@@ -240,6 +267,33 @@ exports.handler = async function (event) {
         headers,
         body: JSON.stringify({ error: 'User not found' }),
       };
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 5️⃣b ANNULATION AUTO DE L'ANCIEN ABONNEMENT
+    // ════════════════════════════════════════════════════════════════
+    // Maintenant seulement — le nouveau paiement est confirmé, la base
+    // est à jour. On annule l'ancien abonnement Stripe s'il y en avait
+    // un différent du nouveau (changement de plan). Non-bloquant : si ça
+    // échoue, le client garde son nouveau plan quand même, on log juste
+    // l'erreur pour vérification manuelle plus tard.
+    if (oldSubscriptionId && oldSubscriptionId !== session.subscription) {
+      try {
+        const cancelRes = await fetchWithTimeout(
+          `https://api.stripe.com/v1/subscriptions/${oldSubscriptionId}`,
+          {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+          },
+          10000
+        );
+        if (!cancelRes.ok) {
+          const t = await cancelRes.text();
+          console.warn('Annulation ancien abonnement échouée (non-bloquant):', t);
+        }
+      } catch (e) {
+        console.warn('Annulation ancien abonnement échouée (non-bloquant):', e.message);
+      }
     }
 
     // ════════════════════════════════════════════════════════════════
