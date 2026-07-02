@@ -377,23 +377,17 @@ exports.handler = async (event) => {
     }
 
     // ── CHAT ────────────────────────────────────────────────────
-    // ⚠️ L'Assistant IA du dashboard N'EST PAS l'IA qui vend sur TikTok.
-    // Elle doit avoir une limite fixe (5/jour), indépendante du forfait —
-    // avant, elle utilisait getQuotaForPlan() comme le bot de vente
-    // (40/75/50), ce qui n'a rien à voir et créait une confusion entre
-    // les deux quotas.
-    const DASHBOARD_CHAT_DAILY_LIMIT = 5;
-
     if (action === "chat") {
-      const { user_text, history, sales_link, quota_available } = body;
+      const { user_text, history, sales_link, quota_available, plan } = body;
       if (!user_text) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "user_text required" }) };
       }
+      const quotaMax = getQuotaForPlan(plan || 'affiliation');
       const result = await nexaChat({
         userText: user_text,
         history: history || [],
         salesLink: sales_link || "",
-        quotaAvailable: quota_available ?? DASHBOARD_CHAT_DAILY_LIMIT,
+        quotaAvailable: quota_available ?? quotaMax,
       });
       return { statusCode: result.success ? 200 : 400, headers, body: JSON.stringify(result) };
     }
