@@ -341,17 +341,13 @@ async function loadUserData() {
         const user = { ...userData, prospects };
         localStorage.setItem('nexaai_user', JSON.stringify(user));
 
-        // Vérification — si profil déjà complet (plan défini ou stripe configuré) → dashboard direct, pas de requalification
-        const profileComplete = user.plan && user.plan !== 'pending' || user.stripe_connect_id;
-        if(profileComplete) {
-            await loadDashboard(user);
-            showPage('dashboard-page');
-        } else {
-            // Profil existant mais incomplet → reprendre la qualification
-            td.email = user.email;
-            showPage('bot-qualify');
-            setTimeout(() => { if(typeof botQualifyStart === 'function') botQualifyStart(user.email); }, 300);
-        }
+        // Profil existant en BDD → toujours vers le dashboard.
+        // loadDashboard() affiche automatiquement le bandeau "configuration incomplète"
+        // si user.plan est absent/'pending' (cf. #setup-warning-banner). On ne bloque plus
+        // l'accès au dashboard ici : ça évite l'incohérence avec login() qui, lui,
+        // envoyait déjà directement au dashboard dans tous les cas.
+        await loadDashboard(user);
+        showPage('dashboard-page');
     } else {
         // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
         // CORRECTION : td est déjà déclaré globalement, pas besoin de td || {}
@@ -791,7 +787,10 @@ async function handlePlanSelection(plan) {
                 email,
                 prenom: td.prenom || email.split('@')[0],
                 business: td.business || '',
-                plan: plan.replace('_annual',''),
+                // ⚠️ NE PAS mettre "plan" ici — c'est enregistré AVANT le paiement Stripe.
+                // Si le client abandonne le checkout, le plan resterait défini alors qu'il
+                // n'a rien payé. Le "plan" ne doit être écrit que par verify-payment.js,
+                // une fois le paiement confirmé côté serveur (voir checkStripeReturn()).
                 tiktok_pseudo: td.tiktok || '',
                 store_url: CLIENT_STORE_URL || ''
             });
@@ -1041,6 +1040,16 @@ function loadProspects(list) {
 }
 
 function showDash(section, el) {
+    // 🔒 Onglets verrouillés tant que la qualification n'est pas terminée.
+    // Même condition que le bandeau #setup-warning-banner dans loadDashboard().
+    if (section === 'prospects' || section === 'bot') {
+        const u = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
+        const profileIncomplete = !u.plan || u.plan === 'pending';
+        if (profileIncomplete) {
+            resumeGuide();
+            return;
+        }
+    }
     const dashSections = ['overview', 'prospects', 'bot', 'settings'];
     dashSections.forEach(s => {
         const el2 = document.getElementById('d-' + s);
@@ -1231,6 +1240,17 @@ async function register() {
 
     if (error) throw error;
 
+    // ⚠️ Compte déjà existant et déjà confirmé : Supabase ne renvoie pas
+    // d'erreur (volontaire, pour ne pas laisser deviner quels emails sont
+    // déjà inscrits) et n'envoie AUCUN nouvel email. Le seul signal, c'est
+    // ce tableau vide. Sans ce check, le client resterait bloqué sur
+    // "Confirme ton email" à attendre un email qui n'arrivera jamais.
+    if (data.user?.identities?.length === 0) {
+      toast('⚠️ Un compte existe déjà avec cet email. Connecte-toi.', 'err');
+      showPage('login');
+      return;
+    }
+
     const prenom = email.split('@')[0].replace(/[0-9._\-+]/g, ' ').trim().split(/\s+/)[0];
     const newUser = {
       id: data.user?.id || genToken(),
@@ -1388,10 +1408,14 @@ async function checkEmailVerifyReturn() {
       stored.emailVerified = true;
       stored.status = 'actif';
       LS.setUser(stored);
+      try { await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email); } catch(e) { console.error('DB update:', e); }
       window.history.replaceState({}, document.title, window.location.pathname);
-      toast('✅ Email confirmé, bienvenue !', 'ok');
-      showPage('bot-qualify');
-      if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
+      // ⚠️ On ne lance plus automatiquement l'IA de qualification ici.
+      // Cliquer le lien dans l'email confirme juste le compte — ça n'ouvre
+      // aucune IA tout seul. Le client atterrit sur l'accueil et se
+      // connecte lui-même quand il est prêt à continuer.
+      toast('✅ Email confirmé ! Tu peux te connecter.', 'ok');
+      showPage('home');
       return true;
     }
   } catch(e) { console.error('checkEmailVerifyReturn:', e); }
@@ -2795,7 +2819,11 @@ async function bqSendToAI(userText) {
             try {
                 await saveUserToDB({
                     email:          bqData.email,
-                    plan:           p.plan,
+                    // ⚠️ "plan" retiré ici volontairement — le client vient juste de le
+                    // NOMMER dans le chat, il n'a pas encore payé. Le vrai "plan" ne doit
+                    // être écrit qu'après confirmation du paiement par verify-payment.js.
+                    // bqData.plan (variable locale, ligne au-dessus) reste utilisé pour
+                    // savoir quel plan envoyer à Stripe plus tard — rien d'autre ne change.
                     prenom:         bqData.prenom || businessData.prenom || 'Client',
                     business:       businessData.business || bqData.business || '',
                     niche_tiktok:   businessData.niche || '',
@@ -3045,5 +3073,9 @@ function closeUpgradeAndPay(plan) {
 
 // 🔄 Reprendre le guide de configuration
 function resumeGuide() {
+    const u = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
     showPage('bot-qualify');
+    setTimeout(() => {
+        if (typeof botQualifyStart === 'function') botQualifyStart(u.email || '');
+    }, 300);
 }
