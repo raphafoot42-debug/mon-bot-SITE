@@ -350,14 +350,8 @@ async function loadUserData() {
         showPage('dashboard-page');
     } else {
         // L'utilisateur est connecté via Auth mais pas encore dans la table 'users'
-        // CORRECTION : td est déjà déclaré globalement, pas besoin de td || {}
         td.email = authUser.email;
-        showPage('bot-qualify');
-        setTimeout(() => {
-            if (typeof botQualifyStart === 'function') {
-                botQualifyStart(authUser.email);
-            }
-        }, 300);
+        showPage('home');
     }
     
     // changeLang appelé uniquement si définie (peut être dans un autre fichier)
@@ -575,7 +569,7 @@ const LANGS = {
         pricingTitle: 'Forfaits', pricingSub: 'Mensuel ou paiement annuel (10 mois payés = 12 mois d\'accès).',
         pStarterName: 'Starter', pStarterPeriod: '/mois',
         pStarterFeat1: '40 messages / jour', pStarterFeat2: 'Messages automatisés', pStarterFeat3: 'Dashboard de suivi', pStarterFeat4: 'Support par email',
-        pStarterBtn: '3 JOURS GRATUITS →',
+        pStarterBtn: 'Choisir Starter →',
         pStarterAnnualBadge: '🎁 2 MOIS OFFERTS', pStarterAnnualName: 'Starter Annuel', pStarterAnnualPeriod: '/an',
         pStarterAnnualFeat1: '40 messages / jour', pStarterAnnualFeat2: 'Messages automatisés', pStarterAnnualFeat3: 'Dashboard de suivi', pStarterAnnualFeat4: 'Support par email', pStarterAnnualFeat5: 'Économie de €128',
         pStarterAnnualBtn: 'Choisir Starter Annuel →',
@@ -615,7 +609,7 @@ const LANGS = {
         pricingTitle: 'Pricing', pricingSub: 'Monthly or annual billing (10 months paid = 12 months access).',
         pStarterName: 'Starter', pStarterPeriod: '/month',
         pStarterFeat1: '40 messages / day', pStarterFeat2: 'Automated messages', pStarterFeat3: 'Tracking dashboard', pStarterFeat4: 'Email support',
-        pStarterBtn: '3 DAYS FREE →',
+        pStarterBtn: 'Choose Starter →',
         pStarterAnnualBadge: '🎁 2 MONTHS FREE', pStarterAnnualName: 'Starter Annual', pStarterAnnualPeriod: '/year',
         pStarterAnnualFeat1: '40 messages / day', pStarterAnnualFeat2: 'Automated messages', pStarterAnnualFeat3: 'Tracking dashboard', pStarterAnnualFeat4: 'Email support', pStarterAnnualFeat5: 'Save €128',
         pStarterAnnualBtn: 'Choose Starter Annual →',
@@ -655,7 +649,7 @@ const LANGS = {
         pricingTitle: '套餐', pricingSub: '按月或按年付款（支付10个月=获得12个月使用权）。',
         pStarterName: 'Starter', pStarterPeriod: '/月',
         pStarterFeat1: '每天40条消息', pStarterFeat2: '自动化消息', pStarterFeat3: '追踪仪表盘', pStarterFeat4: '邮件支持',
-        pStarterBtn: '免费试用3天 →',
+        pStarterBtn: '选择 Starter →',
         pStarterAnnualBadge: '🎁 赠送2个月', pStarterAnnualName: 'Starter 年付', pStarterAnnualPeriod: '/年',
         pStarterAnnualFeat1: '每天40条消息', pStarterAnnualFeat2: '自动化消息', pStarterAnnualFeat3: '追踪仪表盘', pStarterAnnualFeat4: '邮件支持', pStarterAnnualFeat5: '节省€128',
         pStarterAnnualBtn: '选择 Starter 年付 →',
@@ -762,22 +756,18 @@ async function handlePlanSelection(plan) {
             if(email) td.email = email;
         }
         if(!email) {
-            toast('⚠️ Email requis ! Connecte-toi ou passe par le tunnel avec ton email.', 'err');
+            toast('👋 Il faut d\'abord créer un compte et faire le guide avec l\'IA avant de payer.', 'info', 6000);
+            showPage('register');
             resetStripePayButtons();
             return;
         }
 
-        // Annuler l'ancien abonnement Stripe avant d'en créer un nouveau
-        try {
-            const userLocal = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-            if(userLocal.stripe_subscription_id) {
-                await fetch('/.netlify/functions/cancel-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subscription_id: userLocal.stripe_subscription_id, email })
-                });
-            }
-        } catch(cancelErr) { console.warn('Annulation ancien abonnement échouée (non bloquant):', cancelErr); }
+        // ⚠️ L'ancien abonnement n'est plus annulé ici.
+        // Avant : on annulait l'ancien AVANT même que le client ait payé le nouveau —
+        // s'il abandonnait la page Stripe, il se retrouvait sans aucun abonnement actif
+        // alors que "plan" en base gardait encore l'ancienne valeur. L'annulation se fait
+        // maintenant dans verify-payment.js, uniquement après confirmation réelle du
+        // nouveau paiement — voir "ANNULATION AUTO DE L'ANCIEN ABONNEMENT" plus bas.
 
         const rawPartner = localStorage.getItem('nexa_partner_id');
         const referrerId = (rawPartner && rawPartner.startsWith('acct_')) ? rawPartner : null;
@@ -1355,8 +1345,7 @@ async function checkEmailVerified() {
       } catch(e) { console.error('DB update:', e); }
 
       setTimeout(() => {
-        showPage('bot-qualify');
-        if (typeof botQualifyStart === 'function') botQualifyStart(user.email);
+        showPage('home');
       }, 1000);
     } else {
       if (statusEl) statusEl.textContent = MSG.emailNotYet;
@@ -1459,10 +1448,9 @@ async function login() {
         await loadDashboard(user); // CORRECTION: await ajouté
         showPage('dashboard-page');
     } else {
-        // Profil pas encore créé → tunnel de qualification
+        // Profil pas encore créé → accueil, jamais l'IA automatiquement
         td.email = email;
-        showPage('bot-qualify');
-        setTimeout(() => botQualifyStart(email), 300);
+        showPage('home');
     }
 }
 
@@ -2384,7 +2372,26 @@ async function bqSendToAI(userText) {
     }
 
     // --- LOGIQUE SPÉCIALE CLOSER (Affiliation vs Payant) ---
-    
+
+    // 0. Menu explicite des forfaits — affiché sur demande, tant qu'aucun
+    // plan/mode n'est encore engagé. Remplace le flou d'une réponse IA en
+    // texte libre par un vrai choix à 5 options, cliquable.
+    const pricingTriggers = ['prix', 'tarif', 'forfait', 'combien', 'plan', 'offre', 'abonnement'];
+    if (!bqData.plan && !bqData._affStep && bqStep >= 1 && pricingTriggers.some(k => lower.includes(k))) {
+        bqHist.pop();
+        bqAIMsg(
+            "Voici les formules disponibles 👇\n\n" +
+            "🟢 Starter — €39/mois (40 messages/jour)\n" +
+            "🟢 Starter Annuel — €340/an, 2 mois offerts (40 messages/jour)\n" +
+            "🔵 Pro — €59/mois (75 messages/jour)\n" +
+            "🔵 Pro Annuel — €590/an, 2 mois offerts (75 messages/jour)\n" +
+            "🤝 Ambassadeur — Gratuit, tu touches 20% sur chaque vente\n\n" +
+            "Lequel tu choisis ?",
+            ['🟢 Starter Mensuel', '🟢 Starter Annuel', '🔵 Pro Mensuel', '🔵 Pro Annuel', '🤝 Ambassadeur']
+        );
+        return;
+    }
+
     // 1. Détection Ambassadeur / Affiliation
     if (lower.includes('ambassadeur') || lower.includes('affiliation') || lower.includes('gratuit')) {
         bqData.plan = 'affiliation';
@@ -2753,6 +2760,11 @@ async function bqSendToAI(userText) {
             await saveUserToDB({
                 email: bqData.email,
                 plan: 'affiliation',
+                status: 'active', // ⚠️ Sans ce champ, le bot TikTok ne voit jamais cet ambassadeur
+                                   // (sa requête filtre sur status=eq.active, en anglais — alors que
+                                   // la confirmation d'email écrit 'actif' en français). Les clients
+                                   // Starter/Pro n'avaient pas ce souci car verify-payment.js écrase
+                                   // déjà 'actif' par 'active' au moment du paiement.
                 prenom: bqData.prenom || 'Ambassadeur',
                 stripe_connect_id: bqData.stripe_connect_id || '',
                 store_url: bqData.store_url || '',
@@ -2805,8 +2817,10 @@ async function bqSendToAI(userText) {
         }
     }
 
-    // 2. Détection Forfaits Payants
+    // 2. Détection Forfaits Payants (annuel vérifié en premier — "starter annuel" contient aussi "starter")
     const planMap = [
+        { keys: ['starter annuel', 'starter_annual', 'starter annual'], plan: 'starter_annual', name: 'Starter Annuel', price: '€340/an' },
+        { keys: ['pro annuel', 'pro_annual', 'pro annual'], plan: 'pro_annual', name: 'Pro Annuel', price: '€590/an' },
         { keys: ['starter', '39'], plan: 'starter', name: 'Starter', price: '€39' },
         { keys: ['pro', '59'], plan: 'pro', name: 'Pro 🎯', price: '€59' }
     ];
