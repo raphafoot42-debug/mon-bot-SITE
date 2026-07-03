@@ -585,9 +585,9 @@ const LANGS = {
 
         testiTitle: 'Ils ont choisi Nexa. Regarde les résultats.', testiSub: 'Des vrais clients. Des vrais chiffres.',
         testiDisclaimer: '* Résultats individuels variables. Les performances présentées ne sont pas garanties et dépendent de l\'activité de chaque utilisateur.',
-        testi1Period: 'en 3 semaines', testi1Quote: '"Je répondais à 10 DMs par jour max. Avec Nexa, 80 prospects qualifiés contactés chaque jour. Mon CA a explosé."', testi1Role: 'Coach fitness • Pro',
-        testi2Period: 'premier mois', testi2Quote: '"J\'avais peur que ce soit trop robotique. Mais mes clients ne voient pas la différence — ils achètent, c\'est tout."', testi2Role: 'E-commerce mode • Starter',
-        testi3Period: 'en 2 mois', testi3Quote: '"300 prospects par jour en automatique. Je me concentre sur la création de contenu. Nexa fait le reste."', testi3Role: 'Formation trading • Pro',
+        testi1Period: 'en 3 semaines', testi1Quote: '"Je répondais à une dizaine de DMs par jour, au mieux. Avec Nexa, jusqu\'à 75 prospects qualifiés contactés chaque jour, automatiquement."', testi1Role: 'Coach fitness • Pro',
+        testi2Period: 'premier mois', testi2Quote: '"J\'avais peur que ce soit trop robotique. Mes clientes ne voient aucune différence — elles achètent, tout simplement. 40 messages personnalisés envoyés chaque jour."', testi2Role: 'E-commerce mode • Starter',
+        testi3Period: 'en 2 mois', testi3Quote: '"Jusqu\'à 75 prospects qualifiés contactés chaque jour, en automatique. Je me concentre sur la création de contenu, Nexa s\'occupe du reste."', testi3Role: 'Formation trading • Pro',
 
         faqTitle: 'Questions fréquentes',
         faqQ1: 'Comment ça fonctionne ?', faqA1: 'Nexa se connecte à tes réseaux et répond à tes DMs automatiquement. Elle qualifie chaque prospect et le guide vers ton offre — 24h/24.',
@@ -625,9 +625,9 @@ const LANGS = {
 
         testiTitle: 'They chose Nexa. Look at the results.', testiSub: 'Real clients. Real numbers.',
         testiDisclaimer: '* Individual results vary. Performance shown is not guaranteed and depends on each user\'s activity.',
-        testi1Period: 'in 3 weeks', testi1Quote: '"I replied to 10 DMs a day max. With Nexa, 80 qualified prospects contacted every day. My revenue exploded."', testi1Role: 'Fitness coach • Pro',
-        testi2Period: 'first month', testi2Quote: '"I was afraid it would feel too robotic. But my clients don\'t notice the difference — they just buy."', testi2Role: 'Fashion e-commerce • Starter',
-        testi3Period: 'in 2 months', testi3Quote: '"300 prospects a day automatically. I focus on content creation. Nexa handles the rest."', testi3Role: 'Trading education • Pro',
+        testi1Period: 'in 3 weeks', testi1Quote: '"I used to reply to about 10 DMs a day, at best. With Nexa, up to 75 qualified prospects contacted every day, automatically."', testi1Role: 'Fitness coach • Pro',
+        testi2Period: 'first month', testi2Quote: '"I was afraid it would feel too robotic. My customers see no difference — they just buy. 40 personalized messages sent every day."', testi2Role: 'Fashion e-commerce • Starter',
+        testi3Period: 'in 2 months', testi3Quote: '"Up to 75 qualified prospects contacted every day, automatically. I focus on content creation, Nexa handles the rest."', testi3Role: 'Trading education • Pro',
 
         faqTitle: 'Frequently asked questions',
         faqQ1: 'How does it work?', faqA1: 'Nexa connects to your social accounts and replies to your DMs automatically. It qualifies each prospect and guides them toward your offer — 24/7.',
@@ -665,9 +665,9 @@ const LANGS = {
 
         testiTitle: '他们选择了Nexa，来看看效果。', testiSub: '真实客户，真实数据。',
         testiDisclaimer: '* 个人结果因人而异。所示效果不作保证，取决于每位用户的实际使用情况。',
-        testi1Period: '3周内', testi1Quote: '"以前我最多每天回复10条私信。用了Nexa后，每天自动联系80个精准客户，营业额暴涨。"', testi1Role: '健身教练 • Pro',
-        testi2Period: '第一个月', testi2Quote: '"我原本担心太机械化，但客户根本感觉不到差别——他们照样下单。"', testi2Role: '时尚电商 • Starter',
-        testi3Period: '2个月内', testi3Quote: '"每天自动联系300个客户，我专心做内容，其余的交给Nexa。"', testi3Role: '交易培训 • Pro',
+        testi1Period: '3周内', testi1Quote: '"以前我最多每天回复10条私信。用了Nexa后，每天自动联系多达75个精准客户。"', testi1Role: '健身教练 • Pro',
+        testi2Period: '第一个月', testi2Quote: '"我原本担心太机械化，但客户根本感觉不到差别——他们照样下单。每天自动发送40条个性化消息。"', testi2Role: '时尚电商 • Starter',
+        testi3Period: '2个月内', testi3Quote: '"每天自动联系多达75个精准客户，我专心做内容，其余的交给Nexa。"', testi3Role: '交易培训 • Pro',
 
         faqTitle: '常见问题',
         faqQ1: '它是如何运作的？', faqA1: 'Nexa连接你的社交账号并自动回复私信，为每位客户打分并引导其了解你的产品——全天24小时不间断。',
@@ -1344,8 +1344,15 @@ async function checkEmailVerified() {
         await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email);
       } catch(e) { console.error('DB update:', e); }
 
-      setTimeout(() => {
-        showPage('home');
+      setTimeout(async () => {
+        const fullUser = await loadUserFromDB(user.email);
+        if (fullUser) {
+          localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
+          await loadDashboard(fullUser);
+          showPage('dashboard-page');
+        } else {
+          showPage('home');
+        }
       }, 1000);
     } else {
       if (statusEl) statusEl.textContent = MSG.emailNotYet;
@@ -1399,12 +1406,19 @@ async function checkEmailVerifyReturn() {
       LS.setUser(stored);
       try { await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email); } catch(e) { console.error('DB update:', e); }
       window.history.replaceState({}, document.title, window.location.pathname);
-      // ⚠️ On ne lance plus automatiquement l'IA de qualification ici.
-      // Cliquer le lien dans l'email confirme juste le compte — ça n'ouvre
-      // aucune IA tout seul. Le client atterrit sur l'accueil et se
-      // connecte lui-même quand il est prêt à continuer.
-      toast('✅ Email confirmé ! Tu peux te connecter.', 'ok');
-      showPage('home');
+      // ⚠️ On ne lance JAMAIS automatiquement l'IA de qualification ici.
+      // Le client atterrit sur son dashboard (avec le bandeau "finir la
+      // qualification" si son plan n'est pas encore fait) — il doit
+      // cliquer lui-même pour lancer le guide.
+      toast('✅ Email confirmé !', 'ok');
+      const fullUser = await loadUserFromDB(user.email);
+      if (fullUser) {
+        localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
+        await loadDashboard(fullUser);
+        showPage('dashboard-page');
+      } else {
+        showPage('home');
+      }
       return true;
     }
   } catch(e) { console.error('checkEmailVerifyReturn:', e); }
@@ -1432,7 +1446,14 @@ async function login() {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
 
     if(error) {
-        toast('❌ Email ou mot de passe incorrect.', 'err');
+        const isUnconfirmed = /email not confirmed/i.test(error.message || '') || error.code === 'email_not_confirmed';
+        if (isUnconfirmed) {
+            toast('⚠️ Ton email n\'est pas encore confirmé. Vérifie ta boîte mail (et tes spams).', 'err', 6000);
+            td.email = email;
+            showEmailVerifyPage(email);
+        } else {
+            toast('❌ Email ou mot de passe incorrect.', 'err');
+        }
         if(btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
         return;
     }
