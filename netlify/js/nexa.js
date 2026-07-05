@@ -1611,27 +1611,41 @@ async function sendAdminMessage() {
     // Sanitisation : limiter la longueur et supprimer les balises HTML
     const msg = rawMsg.replace(/<[^>]*>/g, '').slice(0, 2000);
 
-    // Sauvegarder le message dans Supabase
-    if(sb) {
-        if(email) {
-            const { data: userRow } = await sb.from('users').select('id').eq('email', email).single();
-            if(userRow) {
-                await sb.from('prospects').insert([{
-                    user_id: userRow.id,
-                    name: 'Message Admin',
-                    status: 'message',
-                    lastMsg: msg,
-                    network: 'admin',
-                    date: new Date().toISOString()
-                }]);
-            }
+    const sendOne = (toEmail, prenom) => fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'admin_message', to: toEmail, data: { prenom: prenom || '', message: msg } })
+    }).catch(e => console.warn('send-email admin_message:', e.message));
+
+    if (email) {
+        // ⚠️ Envoi d'un vrai email au client (plus une fausse ligne dans ses
+        // Prospects, qui faussait son compteur et l'affichage de son dashboard).
+        let prenom = '';
+        if (sb) {
+            try {
+                const { data: userRow } = await sb.from('users').select('prenom').eq('email', email).single();
+                prenom = userRow?.prenom || '';
+            } catch(e) { /* prénom optionnel, on continue sans */ }
         }
+        await sendOne(email, prenom);
+        toast('✅ Email envoyé à ' + email + ' !', 'ok');
+    } else {
+        // ⚠️ CORRECTION : avant, laisser l'email vide ("à tous les clients")
+        // n'envoyait RIEN — le code Supabase était protégé par "if(email)",
+        // donc le message ne partait jamais malgré le toast de succès affiché.
+        if (!(await adminConfirm('⚠️ Envoyer cet email à TOUS tes clients ? Cette action ne peut pas être annulée.'))) return;
+        if (!sb) { toast('❌ Supabase indisponible', 'err'); return; }
+        const { data: users } = await sb.from('users').select('email, prenom');
+        if (!users || !users.length) { toast('⚠️ Aucun client trouvé', 'err'); return; }
+        for (const u of users) {
+            if (u.email) await sendOne(u.email, u.prenom);
+        }
+        toast('✅ Email envoyé à ' + users.length + ' clients !', 'ok');
     }
 
-    // Vider les champs (utilise les variables déjà déclarées en haut)
+    // Vider les champs
     elMsgContent2.value = '';
     elMsgEmail2.value = '';
-    toast('✅ Message envoyé' + (email ? ' à ' + email : ' à tous les clients') + ' !', 'ok');
 }
 
 function exportCSV() {
@@ -1700,8 +1714,9 @@ function renderAdminStats(users) {
     const free = users.filter(u => !u.plan || u.plan === 'pending').length;
     const suspended = users.filter(u => u.status === 'suspended').length;
 
-    // MRR
-    const planPrices = {starter:39, pro:59};
+    // MRR — les forfaits annuels comptent pour leur équivalent mensuel (prix/12),
+    // sinon un client annuel comptait pour 0€ dans le MRR affiché.
+    const planPrices = {starter:39, starter_annual:340/12, pro:59, pro_annual:590/12};
     const mrr = users.filter(u => u.plan && u.plan !== 'pending')
         .reduce((sum, u) => sum + (planPrices[u.plan] || 0), 0);
 
@@ -1732,7 +1747,7 @@ function renderRevenueChart(users) {
     const labels = document.getElementById('revenue-chart-labels');
     if(!chart || !labels) return;
 
-    const planPrices = {starter:39, pro:59};
+    const planPrices = {starter:39, starter_annual:340, pro:59, pro_annual:590};
     const months = {};
     const now = new Date();
 
@@ -1843,18 +1858,24 @@ function filterAdminUsers(search) {
 
 async function adminChangePlan(sel, email) {
     const newPlan = sel.value;
+    // ⚠️ "status" doit suivre "plan" — sans ça, le bot TikTok (qui filtre sur
+    // status=eq.active) ne voit jamais ce client, même si l'admin affiche
+    // bien le nouveau forfait. Un retour à "pending" remet status à
+    // "pending_verify" pour rester cohérent avec l'inscription normale.
+    const newStatus = (newPlan && newPlan !== 'pending') ? 'active' : 'pending_verify';
     // Mettre à jour Supabase
     if(sb) {
-        await sb.from('users').update({ plan: newPlan }).eq('email', email);
+        await sb.from('users').update({ plan: newPlan, status: newStatus }).eq('email', email);
     }
     // Mettre à jour localStorage
     const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     const i = users.findIndex(u => u.email === email);
     if(i !== -1) {
         users[i].plan = newPlan;
+        users[i].status = newStatus;
         localStorage.setItem('nexaai_users', JSON.stringify(users));
     }
-    allUsers = allUsers.map(u => u.email === email ? {...u, plan: newPlan} : u);
+    allUsers = allUsers.map(u => u.email === email ? {...u, plan: newPlan, status: newStatus} : u);
     renderAdminStats(allUsers);
     // Feedback visuel
     sel.style.borderColor = 'var(--accent)';
@@ -1882,14 +1903,17 @@ function giveAccess(event) {
     if(!email) { toast('⚠️ Entre un email !', 'err'); return; }
     // CORRECTION: valider le format email avant insertion
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('❌ Email invalide !', 'err'); return; }
+    // ⚠️ Même correction que adminChangePlan() — sans "status", le bot ne
+    // verra jamais ce client, même avec un plan gratuit offert par l'admin.
+    const newStatus = (plan && plan !== 'pending') ? 'active' : 'pending_verify';
     const users = JSON.parse(localStorage.getItem('nexaai_users') || '[]');
     const i = users.findIndex(u => u.email === email);
-    if(i !== -1) { users[i].plan = plan; }
-    else { users.push({id:(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)), prenom:email.split('@')[0], email, plan, createdAt:new Date().toISOString(), prospects:[], platforms:[]}); }
+    if(i !== -1) { users[i].plan = plan; users[i].status = newStatus; }
+    else { users.push({id:(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)), prenom:email.split('@')[0], email, plan, status:newStatus, createdAt:new Date().toISOString(), prospects:[], platforms:[]}); }
     localStorage.setItem('nexaai_users', JSON.stringify(users));
     // CORRECTION: synchroniser aussi dans Supabase pour que le plan persiste
     if(sb) {
-        sb.from('users').upsert([{ email, plan }], { onConflict: 'email' })
+        sb.from('users').upsert([{ email, plan, status: newStatus }], { onConflict: 'email' })
             .catch(e => console.error('Supabase giveAccess error:', e));
     }
     // CORRECTION: null-check gift-email (utilise elGiftEmail déjà déclaré)
