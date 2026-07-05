@@ -18,10 +18,18 @@ async function fetchWithTimeout(url, options = {}, ms = 10000) {
 // ════════════════════════════════════════════════════════════════
 // 🛡️ RATE LIMITING (par IP — en mémoire)
 // Empêche l'abus de ce endpoint comme relais d'emails
-// Limite : 10 requêtes / minute par IP
+// Limite : 60 requêtes / minute par IP
+// ⚠️ CORRECTION : la limite était à 10/minute. L'envoi groupé depuis
+// l'admin (sendAdminMessage → "envoyer à tous les clients") appelle cet
+// endpoint une fois par client, toujours depuis la même IP (celle de
+// l'admin). Dès que la liste dépassait 10 clients, les envois suivants
+// se faisaient bloquer par ce rate-limit (429) — mais comme le code
+// admin ne vérifiait pas le statut de la réponse, ça passait inaperçu
+// et affichait quand même "succès". Passé à 60/min, cohérent avec le
+// délai de 250ms ajouté entre chaque envoi côté admin (nexa.js).
 // ════════════════════════════════════════════════════════════════
 const _ipWindows = {};
-const RATE_LIMIT = 10;
+const RATE_LIMIT = 60;
 const RATE_WINDOW_MS = 60 * 1000;
 
 function checkIpRate(ip) {
