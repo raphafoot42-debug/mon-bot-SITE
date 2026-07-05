@@ -942,41 +942,27 @@ async function loadDashboard(user) {
     const elEmail = document.getElementById('s-email'); if(elEmail) elEmail.value = user.email || '';
     const elBusiness = document.getElementById('s-business'); if(elBusiness) elBusiness.value = user.business || '';
     const elSType = document.getElementById('s-type'); if(elSType && user.type_business) elSType.value = user.type_business;
-    // Injecter la section Affiliation dans les paramètres si pas encore présente
+    // Injecter la section Programme de parrainage dans les paramètres si pas encore présente
     const dSettings = document.getElementById('d-settings');
     if(dSettings && !document.getElementById('s-aff-section')) {
         const affSection = document.createElement('div');
         affSection.id = 's-aff-section';
         affSection.style.cssText = 'margin-top:30px;padding:20px;background:rgba(57,255,20,0.04);border:1px solid rgba(57,255,20,0.2);border-radius:14px;';
         affSection.innerHTML = `
-            <h3 style="color:var(--accent);font-size:1rem;font-weight:800;margin-bottom:6px;">🤝 Affiliation / Ambassadeur</h3>
-            <p style="color:var(--text-light);font-size:0.82rem;margin-bottom:18px;">Configure ton mode d'affiliation pour recevoir 20% automatiquement sur Stripe.</p>
-            <div class="form-group" style="margin-bottom:14px;">
-                <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">Mode</label>
-                <select id="s-aff-mode" onchange="onAffModeChange()" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);">
-                    <option value="">— Choisir un mode —</option>
-                    <option value="ia_close">🤖 Mode 1 — L'IA close pour moi (Nexa 80% / moi 20%)</option>
-                    <option value="lien">🔗 Mode 2 — Je partage mon lien (Nexa 80% / moi 20%)</option>
-                </select>
-            </div>
+            <h3 style="color:var(--accent);font-size:1rem;font-weight:800;margin-bottom:6px;">🔗 Programme de parrainage</h3>
+            <p style="color:var(--text-light);font-size:0.82rem;margin-bottom:18px;">Renseigne ton compte Stripe pour recevoir 20% automatiquement sur chaque personne qui s'abonne via ton lien — quel que soit ton forfait actuel.</p>
             <div class="form-group" style="margin-bottom:14px;">
                 <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">ID Stripe Connect <span style="color:#ff4444;">*</span></label>
                 <input type="text" id="s-aff-stripe" placeholder="acct_xxxxxxxxxxxxxxxx" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);box-sizing:border-box;">
                 <p style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">Trouve ton ID sur <a href="https://dashboard.stripe.com" target="_blank" style="color:var(--accent);">dashboard.stripe.com</a></p>
             </div>
-            <div id="s-aff-url-group" class="form-group" style="margin-bottom:14px;display:none;">
-                <label style="font-size:0.82rem;color:var(--text-light);display:block;margin-bottom:6px;">URL de ton tunnel de vente</label>
-                <input type="text" id="s-aff-url" placeholder="https://ton-site.com/vente" style="width:100%;padding:10px;background:#000;border:1px solid var(--border);border-radius:8px;color:var(--text);box-sizing:border-box;">
-            </div>
             <p id="s-aff-status" style="font-size:0.82rem;margin-bottom:10px;min-height:18px;"></p>
             <p id="s-aff-link" style="display:none;font-size:0.82rem;color:var(--accent);word-break:break-all;margin-bottom:12px;padding:10px;background:rgba(57,255,20,0.06);border-radius:8px;"></p>
-            <button id="sAffSaveBtn" onclick="saveAffiliationSettings()" style="padding:12px 24px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.88rem;cursor:pointer;">Sauvegarder</button>
+            <button id="sAffSaveBtn" onclick="saveAffiliationSettings()" style="padding:12px 24px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.88rem;cursor:pointer;">Valider mon compte</button>
         `;
         dSettings.appendChild(affSection);
     }
-    const elAffMode = document.getElementById('s-aff-mode'); if(elAffMode && user.affiliation_mode) { elAffMode.value = user.affiliation_mode; onAffModeChange(); }
     const elAffStripe = document.getElementById('s-aff-stripe'); if(elAffStripe && user.stripe_connect_id) elAffStripe.value = user.stripe_connect_id;
-    const elAffUrl = document.getElementById('s-aff-url'); if(elAffUrl && user.store_url) elAffUrl.value = user.store_url;
     const elAffLink = document.getElementById('s-aff-link');
     if(elAffLink && user.stripe_connect_id && user.stripe_connect_id.startsWith('acct_')) {
         elAffLink.style.display = 'block';
@@ -1084,73 +1070,57 @@ async function saveSettings() {
 // ===== AFFILIATION SETTINGS =====
 async function saveAffiliationSettings() {
     const user = JSON.parse(localStorage.getItem('nexaai_user') || '{}');
-    const elAffMode = document.getElementById('s-aff-mode');
     const elAffStripe = document.getElementById('s-aff-stripe');
-    const elAffUrl = document.getElementById('s-aff-url');
     const elAffStatus = document.getElementById('s-aff-status');
     const elAffLink = document.getElementById('s-aff-link');
     const btn = document.getElementById('sAffSaveBtn');
 
-    const mode = elAffMode ? elAffMode.value : '';
     const stripeId = elAffStripe ? elAffStripe.value.trim() : '';
-    const storeUrl = elAffUrl ? elAffUrl.value.trim() : '';
 
     // Validation Stripe ID
     if (!stripeId.startsWith('acct_')) {
         if(elAffStatus) { elAffStatus.textContent = "❌ L'ID Stripe doit commencer par acct_"; elAffStatus.style.color = '#ff4444'; }
         return;
     }
-    // Validation URL si mode IA close
-    if (mode === 'ia_close' && storeUrl && !/^https?:\/\/.+/.test(storeUrl)) {
-        if(elAffStatus) { elAffStatus.textContent = "❌ L'URL doit commencer par https://"; elAffStatus.style.color = '#ff4444'; }
-        return;
-    }
 
-    if(btn) { btn.textContent = '⏳ Sauvegarde...'; btn.disabled = true; }
+    if(btn) { btn.textContent = '⏳ Validation...'; btn.disabled = true; }
 
     try {
-        user.affiliation_mode = mode;
+        user.affiliation_mode = 'lien';
         user.stripe_connect_id = stripeId;
-        if(storeUrl) user.store_url = storeUrl;
-        if(!user.plan || user.plan === 'pending') user.plan = 'affiliation';
+        // ⚠️ On ne touche plus JAMAIS à "plan" ici. Avant, un client qui n'avait
+        // jamais fait le guide (pas de TikTok connecté) pouvait juste coller un
+        // ID Stripe ici et voir son plan passer à "affiliation" — ça faisait
+        // disparaître le bandeau "finir le guide" et débloquait les onglets,
+        // alors que rien n'était réellement configuré (le bot ne peut pas
+        // tourner sans identifiants TikTok). Devenir vraiment Ambassadeur ne
+        // peut se faire que via le guide complet, jamais depuis les Paramètres.
 
         await saveUserToDB({
             email: user.email,
-            affiliation_mode: mode,
-            stripe_connect_id: stripeId,
-            store_url: storeUrl || user.store_url || '',
-            plan: user.plan
+            affiliation_mode: 'lien',
+            stripe_connect_id: stripeId
             // commission_rate retiré — défini côté serveur uniquement
         });
 
         localStorage.setItem('nexaai_user', JSON.stringify(user));
 
-        // Afficher le lien d'affiliation généré
+        // Afficher le lien de parrainage généré
         const affLink = window.location.origin + '?ref=' + stripeId;
         if(elAffLink) {
             elAffLink.style.display = 'block';
             elAffLink.textContent = '🔗 Ton lien : ' + affLink;
         }
         if(elAffStatus) {
-            elAffStatus.textContent = mode === 'ia_close'
-                ? '✅ Mode activé ! Nexa close tes DMs, tu reçois 20% de chaque vente.'
-                : '✅ Mode activé ! Partage ton lien, tu reçois 20% à chaque abonnement.';
+            elAffStatus.textContent = '✅ Compte validé ! Partage ton lien, tu reçois 20% à chaque abonnement.';
             elAffStatus.style.color = 'var(--accent)';
         }
-        if(btn) { btn.textContent = '✅ Sauvegardé !'; setTimeout(() => { btn.textContent = 'Sauvegarder'; btn.disabled = false; }, 2000); }
+        if(btn) { btn.textContent = '✅ Validé !'; setTimeout(() => { btn.textContent = 'Valider mon compte'; btn.disabled = false; }, 2000); }
     } catch(err) {
         console.error('saveAffiliationSettings error:', err);
         if(elAffStatus) { elAffStatus.textContent = '❌ Erreur lors de la sauvegarde.'; elAffStatus.style.color = '#ff4444'; }
         if(btn) { btn.textContent = 'Réessayer'; btn.disabled = false; }
     }
-}
-
-// Afficher/masquer le champ URL selon le mode choisi
-function onAffModeChange() {
-    const mode = document.getElementById('s-aff-mode');
-    const urlGroup = document.getElementById('s-aff-url-group');
-    if(!mode || !urlGroup) return;
-    urlGroup.style.display = mode.value === 'ia_close' ? 'block' : 'none';
 }
 
 // ===== AUTH =====
