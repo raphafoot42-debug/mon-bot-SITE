@@ -190,6 +190,26 @@ function templateAccountWarning({ prenom, daysLeft }) {
   };
 }
 
+function templateAdminMessage({ prenom, message }) {
+  // Message brut de l'admin — échappé pour éviter toute injection HTML dans l'email
+  const safeMsg = String(message || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  return {
+    subject: `📩 Message de l'équipe NexaAI`,
+    html: `
+    <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;background:#050505;color:#fff;padding:40px 32px;border-radius:16px;">
+      <div style="color:#39ff14;font-size:1.5rem;font-weight:900;letter-spacing:2px;margin-bottom:24px;">NEXA AI</div>
+      <h1 style="font-size:1.5rem;margin-bottom:16px;">📩 Message de l'équipe</h1>
+      <p style="color:#aaa;line-height:1.7;margin-bottom:16px;">${prenom ? 'Salut ' + prenom + ',' : 'Bonjour,'}</p>
+      <div style="color:#fff;line-height:1.7;margin-bottom:24px;background:#111;border:1px solid #222;border-radius:10px;padding:18px;">${safeMsg}</div>
+      <a href="https://nexaai.fr" style="display:inline-block;background:#39ff14;color:#000;padding:14px 28px;border-radius:10px;font-weight:900;text-decoration:none;">
+        Accéder à mon dashboard →
+      </a>
+    </div>`
+  };
+}
+
 function templateAccountBlocked({ prenom }) {
   return {
     subject: `🚫 Ton compte Nexa a été suspendu`,
@@ -340,6 +360,8 @@ exports.handler = async (event) => {
         template = templateHotLead(data); break;
       case 'account_warning':
         template = templateAccountWarning(data); break;
+      case 'admin_message':
+        template = templateAdminMessage(data); break;
       case 'account_blocked':
         template = templateAccountBlocked(data); break;
       case 'owner_nexa_sale':
