@@ -1314,15 +1314,13 @@ async function checkEmailVerified() {
         await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email);
       } catch(e) { console.error('DB update:', e); }
 
+      // ✅ Lance directement l'IA de qualification, comme après un clic sur
+      // le lien reçu par email (cohérence des deux parcours de confirmation).
       setTimeout(async () => {
         const fullUser = await loadUserFromDB(user.email);
-        if (fullUser) {
-          localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
-          await loadDashboard(fullUser);
-          showPage('dashboard-page');
-        } else {
-          showPage('home');
-        }
+        if (fullUser) localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
+        showPage('bot-qualify');
+        setTimeout(() => botQualifyStart(user.email), 300);
       }, 1000);
     } else {
       if (statusEl) statusEl.textContent = MSG.emailNotYet;
@@ -1363,12 +1361,47 @@ async function resendVerifyEmail() {
 
 async function checkEmailVerifyReturn() {
   const params = new URLSearchParams(window.location.search);
-  if (!params.has('verified') && !params.has('access_token') && !window.location.hash.includes('access_token')) {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+  const hasVerifiedParam = params.has('verified');
+  const hasAccessToken = params.has('access_token') || hash.has('access_token');
+  const hasAuthError = hash.has('error') || params.has('error');
+
+  if (!hasVerifiedParam && !hasAccessToken && !hasAuthError) {
     return false;
   }
+
+  // ⚠️ CAS ERREUR : lien expiré, déjà utilisé, ou "pré-cliqué" par un scanner
+  // anti-virus de la boîte mail (Gmail/Outlook le font en arrière-plan et
+  // consomment le lien à usage unique avant le vrai clic de l'utilisateur).
+  // Avant : cette erreur était ignorée et l'utilisateur atterrissait sur
+  // l'accueil sans aucune explication.
+  if (hasAuthError) {
+    const errDesc = decodeURIComponent((hash.get('error_description') || params.get('error_description') || '').replace(/\+/g, ' '));
+    window.history.replaceState({}, document.title, window.location.pathname);
+    const email = (LS.user() || {}).email || '';
+    showEmailVerifyPage(email);
+    const st = document.getElementById('verify-status');
+    if (st) st.textContent = '❌ Lien invalide ou expiré. Clique sur "Renvoyer l\'email".';
+    toast('❌ Lien de confirmation invalide ou expiré' + (errDesc ? ' : ' + errDesc : ''), 'err', 6000);
+    return true;
+  }
+
   try {
     const client = getSb();
-    const { data: { user } } = await client.auth.getUser();
+
+    // ⚠️ CORRECTION : juste après le clic sur le lien, supabase-js a besoin
+    // de quelques centaines de ms pour lire le token dans l'URL et créer la
+    // session. Un seul getUser() immédiat arrivait trop tôt et ne trouvait
+    // rien → retour silencieux vers l'accueil. On retente plusieurs fois.
+    let user = null;
+    for (let i = 0; i < 6; i++) {
+      const { data } = await client.auth.getUser();
+      user = data?.user || null;
+      if (user?.email_confirmed_at) break;
+      await new Promise(r => setTimeout(r, 400));
+    }
+
     if (user?.email_confirmed_at) {
       const stored = LS.user();
       stored.emailVerified = true;
@@ -1376,23 +1409,35 @@ async function checkEmailVerifyReturn() {
       LS.setUser(stored);
       try { await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email); } catch(e) { console.error('DB update:', e); }
       window.history.replaceState({}, document.title, window.location.pathname);
-      // ⚠️ On ne lance JAMAIS automatiquement l'IA de qualification ici.
-      // Le client atterrit sur son dashboard (avec le bandeau "finir la
-      // qualification" si son plan n'est pas encore fait) — il doit
-      // cliquer lui-même pour lancer le guide.
       toast('✅ Email confirmé !', 'ok');
+
       const fullUser = await loadUserFromDB(user.email);
-      if (fullUser) {
-        localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
-        await loadDashboard(fullUser);
-        showPage('dashboard-page');
-      } else {
-        showPage('home');
-      }
+      if (fullUser) localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
+
+      // ✅ Lance directement l'IA de qualification après confirmation.
+      // botQualifyStart() gère déjà lui-même le cas où l'utilisateur a
+      // déjà terminé sa qualification (renvoie vers le dashboard).
+      showPage('bot-qualify');
+      setTimeout(() => botQualifyStart(user.email), 300);
       return true;
     }
-  } catch(e) { console.error('checkEmailVerifyReturn:', e); }
-  return false;
+
+    // Toujours pas de session après les tentatives : on ne laisse plus
+    // l'utilisateur atterrir sur une page d'accueil muette, on lui montre
+    // la page de vérification avec un vrai bouton.
+    window.history.replaceState({}, document.title, window.location.pathname);
+    const email = (LS.user() || {}).email || '';
+    showEmailVerifyPage(email);
+    const st = document.getElementById('verify-status');
+    if (st) st.textContent = '⏳ Confirmation en cours... si rien ne se passe, clique sur "J\'ai confirmé mon email".';
+    return true;
+
+  } catch(e) {
+    console.error('checkEmailVerifyReturn:', e);
+    const email = (LS.user() || {}).email || '';
+    showEmailVerifyPage(email);
+    return true;
+  }
 }
 
 
@@ -1611,11 +1656,30 @@ async function sendAdminMessage() {
     // Sanitisation : limiter la longueur et supprimer les balises HTML
     const msg = rawMsg.replace(/<[^>]*>/g, '').slice(0, 2000);
 
-    const sendOne = (toEmail, prenom) => fetch('/.netlify/functions/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'admin_message', to: toEmail, data: { prenom: prenom || '', message: msg } })
-    }).catch(e => console.warn('send-email admin_message:', e.message));
+    // ⚠️ CORRECTION : avant, on ne vérifiait jamais la réponse du fetch.
+    // fetch() ne rejette PAS sur une erreur HTTP (429 rate-limit, 500 Resend
+    // en échec, clé API invalide...) — seul un problème réseau déclenchait
+    // le .catch(). Résultat : le toast affichait "✅ Email envoyé" même
+    // quand rien n'était réellement parti. On vérifie maintenant réellement
+    // le succès renvoyé par send-email.js.
+    const sendOne = async (toEmail, prenom) => {
+        try {
+            const res = await fetch('/.netlify/functions/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'admin_message', to: toEmail, data: { prenom: prenom || '', message: msg } })
+            });
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                console.warn('send-email admin_message échec pour', toEmail, res.status, errBody.error);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.warn('send-email admin_message réseau:', e.message);
+            return false;
+        }
+    };
 
     if (email) {
         // ⚠️ Envoi d'un vrai email au client (plus une fausse ligne dans ses
@@ -1627,8 +1691,12 @@ async function sendAdminMessage() {
                 prenom = userRow?.prenom || '';
             } catch(e) { /* prénom optionnel, on continue sans */ }
         }
-        await sendOne(email, prenom);
-        toast('✅ Email envoyé à ' + email + ' !', 'ok');
+        const ok = await sendOne(email, prenom);
+        if (ok) {
+            toast('✅ Email envoyé à ' + email + ' !', 'ok');
+        } else {
+            toast('❌ Échec de l\'envoi à ' + email + '. Vérifie les logs Netlify.', 'err', 6000);
+        }
     } else {
         // ⚠️ CORRECTION : avant, laisser l'email vide ("à tous les clients")
         // n'envoyait RIEN — le code Supabase était protégé par "if(email)",
@@ -1637,10 +1705,24 @@ async function sendAdminMessage() {
         if (!sb) { toast('❌ Supabase indisponible', 'err'); return; }
         const { data: users } = await sb.from('users').select('email, prenom');
         if (!users || !users.length) { toast('⚠️ Aucun client trouvé', 'err'); return; }
+
+        let successCount = 0;
+        const failed = [];
         for (const u of users) {
-            if (u.email) await sendOne(u.email, u.prenom);
+            if (!u.email) continue;
+            const ok = await sendOne(u.email, u.prenom);
+            if (ok) successCount++; else failed.push(u.email);
+            // Petite pause entre chaque envoi pour rester sous le rate-limit
+            // de send-email.js (voir RATE_LIMIT dans send-email.js).
+            await new Promise(r => setTimeout(r, 250));
         }
-        toast('✅ Email envoyé à ' + users.length + ' clients !', 'ok');
+
+        if (failed.length) {
+            toast(`⚠️ ${successCount}/${users.length} emails envoyés — ${failed.length} échec(s) (voir console)`, 'err', 8000);
+            console.warn('Emails admin non envoyés :', failed);
+        } else {
+            toast('✅ Email envoyé à ' + successCount + ' clients !', 'ok');
+        }
     }
 
     // Vider les champs
