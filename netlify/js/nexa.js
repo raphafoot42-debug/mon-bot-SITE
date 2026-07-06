@@ -773,17 +773,22 @@ async function handlePlanSelection(plan) {
         const referrerId = (rawPartner && rawPartner.startsWith('acct_')) ? rawPartner : null;
 
         if(sb && email) {
-            await saveUserToDB({
-                email,
-                prenom: td.prenom || email.split('@')[0],
-                business: td.business || '',
-                // ⚠️ NE PAS mettre "plan" ici — c'est enregistré AVANT le paiement Stripe.
-                // Si le client abandonne le checkout, le plan resterait défini alors qu'il
-                // n'a rien payé. Le "plan" ne doit être écrit que par verify-payment.js,
-                // une fois le paiement confirmé côté serveur (voir checkStripeReturn()).
-                tiktok_pseudo: td.tiktok || '',
-                store_url: CLIENT_STORE_URL || ''
-            });
+            // ⚠️ CORRECTION : avant, ces 4 champs étaient TOUJOURS envoyés avec un
+            // fallback vide ('') si `td` n'était pas rempli. Or `td` n'est rempli
+            // que si le client vient de passer par le tunnel d'inscription ou le
+            // bot de qualification. Un Ambassadeur déjà inscrit qui clique juste
+            // "Changer de forfait" depuis Paramètres ne repasse jamais par là —
+            // ça écrasait silencieusement son pseudo TikTok, son business et son
+            // prénom déjà enregistrés (remplacés par des valeurs vides).
+            // Maintenant : on ne met à jour que ce qu'on a vraiment. Tout ce qui
+            // existe déjà en base (TikTok connecté, site créé, lien de parrainage
+            // via stripe_connect_id) reste intact au changement de forfait.
+            const patch = { email };
+            if (td.prenom) patch.prenom = td.prenom;
+            if (td.business) patch.business = td.business;
+            if (td.tiktok) patch.tiktok_pseudo = td.tiktok;
+            if (CLIENT_STORE_URL) patch.store_url = CLIENT_STORE_URL;
+            await saveUserToDB(patch);
         }
 
         const res = await fetch(STRIPE_URL, {
@@ -894,7 +899,6 @@ async function loadDashboard(user) {
     }
     const elWelcome = document.getElementById('dash-welcome'); if(elWelcome) elWelcome.textContent = `Bienvenue ${user.prenom || ''} 🎯`;
     const elProspects = document.getElementById('st-prospects'); if(elProspects) elProspects.textContent = user.prospects?.length || 0;
-    const elMsgs = document.getElementById('st-msgs'); if(elMsgs) elMsgs.textContent = (user.prospects?.length || 0) * 3;
     const elRate = document.getElementById('st-rate');
     if(elRate) {
         const totalP = (user.prospects || []).length;
@@ -903,12 +907,17 @@ async function loadDashboard(user) {
     }
     // Calcul du revenu estimé depuis les prospects closés
     const closedCount = (user.prospects || []).filter(p => p.status === 'closed').length;
-    const planRevenue = { starter: 39, pro: 59, affiliation: 0 };
-    // CORRECTION: utiliser le prix du produit client si renseigné, sinon le tarif du plan
-    const revenueEstimate = closedCount * (parseFloat(user.prix_produit) || planRevenue[user.plan] || 0);
-    // CORRECTION: null-check sur st-revenue
+    // ⚠️ CORRECTION : l'ancien fallback utilisait planRevenue[user.plan] (39€/59€ —
+    // le prix de L'ABONNEMENT NEXA) quand le client n'avait pas renseigné le prix
+    // de SON produit. Ça n'a aucun sens : le revenu du client n'a rien à voir avec
+    // ce qu'il paie à Nexa. Ça affichait un "revenu estimé" totalement inventé.
+    // Maintenant : si on n'a pas de vrai prix produit, on affiche "—" au lieu
+    // d'un chiffre trompeur.
     const elRevenue = document.getElementById('st-revenue');
-    if(elRevenue) elRevenue.textContent = '€' + revenueEstimate;
+    if(elRevenue) {
+        const prixProduit = parseFloat(user.prix_produit);
+        elRevenue.textContent = prixProduit ? '€' + (closedCount * prixProduit) : '—';
+    }
     // Badges
     const badges = document.getElementById('platform-badges');
     // CORRECTION: null-check sur badges avant innerHTML
