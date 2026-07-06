@@ -129,39 +129,54 @@ exports.handler = async (event) => {
     const siteUrl = process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app';
     const commission = (amount * 0.20).toFixed(2);
 
-    // ── 4️⃣ Email au client — non-bloquant ──────────────────────────
+    // ⚠️ CORRECTION : ces deux fetch n'étaient jamais "await" — la fonction
+    // pouvait retourner (et l'environnement serverless se geler) avant même
+    // que la requête réseau ait eu le temps de partir. Résultat : les emails
+    // de vente pouvaient ne jamais arriver, de façon imprévisible (parfois
+    // ça passe si le fetch part assez vite, parfois non). On attend
+    // maintenant réellement les deux envois avant de répondre à Stripe.
+    // Promise.allSettled : si l'un des deux échoue, l'autre part quand même.
+    const emailJobs = [];
+
+    // ── 4️⃣ Email au client ──────────────────────────
     if (partner?.email) {
+      emailJobs.push(
+        fetch(`${siteUrl}/.netlify/functions/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'sale_notify',
+            to: partner.email,
+            data: {
+              partnerPrenom: partner.prenom || '',
+              buyerEmail,
+              productName,
+              amount: amount.toFixed(2),
+              commission,
+            },
+          }),
+        }).catch((e) => console.warn('send-email sale_notify:', e.message))
+      );
+    }
+
+    // ── 5️⃣ Email à toi (owner) ──────────────────────
+    emailJobs.push(
       fetch(`${siteUrl}/.netlify/functions/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'sale_notify',
-          to: partner.email,
+          type: 'owner_affiliation_sale',
+          to: process.env.OWNER_EMAIL || 'contact@nexaai.fr',
           data: {
-            partnerPrenom: partner.prenom || '',
-            buyerEmail,
+            clientEmail: partner?.email || acct,
             productName,
             amount: amount.toFixed(2),
-            commission,
           },
         }),
-      }).catch((e) => console.warn('send-email sale_notify:', e.message));
-    }
+      }).catch((e) => console.warn('send-email owner_affiliation_sale:', e.message))
+    );
 
-    // ── 5️⃣ Email à toi (owner) — non-bloquant ──────────────────────
-    fetch(`${siteUrl}/.netlify/functions/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'owner_affiliation_sale',
-        to: process.env.OWNER_EMAIL || 'contact@nexaai.fr',
-        data: {
-          clientEmail: partner?.email || acct,
-          productName,
-          amount: amount.toFixed(2),
-        },
-      }),
-    }).catch((e) => console.warn('send-email owner_affiliation_sale:', e.message));
+    await Promise.allSettled(emailJobs);
 
     return { statusCode: 200, body: JSON.stringify({ received: true }) };
   } catch (err) {
