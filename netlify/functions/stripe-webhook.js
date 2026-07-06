@@ -92,6 +92,35 @@ exports.handler = async (event) => {
 
   const session = stripeEvent.data?.object || {};
 
+  // ── 2️⃣bis Vente d'un forfait Nexa classique (Starter/Pro) ──────
+  // Bloc totalement isolé du reste : ne touche à rien d'existant, ne fait
+  // que t'envoyer un email quand un vrai abonnement Nexa est payé.
+  const NEXA_PLANS = new Set(['starter', 'pro', 'starter_annual', 'pro_annual']);
+  if (NEXA_PLANS.has(session.metadata?.plan)) {
+    try {
+      const siteUrl = process.env.SITE_URL || 'https://steady-centaur-82e10a.netlify.app';
+      const buyerEmail = session.customer_details?.email || session.customer_email || '';
+      const amount = (session.amount_total || 0) / 100;
+
+      await fetch(`${siteUrl}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'owner_nexa_sale',
+          to: process.env.OWNER_EMAIL || 'contact@nexaai.fr',
+          data: {
+            buyerEmail,
+            plan: session.metadata.plan.replace('_annual', ''),
+            amount: amount.toFixed(2),
+          },
+        }),
+      }).catch((e) => console.warn('send-email owner_nexa_sale:', e.message));
+    } catch (err) {
+      console.error('stripe-webhook owner_nexa_sale error:', err.message);
+    }
+    return { statusCode: 200, body: JSON.stringify({ received: true }) };
+  }
+
   if (session.metadata?.plan !== 'affiliation_product') {
     return { statusCode: 200, body: 'ignored' }; // pas une vente de page ambassadeur
   }
