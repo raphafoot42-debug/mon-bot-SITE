@@ -1221,14 +1221,21 @@ async function register() {
     }
 
     const prenom = email.split('@')[0].replace(/[0-9._\-+]/g, ' ').trim().split(/\s+/)[0];
+
+    // ⚠️ IMPORTANT : `data.session` n'est rempli que si Supabase a confirmé le
+    // compte immédiatement (option "Confirm email" désactivée dans Supabase).
+    // Ce code s'adapte automatiquement aux deux cas — pas besoin de retoucher
+    // ce fichier quand la vérification email sera réactivée plus tard.
+    const autoConfirmed = !!data.session;
+
     const newUser = {
       id: data.user?.id || genToken(),
       email,
       prenom: prenom.charAt(0).toUpperCase() + prenom.slice(1),
       plan: 'pending',
       platforms: [],
-      status: 'pending_verify',
-      email_verified: false,
+      status: autoConfirmed ? 'actif' : 'pending_verify',
+      email_verified: autoConfirmed,
       created_at: new Date().toISOString(),
       prospects: []
     };
@@ -1236,8 +1243,16 @@ async function register() {
     LS.setUser(newUser);
     try { await client.from('users').insert([newUser]); } catch(e) { console.error('DB insert:', e); }
 
-    showEmailVerifyPage(email);
-    toast('✅ Email de confirmation envoyé', 'ok');
+    if (autoConfirmed) {
+      // Vérification email désactivée côté Supabase : pas d'email à attendre,
+      // on lance directement l'IA de qualification.
+      toast('✅ Compte créé !', 'ok');
+      showPage('bot-qualify');
+      setTimeout(() => botQualifyStart(email), 300);
+    } else {
+      showEmailVerifyPage(email);
+      toast('✅ Email de confirmation envoyé', 'ok');
+    }
 
   } catch (err) {
     toast('❌ ' + err.message, 'err');
