@@ -1272,11 +1272,14 @@ async function register() {
     } catch(e) { console.error('create-user réseau:', e); }
 
     if (autoConfirmed) {
-      // Vérification email désactivée côté Supabase : pas d'email à attendre,
-      // on lance directement l'IA de qualification.
+      // CHANGEMENT: on n'envoie plus direct dans l'IA de qualification.
+      // Le client atterrit sur le dashboard (état "pending" : onglets
+      // Prospects/Bot verrouillés + bandeau "Finir le guide" en haut,
+      // cf. #setup-warning-banner dans loadDashboard()). Il lance l'IA
+      // quand il est prêt via le bandeau, plutôt que d'y être jeté direct.
       toast('✅ Compte créé !', 'ok');
-      showPage('bot-qualify');
-      setTimeout(() => botQualifyStart(email), 300);
+      await loadDashboard(newUser);
+      showPage('dashboard-page');
     } else {
       showEmailVerifyPage(email);
       toast('✅ Email de confirmation envoyé', 'ok');
@@ -1374,13 +1377,14 @@ async function checkEmailVerified() {
         }
       } catch(e) { console.error('create-user (confirm) réseau:', e); }
 
-      // ✅ Lance directement l'IA de qualification, comme après un clic sur
-      // le lien reçu par email (cohérence des deux parcours de confirmation).
+      // CHANGEMENT: même logique que l'inscription auto-confirmée — direction
+      // le dashboard (verrouillé + bandeau "Finir le guide"), pas l'IA direct.
       setTimeout(async () => {
         const fullUser = await loadUserFromDB(user.email);
-        if (fullUser) localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
-        showPage('bot-qualify');
-        setTimeout(() => botQualifyStart(user.email), 300);
+        const dashUser = fullUser || { email: user.email, plan: 'pending', prospects: [] };
+        localStorage.setItem('nexaai_user', JSON.stringify(dashUser));
+        await loadDashboard(dashUser);
+        showPage('dashboard-page');
       }, 1000);
     } else {
       if (statusEl) statusEl.textContent = MSG.emailNotYet;
@@ -1485,13 +1489,13 @@ async function checkEmailVerifyReturn() {
       toast('✅ Email confirmé !', 'ok');
 
       const fullUser = await loadUserFromDB(user.email);
-      if (fullUser) localStorage.setItem('nexaai_user', JSON.stringify(fullUser));
+      const dashUser = fullUser || { email: user.email, plan: 'pending', prospects: [] };
+      localStorage.setItem('nexaai_user', JSON.stringify(dashUser));
 
-      // ✅ Lance directement l'IA de qualification après confirmation.
-      // botQualifyStart() gère déjà lui-même le cas où l'utilisateur a
-      // déjà terminé sa qualification (renvoie vers le dashboard).
-      showPage('bot-qualify');
-      setTimeout(() => botQualifyStart(user.email), 300);
+      // CHANGEMENT: dashboard direct (verrouillé + bandeau "Finir le guide")
+      // au lieu de lancer l'IA de qualification automatiquement.
+      await loadDashboard(dashUser);
+      showPage('dashboard-page');
       return true;
     }
 
@@ -2308,6 +2312,14 @@ async function sendChatMsg(text) {
             body:JSON.stringify({
                 message: text,
                 history: chatHist.slice(0, -1),
+                // CORRECTION: chatMode explicite. Sans ça, claude.js retombe sur son
+                // défaut ('qualify') — ce widget (visiteurs non inscrits, page d'accueil)
+                // recevait donc le prompt du bot de qualification (qui suppose l'inscrit
+                // déjà connecté, pousse un OAuth TikTok inexistant ici, termine par
+                // "REDIRECT") au lieu du prompt FLOAT prévu pour ce chat. Le champ
+                // `system` ci-dessous n'est de toute façon utilisé par le serveur
+                // qu'en mode 'dash' — il était ignoré ici.
+                chatMode: 'float',
                 system: SYS + (CLIENT_STORE_URL
                     && /^https?:\/\/[^\s]{1,200}$/.test(CLIENT_STORE_URL.trim())
                     ? '\n\nLien de vente du client : ' + CLIENT_STORE_URL.trim().slice(0, 200)
@@ -3122,7 +3134,10 @@ async function bqSendToAI(userText) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             // claude.js attend { message, history } et retourne { reply }
-            body: JSON.stringify({ message: bqHist[bqHist.length-1]?.content || '', history: bqHist.slice(0,-1) })
+            // CORRECTION: chatMode explicite (voir sendChatMsg plus haut pour le
+            // même souci côté chat flottant) — on ne repose plus sur le défaut
+            // serveur pour un chat aussi central que la qualification.
+            body: JSON.stringify({ message: bqHist[bqHist.length-1]?.content || '', history: bqHist.slice(0,-1), chatMode: 'qualify' })
         });
         const raw = await res.text();
         let data = {};
