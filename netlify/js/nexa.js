@@ -694,6 +694,19 @@ function changeLang(lang) {
 
 // ===== TUNNEL =====
 function startTunnel(plan) {
+    // CORRECTION: le plan Ambassadeur est gratuit (0€) et son price Stripe
+    // n'existe plus côté compte Stripe — l'envoyer vers handlePlanSelection
+    // renvoyait systématiquement une erreur ("Invalid plan" / erreur serveur).
+    // Un plan gratuit n'a de toute façon rien à faire sur Stripe Checkout :
+    // on renvoie directement vers la qualification IA, qui est le seul
+    // endroit où "Ambassadeur" doit être choisi proprement (compte créé,
+    // connecté, dashboard en place).
+    if(plan === 'affiliation') {
+        toast('🤝 Pour devenir Ambassadeur, fais d\'abord ta qualification avec l\'IA — tu pourras choisir Ambassadeur gratuitement à la fin.', 'info', 6000);
+        showPage('register');
+        return;
+    }
+
     // Résout les price IDs Stripe vers leur clé plan (pour compatibilité boutons HTML existants)
     const priceIdMap = {
         'price_1TgQAiP6KQQPJW2bIPBL567L': 'starter',
@@ -1544,9 +1557,17 @@ async function login() {
         await loadDashboard(user); // CORRECTION: await ajouté
         showPage('dashboard-page');
     } else {
-        // Profil pas encore créé → accueil, jamais l'IA automatiquement
+        // CORRECTION: le profil n'existe pas encore dans la table 'users'
+        // (le client a quitté le guide avant qu'une ligne soit créée), mais
+        // le compte Auth existe bien : on va quand même sur le dashboard,
+        // pas sur l'accueil. loadDashboard() affiche automatiquement le
+        // bandeau "finir le guide" + verrouille les onglets tant que
+        // user.plan est absent/'pending' — cohérent avec loadUserData().
         td.email = email;
-        showPage('home');
+        const user = { email, plan: 'pending', prospects: [] };
+        localStorage.setItem('nexaai_user', JSON.stringify(user));
+        await loadDashboard(user);
+        showPage('dashboard-page');
     }
 }
 
