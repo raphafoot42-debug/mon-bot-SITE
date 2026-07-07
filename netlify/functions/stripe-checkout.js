@@ -14,6 +14,11 @@ const PRICE_IDS = {
   // ── Annuel ───────────────────────────────────────────────────
   starter_annual: process.env.STRIPE_PRICE_STARTER_ANNUAL || 'price_1TgQAjP6KQQPJW2buOxVpaY3',
   pro_annual:     process.env.STRIPE_PRICE_PRO_ANNUAL     || 'price_1TgQAlP6KQQPJW2bRq9GGOnU',
+  // NOTE: pas de clé 'affiliation' ici volontairement — le plan Ambassadeur
+  // est gratuit (0€) et ne doit jamais passer par Stripe Checkout. Le
+  // price Stripe correspondant a été supprimé côté compte Stripe.
+  // Le client (nexa.js) doit intercepter 'affiliation' AVANT d'appeler
+  // cette function et rediriger vers la qualification IA à la place.
 };
 
 const SUBSCRIPTION_PLANS = new Set(['starter', 'pro', 'starter_annual', 'pro_annual']);
