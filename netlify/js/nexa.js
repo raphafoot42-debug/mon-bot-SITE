@@ -1241,7 +1241,22 @@ async function register() {
     };
 
     LS.setUser(newUser);
-    try { await client.from('users').insert([newUser]); } catch(e) { console.error('DB insert:', e); }
+    // CORRECTION: l'insert direct côté client (anon, pas encore de session
+    // tant que l'email n'est pas confirmé) pouvait être bloqué silencieusement
+    // par les policies RLS de Supabase → le compte n'existait jamais en base
+    // et n'apparaissait jamais dans l'admin, quoi que fasse l'utilisateur
+    // ensuite. On passe par une fonction serveur (service_role, bypass RLS).
+    try {
+      const res = await fetch('/.netlify/functions/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', ...newUser })
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error('create-user échec:', res.status, errBody.error);
+      }
+    } catch(e) { console.error('create-user réseau:', e); }
 
     if (autoConfirmed) {
       // Vérification email désactivée côté Supabase : pas d'email à attendre,
@@ -1335,8 +1350,16 @@ async function checkEmailVerified() {
       LS.setUser(stored);
 
       try {
-        await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email);
-      } catch(e) { console.error('DB update:', e); }
+        const res = await fetch('/.netlify/functions/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'confirm', email: user.email, id: user.id })
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          console.error('create-user (confirm) échec:', res.status, errBody.error);
+        }
+      } catch(e) { console.error('create-user (confirm) réseau:', e); }
 
       // ✅ Lance directement l'IA de qualification, comme après un clic sur
       // le lien reçu par email (cohérence des deux parcours de confirmation).
@@ -1431,7 +1454,20 @@ async function checkEmailVerifyReturn() {
       stored.emailVerified = true;
       stored.status = 'actif';
       LS.setUser(stored);
-      try { await client.from('users').update({ email_verified: true, status: 'actif' }).eq('email', user.email); } catch(e) { console.error('DB update:', e); }
+      // CORRECTION: passe aussi par create-user (action 'confirm') — si la ligne
+      // n'a jamais été créée à l'inscription (échec RLS), cette fonction la
+      // recrée au lieu de faire un UPDATE muet sur une ligne inexistante.
+      try {
+        const res = await fetch('/.netlify/functions/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'confirm', email: user.email, id: user.id })
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          console.error('create-user (confirm) échec:', res.status, errBody.error);
+        }
+      } catch(e) { console.error('create-user (confirm) réseau:', e); }
       window.history.replaceState({}, document.title, window.location.pathname);
       toast('✅ Email confirmé !', 'ok');
 
